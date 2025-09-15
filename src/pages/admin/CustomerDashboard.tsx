@@ -7,7 +7,6 @@ import EmailReminderManager from '../../components/EmailReminderManager';
 const CustomerDashboard: React.FC = () => {
   const { users, subscriptions, extendSubscription, checkSubscriptionExpiry } = useData();
   const { user } = useAuth();
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [extensionDays, setExtensionDays] = useState(30);
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'expiring'>('all');
   const [expiryStatus, setExpiryStatus] = useState<{ expired: UserProfile[], expiringSoon: UserProfile[] }>({ expired: [], expiringSoon: [] });

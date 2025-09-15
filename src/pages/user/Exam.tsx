@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
+import { STORAGE_KEYS } from '../../contexts/DataContext'
 import { Question, Attempt, AttemptItem } from '../../types'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
 
@@ -13,6 +14,8 @@ const Exam: React.FC = () => {
     getAttemptItems, 
     createAttemptItem, 
     updateAttemptItem,
+    getUserAttemptItems,
+    saveToStorage,
     questions,
     subtopics,
     topics,
@@ -106,7 +109,7 @@ const Exam: React.FC = () => {
   }
 
   // Submit exam
-  const handleSubmitExam = async (isTimeout = false) => {
+  const handleSubmitExam = async () => {
     if (!attempt || !attemptId) return
 
     setIsSubmitting(true)
@@ -129,16 +132,16 @@ const Exam: React.FC = () => {
 
         if (answer.trim()) {
           // Evaluate the answer
-          const evaluation = evaluateAnswer(answer, question.connectedKPIs)
+          const evaluation = await evaluateAnswer(answer, question.connectedKPIs)
           
           const result: AttemptItem = existingItem ? {
             ...existingItem,
             answer,
-            kpisDetected: evaluation.detectedKPIs,
-            kpisMissing: evaluation.missingKPIs,
-            score: evaluation.score,
-            maxScore: evaluation.maxScore,
-            feedback: evaluation.feedback,
+            kpisDetected: evaluation.toteutuneet_kpi,
+            kpisMissing: evaluation.puuttuvat_kpi,
+            score: evaluation.pisteet,
+            maxScore: 3, // Maximum score for this evaluation system
+            feedback: evaluation.sanallinen_arvio,
             isEvaluated: true,
             updatedAt: new Date().toISOString()
           } : {
@@ -146,12 +149,13 @@ const Exam: React.FC = () => {
             attemptId,
             questionId: question.id,
             answer,
-            kpisDetected: evaluation.detectedKPIs,
-            kpisMissing: evaluation.missingKPIs,
-            score: evaluation.score,
-            maxScore: evaluation.maxScore,
-            feedback: evaluation.feedback,
+            kpisDetected: evaluation.toteutuneet_kpi,
+            kpisMissing: evaluation.puuttuvat_kpi,
+            score: evaluation.pisteet,
+            maxScore: 3, // Maximum score for this evaluation system
+            feedback: evaluation.sanallinen_arvio,
             isEvaluated: true,
+            durationSec: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }
@@ -159,7 +163,10 @@ const Exam: React.FC = () => {
           if (existingItem) {
             updateAttemptItem(existingItem.id, result)
           } else {
-            createAttemptItem(attemptId, question.id, answer)
+            // Create the attempt item with the result data
+            const userAttemptItems = getUserAttemptItems(attempt.userId)
+            const updatedItems = [...userAttemptItems, result]
+            saveToStorage(STORAGE_KEYS.attemptItems(attempt.userId), updatedItems)
           }
 
           questionResults.push(result)

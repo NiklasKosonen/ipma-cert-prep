@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
-import { Topic, Subtopic } from '../../types'
 
 const ExamSelection: React.FC = () => {
   const navigate = useNavigate()

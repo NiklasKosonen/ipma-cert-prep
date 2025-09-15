@@ -15,24 +15,13 @@ let aiModel = {
   learnedPatterns: new Map<string, string[]>(), // KPI name -> learned variations
   contextPatterns: new Map<string, string[]>(), // Context -> related KPIs
 }
-export const evaluateAnswer = async ({
-  answer,
-  kpis
-}: {
-  topic: string
-  question: string
-  answer: string
-  kpis: KPI[]
-  rubric?: 'kpi-count' | 'detailed-analysis'
-}): Promise<EvaluationResult> => {
+export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<EvaluationResult> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000))
 
   // Mock KPI detection based on keyword matching
   const detectedKPIs = detectKPIs(answer, kpis)
-  const missingKPIs = kpis
-    .filter(kpi => !detectedKPIs.some(detected => detected.id === kpi.id))
-    .map(kpi => kpi.name)
+  const missingKPIs = kpis.filter(kpi => !detectedKPIs.includes(kpi))
 
   // Calculate score based on KPI count rubric
   const score = calculateScore(detectedKPIs.length)
@@ -51,19 +40,17 @@ export const evaluateAnswer = async ({
 /**
  * Detect KPIs in the answer text using keyword matching and learned patterns
  */
-const detectKPIs = (answer: string, kpis: KPI[]): KPI[] => {
+const detectKPIs = (answer: string, kpis: string[]): string[] => {
   const answerLower = answer.toLowerCase()
   
   return kpis.filter(kpi => {
     // Check main name
-    if (answerLower.includes(kpi.name.toLowerCase())) {
+    if (answerLower.includes(kpi.toLowerCase())) {
       return true
     }
     
-    // Check synonyms (removed since we removed synonyms from KPI)
-    
     // Check learned patterns for this KPI
-    const learnedPatterns = aiModel.learnedPatterns.get(kpi.name) || []
+    const learnedPatterns = aiModel.learnedPatterns.get(kpi) || []
     if (learnedPatterns.some(pattern => 
       answerLower.includes(pattern.toLowerCase())
     )) {
@@ -71,7 +58,7 @@ const detectKPIs = (answer: string, kpis: KPI[]): KPI[] => {
     }
     
     // Check context-based patterns
-    const contextPatterns = aiModel.contextPatterns.get(kpi.name) || []
+    const contextPatterns = aiModel.contextPatterns.get(kpi) || []
     if (contextPatterns.some(pattern => 
       answerLower.includes(pattern.toLowerCase())
     )) {
@@ -102,10 +89,10 @@ export const trainAIModel = async (sampleAnswers: SampleAnswer[], trainingExampl
   
   // Learn patterns from sample answers
   sampleAnswers.forEach(sample => {
-    if (sample.answer && sample.questionId) {
+    if (sample.answerText && sample.questionId) {
       // Extract potential KPI patterns from the sample answer
-      const words = sample.answer.toLowerCase().split(/\s+/)
-      const phrases = extractPhrases(sample.answer.toLowerCase())
+      const words = sample.answerText.toLowerCase().split(/\s+/)
+      const phrases = extractPhrases(sample.answerText.toLowerCase())
       
       // Store patterns for future detection
       words.forEach((word: string) => {
@@ -124,10 +111,10 @@ export const trainAIModel = async (sampleAnswers: SampleAnswer[], trainingExampl
   
   // Learn from training examples
   trainingExamples.forEach(example => {
-    if (example.sampleAnswer && example.detectedKPIs) {
+    if (example.answerText && example.detectedKPIs) {
       // Learn which patterns correspond to which KPIs
-      const answerWords = example.sampleAnswer.toLowerCase().split(/\s+/)
-      const answerPhrases = extractPhrases(example.sampleAnswer.toLowerCase())
+      const answerWords = example.answerText.toLowerCase().split(/\s+/)
+      const answerPhrases = extractPhrases(example.answerText.toLowerCase())
       
       example.detectedKPIs.forEach(kpiName => {
         // Store learned patterns for this KPI
@@ -179,11 +166,11 @@ const extractPhrases = (text: string): string[] => {
  * Generate coaching feedback based on detected and missing KPIs
  */
 const generateFeedback = (
-  detectedKPIs: KPI[], 
+  detectedKPIs: string[], 
   missingKPIs: string[], 
   score: number
 ): string => {
-  const detectedNames = detectedKPIs.map(kpi => kpi.name)
+  const detectedNames = detectedKPIs
   
   if (score === 3) {
     return `Excellent work! You've covered all the key areas: ${detectedNames.join(', ')}. Your answer demonstrates comprehensive understanding of the topic. The AI has successfully detected these KPIs even with variations in wording.`

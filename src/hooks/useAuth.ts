@@ -267,7 +267,7 @@ export const useAuth = () => {
     }
   }
 
-  const signUp = async (email: string, password: string, role: UserRole, name?: string) => {
+  const signUp = async (email: string, _password: string, role: UserRole, name?: string) => {
     try {
       const mockUser: AuthUser = {
         id: `user_${Date.now()}`,
