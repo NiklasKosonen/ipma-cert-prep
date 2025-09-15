@@ -53,7 +53,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {user && <Header />}
+      <Header />
       
       <Routes>
         {/* Public Routes */}
