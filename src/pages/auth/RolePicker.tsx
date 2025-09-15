@@ -8,24 +8,24 @@ export const RolePicker = () => {
   const roles = [
     {
       id: 'user',
-      title: t('auth.rolePicker.user'),
-      description: t('auth.rolePicker.userDesc'),
+      title: t('roleUser'),
+      description: t('roleUserDesc'),
       icon: User,
       path: '/auth/user',
       color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100',
     },
     {
-      id: 'trainer',
-      title: t('auth.rolePicker.trainer'),
-      description: t('auth.rolePicker.trainerDesc'),
+      id: 'trainee',
+      title: t('roleTrainee'),
+      description: t('roleTraineeDesc'),
       icon: GraduationCap,
-      path: '/auth/trainer',
+      path: '/auth/trainee',
       color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100',
     },
     {
       id: 'admin',
-      title: t('auth.rolePicker.admin'),
-      description: t('auth.rolePicker.adminDesc'),
+      title: t('roleAdmin'),
+      description: t('roleAdminDesc'),
       icon: Settings,
       path: '/auth/admin',
       color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100',
@@ -40,10 +40,10 @@ export const RolePicker = () => {
             <span className="text-white font-bold text-xl">IPMA</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {t('app.title')}
+            {t('appTitle')}
           </h2>
           <p className="text-gray-600 mb-8">
-            {t('app.subtitle')}
+            {t('appSubtitle')}
           </p>
         </div>
       </div>
@@ -51,7 +51,7 @@ export const RolePicker = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-2xl">
         <div className="bg-white py-8 px-4 shadow sm:rounded-2xl sm:px-10">
           <h3 className="text-xl font-semibold text-gray-900 text-center mb-8">
-            {t('auth.rolePicker.title')}
+            {t('rolePickerTitle')}
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

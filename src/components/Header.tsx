@@ -34,8 +34,10 @@ export const Header = () => {
         return '/admin'
       case 'trainer':
         return '/coach/dashboard'
+      case 'trainee':
+        return '/trainee/dashboard'
       case 'user':
-        return '/app/home'
+        return '/user/dashboard'
       default:
         return '/'
     }
@@ -51,7 +53,7 @@ export const Header = () => {
               <span className="text-white font-bold text-sm">IPMA</span>
             </div>
             <span className="font-bold text-gray-900 hidden sm:block text-lg">
-              {t('app.title')}
+              {t('appTitle')}
             </span>
           </Link>
 

@@ -52,6 +52,14 @@ const AdminConsole: React.FC = () => {
     { id: 'rule3', description: 'Vastaus sisältää tasan 1 KPI:n', points: 1, kpiCount: 1, condition: 'exactly' },
     { id: 'rule4', description: 'Vastaus ei sisällä KPI:ta', points: 0, kpiCount: 0, condition: 'exactly' }
   ])
+  
+  const [aiTips, setAiTips] = useState<string[]>([
+    'KPI:t eivät tarvitse olla kirjoitettu sanatarkasti - AI ymmärtää niiden olemassaolon vastauksen kontekstista',
+    'Synonyymit ja liittyvät käsitteet lasketaan KPI:ksi jos ne liittyvät aiheeseen',
+    'Implisiittiset viittaukset ovat yhtä arvokkaita kuin suorat maininnat',
+    'Vastauksen laadun arviointi perustuu kokonaisuuteen, ei vain KPI-määrään',
+    'Ymmärryksen taso näkyy vastauksen syvyydessä ja perustelujen laadussa'
+  ])
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [editTopic, setEditTopic] = useState({ title: '', description: '' })
   
@@ -1595,6 +1603,8 @@ const AdminConsole: React.FC = () => {
               <AIEvaluationRules 
                 rules={evaluationRules}
                 onRulesChange={setEvaluationRules}
+                tips={aiTips}
+                onTipsChange={setAiTips}
               />
             </div>
           )}

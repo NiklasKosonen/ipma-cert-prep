@@ -10,9 +10,14 @@ export const DEFAULT_LANGUAGE: Language = 'fi';
 
 // Finnish translations
 export const FINNISH_TRANSLATIONS = {
+  // App
+  appTitle: 'AI PRO',
+  appSubtitle: 'IPMA Certification Prep Platform',
+  
   // Navigation
   adminConsole: 'Hallintapaneeli',
   userDashboard: 'Käyttäjäpaneeli',
+  traineeDashboard: 'Kouluttajapaneeli',
   logout: 'Kirjaudu ulos',
   login: 'Kirjaudu sisään',
   
@@ -72,6 +77,15 @@ export const FINNISH_TRANSLATIONS = {
   emailSystemConfigured: 'Sähköpostijärjestelmä konfiguroitu',
   testEmailSending: 'Testaa sähköpostin lähettämistä',
   
+  // Role Picker
+  rolePickerTitle: 'Valitse roolisi',
+  roleUser: 'Käyttäjä',
+  roleUserDesc: 'Opiskelija - suorita tenttejä ja seuraa omaa edistymistäsi',
+  roleTrainee: 'Kouluttaja',
+  roleTraineeDesc: 'Kouluttaja - seuraa opiskelijoiden edistymistä ja vastauksia',
+  roleAdmin: 'Ylläpitäjä',
+  roleAdminDesc: 'Ylläpitäjä - hallinnoi järjestelmää ja sisältöä',
+  
   // Forms
   required: 'Pakollinen',
   optional: 'Valinnainen',
@@ -93,9 +107,14 @@ export const FINNISH_TRANSLATIONS = {
 
 // English translations (fallback)
 export const ENGLISH_TRANSLATIONS = {
+  // App
+  appTitle: 'AI PRO',
+  appSubtitle: 'IPMA Certification Prep Platform',
+  
   // Navigation
   adminConsole: 'Admin Console',
   userDashboard: 'User Dashboard',
+  traineeDashboard: 'Trainee Dashboard',
   logout: 'Logout',
   login: 'Login',
   
@@ -154,6 +173,15 @@ export const ENGLISH_TRANSLATIONS = {
   emailSystemActive: 'Email system active',
   emailSystemConfigured: 'Email system configured',
   testEmailSending: 'Test email sending',
+  
+  // Role Picker
+  rolePickerTitle: 'Select Your Role',
+  roleUser: 'User',
+  roleUserDesc: 'Student - take exams and track your progress',
+  roleTrainee: 'Trainee',
+  roleTraineeDesc: 'Trainee - monitor student progress and answers',
+  roleAdmin: 'Admin',
+  roleAdminDesc: 'Admin - manage system and content',
   
   // Forms
   required: 'Required',

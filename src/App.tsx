@@ -23,6 +23,7 @@ import ExamResults from './pages/user/ExamResults'
 
 // Trainer pages
 import { TrainerDashboard } from './pages/trainer/Dashboard'
+import { TraineeDashboard } from './pages/trainee/TraineeDashboard'
 
 // Admin pages
 import AdminConsole from './pages/admin/AdminConsole'
@@ -120,6 +121,14 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
               <TrainerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainee/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['trainee']}>
+              <TraineeDashboard />
             </ProtectedRoute>
           }
         />

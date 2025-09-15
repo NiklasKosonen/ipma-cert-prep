@@ -12,9 +12,11 @@ export interface EvaluationRule {
 interface AIEvaluationRulesProps {
   rules: EvaluationRule[];
   onRulesChange: (rules: EvaluationRule[]) => void;
+  tips?: string[];
+  onTipsChange?: (tips: string[]) => void;
 }
 
-const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesChange }) => {
+const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesChange, tips = [], onTipsChange }) => {
   const { t } = useLanguage();
   const [newRule, setNewRule] = useState<Partial<EvaluationRule>>({
     description: '',
@@ -22,6 +24,10 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
     kpiCount: 0,
     condition: 'exactly'
   });
+  
+  const [editingTipIndex, setEditingTipIndex] = useState<number | null>(null);
+  const [editingTip, setEditingTip] = useState('');
+  const [newTip, setNewTip] = useState('');
 
   const addRule = () => {
     if (!newRule.description || newRule.points === undefined || newRule.kpiCount === undefined) {
@@ -55,6 +61,34 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
     ));
   };
 
+  const addTip = () => {
+    if (newTip.trim() && onTipsChange) {
+      onTipsChange([...tips, newTip.trim()]);
+      setNewTip('');
+    }
+  };
+
+  const editTip = (index: number) => {
+    setEditingTipIndex(index);
+    setEditingTip(tips[index]);
+  };
+
+  const updateTip = () => {
+    if (editingTipIndex !== null && editingTip.trim() && onTipsChange) {
+      const updatedTips = [...tips];
+      updatedTips[editingTipIndex] = editingTip.trim();
+      onTipsChange(updatedTips);
+      setEditingTipIndex(null);
+      setEditingTip('');
+    }
+  };
+
+  const deleteTip = (index: number) => {
+    if (onTipsChange) {
+      onTipsChange(tips.filter((_, i) => i !== index));
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
@@ -64,12 +98,75 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
           {/* AI Evaluation Tips */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <h4 className="text-md font-medium text-blue-900 mb-3">💡 AI Arviointivinkit</h4>
+            
+            {/* Add New Tip */}
+            <div className="mb-4">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={newTip}
+                  onChange={(e) => setNewTip(e.target.value)}
+                  placeholder="Lisää uusi vinkki..."
+                  className="flex-1 px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={addTip}
+                  disabled={!newTip.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  Lisää
+                </button>
+              </div>
+            </div>
+            
+            {/* Tips List */}
             <div className="space-y-2 text-sm text-blue-800">
-              <p>• <strong>KPI:t eivät tarvitse olla kirjoitettu sanatarkasti</strong> - AI ymmärtää niiden olemassaolon vastauksen kontekstista</p>
-              <p>• <strong>Synonyymit ja liittyvät käsitteet</strong> lasketaan KPI:ksi jos ne liittyvät aiheeseen</p>
-              <p>• <strong>Implisiittiset viittaukset</strong> ovat yhtä arvokkaita kuin suorat maininnat</p>
-              <p>• <strong>Vastauksen laadun arviointi</strong> perustuu kokonaisuuteen, ei vain KPI-määrään</p>
-              <p>• <strong>Ymmärryksen taso</strong> näkyy vastauksen syvyydessä ja perustelujen laadussa</p>
+              {tips.length === 0 ? (
+                <p className="text-blue-600 italic">Ei vinkkejä vielä lisätty. Lisää ensimmäinen vinkki yllä.</p>
+              ) : (
+                tips.map((tip, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    {editingTipIndex === index ? (
+                      <div className="flex-1 flex space-x-2">
+                        <input
+                          type="text"
+                          value={editingTip}
+                          onChange={(e) => setEditingTip(e.target.value)}
+                          className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm"
+                        />
+                        <button
+                          onClick={updateTip}
+                          className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                        >
+                          Tallenna
+                        </button>
+                        <button
+                          onClick={() => setEditingTipIndex(null)}
+                          className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700"
+                        >
+                          Peruuta
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="flex-1">• {tip}</span>
+                        <button
+                          onClick={() => editTip(index)}
+                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                        >
+                          Muokkaa
+                        </button>
+                        <button
+                          onClick={() => deleteTip(index)}
+                          className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                        >
+                          Poista
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
