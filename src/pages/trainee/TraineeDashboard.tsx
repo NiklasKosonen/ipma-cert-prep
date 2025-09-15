@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+// import { useLanguage } from '../../contexts/LanguageContext';
 import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare } from 'lucide-react';
 
 export const TraineeDashboard: React.FC = () => {
