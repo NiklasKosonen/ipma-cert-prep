@@ -12,7 +12,7 @@ export const EMAIL_CONFIG = {
   }
 };
 
-export interface EmailData {
+export interface EmailData extends Record<string, unknown> {
   to_email: string;
   to_name: string;
   subject: string;

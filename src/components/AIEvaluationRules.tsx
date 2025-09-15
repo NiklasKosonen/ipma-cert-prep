@@ -55,11 +55,11 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
     onRulesChange(rules.filter(rule => rule.id !== ruleId));
   };
 
-  const updateRule = (ruleId: string, updates: Partial<EvaluationRule>) => {
-    onRulesChange(rules.map(rule => 
-      rule.id === ruleId ? { ...rule, ...updates } : rule
-    ));
-  };
+  // const updateRule = (ruleId: string, updates: Partial<EvaluationRule>) => {
+  //   onRulesChange(rules.map(rule => 
+  //     rule.id === ruleId ? { ...rule, ...updates } : rule
+  //   ));
+  // };
 
   const addTip = () => {
     if (newTip.trim() && onTipsChange) {

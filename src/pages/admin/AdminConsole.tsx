@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { Topic, Subtopic, KPI, Question, TrainingExample } from '../../types'
+import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 
@@ -31,8 +31,8 @@ const AdminConsole: React.FC = () => {
     feedback: '',
     exampleType: 'training'
   })
-  const [editingTrainingExample, setEditingTrainingExample] = useState<string | null>(null)
-  const [editTrainingExample, setEditTrainingExample] = useState<Partial<TrainingExample>>({})
+  // const [editingTrainingExample, setEditingTrainingExample] = useState<string | null>(null)
+  // const [editTrainingExample, setEditTrainingExample] = useState<Partial<TrainingExample>>({})
   
   // Company Code states
   const [newCompanyCode, setNewCompanyCode] = useState<Partial<CompanyCode>>({
@@ -67,14 +67,12 @@ const AdminConsole: React.FC = () => {
   const handleAddTrainingExample = () => {
     if (newTrainingExample.questionId && newTrainingExample.answerText) {
       addTrainingExample({
-        id: `training_${Date.now()}`,
         questionId: newTrainingExample.questionId,
         answerText: newTrainingExample.answerText,
         qualityRating: newTrainingExample.qualityRating || 0,
         detectedKPIs: newTrainingExample.detectedKPIs || [],
         feedback: newTrainingExample.feedback || '',
-        exampleType: 'training',
-        createdAt: new Date().toISOString()
+        exampleType: 'training'
       })
       setNewTrainingExample({
         questionId: '',
@@ -113,14 +111,11 @@ const AdminConsole: React.FC = () => {
   const handleAddCompanyCode = () => {
     if (newCompanyCode.code && newCompanyCode.companyName) {
       addCompanyCode({
-        id: `company_${Date.now()}`,
         code: newCompanyCode.code,
         companyName: newCompanyCode.companyName,
         maxUsers: newCompanyCode.maxUsers || 1,
         expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        isActive: true
       })
       setNewCompanyCode({
         code: '',
@@ -140,13 +135,13 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleUpdateCompanyCode = () => {
-    if (editingCompanyCode && editCompanyCode) {
-      updateCompanyCode(editingCompanyCode, editCompanyCode)
-      setEditingCompanyCode(null)
-      setEditCompanyCode({})
-    }
-  }
+  // const handleUpdateCompanyCode = () => {
+  //   if (editingCompanyCode && editCompanyCode) {
+  //     updateCompanyCode(editingCompanyCode, editCompanyCode)
+  //     setEditingCompanyCode(null)
+  //     setEditCompanyCode({})
+  //   }
+  // }
 
   const handleDeleteCompanyCode = (id: string) => {
     if (confirm('Haluatko varmasti poistaa tämän yrityskoodin?')) {

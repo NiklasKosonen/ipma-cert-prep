@@ -1,27 +1,24 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../hooks/useAuth';
 import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare } from 'lucide-react';
 
 export const TraineeDashboard: React.FC = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
   const { 
     topics, subtopics, kpis, questions, 
-    attempts, attemptItems, users 
+    users, getUserAttempts
   } = useData();
 
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
 
   // Get all student attempts
-  const studentAttempts = attempts.filter(attempt => 
-    users.find(u => u.id === attempt.userId)?.role === 'user'
-  );
+  const studentUsers = users.filter(u => u.role === 'user');
+  const allStudentAttempts = studentUsers.flatMap(student => getUserAttempts(student.id));
 
   // Filter attempts by selected topic and user
-  const filteredAttempts = studentAttempts.filter(attempt => {
+  const filteredAttempts = allStudentAttempts.filter(attempt => {
     const question = questions.find(q => q.id === attempt.questionIds[0]);
     const subtopic = subtopics.find(s => s.id === question?.subtopicId);
     const topic = topics.find(t => t.id === subtopic?.topicId);

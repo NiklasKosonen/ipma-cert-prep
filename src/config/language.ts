@@ -102,7 +102,43 @@ export const FINNISH_TRANSLATIONS = {
   timeRemaining: 'Aikaa jäljellä',
   examCompleted: 'Tentti suoritettu',
   score: 'Pisteet',
-  feedback: 'Palaute'
+  feedback: 'Palaute',
+  
+  // Auth translations
+  'auth.logout': 'Kirjaudu ulos',
+  'auth.login': 'Kirjaudu sisään',
+  'auth.email': 'Sähköposti',
+  'auth.password': 'Salasana',
+  'auth.confirmPassword': 'Vahvista salasana',
+  'auth.forgotPassword': 'Unohtuiko salasana?',
+  'auth.resetPassword': 'Nollaa salasana',
+  'auth.updatePassword': 'Päivitä salasana',
+  'auth.rolePicker.admin': 'Ylläpitäjä',
+  'auth.rolePicker.trainer': 'Kouluttaja',
+  'auth.rolePicker.user': 'Käyttäjä',
+  
+  // History translations
+  'history.title': 'Tenttihistoria',
+  'history.export': 'Vie tiedot',
+  
+  // Topics translations
+  'topics.title': 'Aiheet',
+  
+  // Trainee dashboard translations
+  totalStudents: 'Yhteensä opiskelijoita',
+  totalExamAttempts: 'Yhteensä tenttisuorituksia',
+  averageScore: 'Keskiarvo',
+  filters: 'Suodattimet',
+  filterByTopic: 'Suodata aiheen mukaan',
+  filterByStudent: 'Suodata opiskelijan mukaan',
+  allTopics: 'Kaikki aiheet',
+  allStudents: 'Kaikki opiskelijat',
+  studentExamAttempts: 'Opiskelijoiden tenttisuoritukset',
+  noAttemptsFound: 'Ei tenttisuorituksia löytynyt',
+  date: 'Päivämäärä',
+  studentAnswer: 'Opiskelijan vastaus',
+  aiFeedback: 'AI-palaute',
+  detectedKPIs: 'Havaitut KPI:t'
 };
 
 // English translations (fallback)
@@ -199,7 +235,43 @@ export const ENGLISH_TRANSLATIONS = {
   timeRemaining: 'Time Remaining',
   examCompleted: 'Exam Completed',
   score: 'Score',
-  feedback: 'Feedback'
+  feedback: 'Feedback',
+  
+  // Auth translations
+  'auth.logout': 'Logout',
+  'auth.login': 'Login',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.confirmPassword': 'Confirm Password',
+  'auth.forgotPassword': 'Forgot Password?',
+  'auth.resetPassword': 'Reset Password',
+  'auth.updatePassword': 'Update Password',
+  'auth.rolePicker.admin': 'Admin',
+  'auth.rolePicker.trainer': 'Trainer',
+  'auth.rolePicker.user': 'User',
+  
+  // History translations
+  'history.title': 'Exam History',
+  'history.export': 'Export Data',
+  
+  // Topics translations
+  'topics.title': 'Topics',
+  
+  // Trainee dashboard translations
+  totalStudents: 'Total Students',
+  totalExamAttempts: 'Total Exam Attempts',
+  averageScore: 'Average Score',
+  filters: 'Filters',
+  filterByTopic: 'Filter by Topic',
+  filterByStudent: 'Filter by Student',
+  allTopics: 'All Topics',
+  allStudents: 'All Students',
+  studentExamAttempts: 'Student Exam Attempts',
+  noAttemptsFound: 'No attempts found',
+  date: 'Date',
+  studentAnswer: 'Student Answer',
+  aiFeedback: 'AI Feedback',
+  detectedKPIs: 'Detected KPIs'
 };
 
 export const TRANSLATIONS = {
