@@ -1,23 +1,117 @@
 import React, { useState } from 'react'
 import { useData } from '../../contexts/DataContext'
-import { Topic, Subtopic, KPI, Question } from '../../types'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { Topic, Subtopic, KPI, Question, TrainingExample } from '../../types'
 import * as XLSX from 'xlsx'
+import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 
 const AdminConsole: React.FC = () => {
+  const { t } = useLanguage()
   const { 
-    topics, subtopics, kpis, questions,
+    topics, subtopics, kpis, questions, trainingExamples,
     addTopic, updateTopic, deleteTopic,
     addSubtopic, updateSubtopic, deleteSubtopic,
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
+    addTrainingExample, updateTrainingExample, deleteTrainingExample,
   } = useData()
 
   const [activeTab, setActiveTab] = useState('topics')
   
   // Topic states
   const [newTopic, setNewTopic] = useState({ title: '', description: '', isActive: true })
+  
+  // Training Example states
+  const [newTrainingExample, setNewTrainingExample] = useState<Partial<TrainingExample>>({
+    questionId: '',
+    answerText: '',
+    qualityRating: 0,
+    detectedKPIs: [],
+    feedback: '',
+    exampleType: 'training'
+  })
+  const [editingTrainingExample, setEditingTrainingExample] = useState<string | null>(null)
+  const [editTrainingExample, setEditTrainingExample] = useState<Partial<TrainingExample>>({})
+  
+  // AI Evaluation Rules state
+  const [evaluationRules, setEvaluationRules] = useState<EvaluationRule[]>([
+    { id: 'rule1', description: 'Vastaus sisältää ≥3 KPI:tä', points: 3, kpiCount: 3, condition: 'at_least' },
+    { id: 'rule2', description: 'Vastaus sisältää tasan 2 KPI:ta', points: 2, kpiCount: 2, condition: 'exactly' },
+    { id: 'rule3', description: 'Vastaus sisältää tasan 1 KPI:n', points: 1, kpiCount: 1, condition: 'exactly' },
+    { id: 'rule4', description: 'Vastaus ei sisällä KPI:ta', points: 0, kpiCount: 0, condition: 'exactly' }
+  ])
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [editTopic, setEditTopic] = useState({ title: '', description: '' })
+  
+  // Training Example handlers
+  const handleAddTrainingExample = () => {
+    if (newTrainingExample.questionId && newTrainingExample.answerText) {
+      addTrainingExample({
+        id: `training_${Date.now()}`,
+        questionId: newTrainingExample.questionId,
+        answerText: newTrainingExample.answerText,
+        qualityRating: newTrainingExample.qualityRating || 0,
+        detectedKPIs: newTrainingExample.detectedKPIs || [],
+        feedback: newTrainingExample.feedback || '',
+        exampleType: 'training',
+        createdAt: new Date().toISOString()
+      })
+      setNewTrainingExample({
+        questionId: '',
+        answerText: '',
+        qualityRating: 0,
+        detectedKPIs: [],
+        feedback: '',
+        exampleType: 'training'
+      })
+    }
+  }
+
+  const handleEditTrainingExample = (id: string) => {
+    const trainingExample = trainingExamples.find(te => te.id === id)
+    if (trainingExample) {
+      setEditingTrainingExample(id)
+      setEditTrainingExample(trainingExample)
+    }
+  }
+
+  // const handleUpdateTrainingExample = () => {
+  //   if (editingTrainingExample && editTrainingExample) {
+  //     updateTrainingExample(editingTrainingExample, editTrainingExample)
+  //     setEditingTrainingExample(null)
+  //     setEditTrainingExample({})
+  //   }
+  // }
+
+  const handleDeleteTrainingExample = (id: string) => {
+    if (confirm('Haluatko varmasti poistaa tämän harjoitusesimerkin?')) {
+      deleteTrainingExample(id)
+    }
+  }
+
+  const generateAIEvaluation = async (trainingExample: TrainingExample) => {
+    try {
+      // Mock AI evaluation - in real implementation, this would call an AI service
+      const selectedKPIs = kpis.filter(kpi => trainingExample.detectedKPIs.includes(kpi.id))
+      const kpiNames = selectedKPIs.map(kpi => kpi.name).join(', ')
+      
+      let feedback = ''
+      if (trainingExample.qualityRating >= 3) {
+        feedback = `Erinomainen vastaus! Vastaus sisältää useita KPI:ta (${kpiNames}) ja osoittaa syvällistä ymmärrystä aiheesta. Vastaus on strukturoitu ja perusteltu hyvin.`
+      } else if (trainingExample.qualityRating === 2) {
+        feedback = `Hyvä vastaus. Vastaus sisältää muutaman KPI:n (${kpiNames}) ja osoittaa hyvää ymmärrystä aiheesta. Vastaus voisi olla vielä tarkemmin perusteltu.`
+      } else if (trainingExample.qualityRating === 1) {
+        feedback = `Kohtalainen vastaus. Vastaus sisältää jonkin verran KPI:a (${kpiNames}) mutta puuttuu syvällisempi analyysi. Suosittelemme tarkentamaan vastausta.`
+      } else {
+        feedback = `Vastaus vaatii parantamista. Vastaus ei sisällä KPI:ta tai vastaus ei vastaa kysymykseen riittävällä tasolla. Suosittelemme uudelleen miettimään vastausta.`
+      }
+      
+      return feedback
+    } catch (error) {
+      console.error('AI evaluation failed:', error)
+      return 'AI-arviointi epäonnistui. Yritä uudelleen.'
+    }
+  }
 
   // Subtopic states
   const [newSubtopic, setNewSubtopic] = useState({ title: '', description: '', topicId: '', isActive: true })
@@ -256,14 +350,15 @@ const AdminConsole: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="flex border-b border-gray-200">
             {[
-              { id: 'topics', label: 'Topics' },
-              { id: 'subtopics', label: 'Subtopics' },
-              { id: 'kpis', label: 'KPIs' },
-              { id: 'questions', label: 'Questions' },
-              { id: 'sample-answers', label: 'Sample Answers' },
-              { id: 'training-examples', label: 'Training Examples' },
-              { id: 'company-codes', label: 'Company Codes' },
-              { id: 'email-config', label: 'Email Config' }
+              { id: 'topics', label: t('topics') },
+              { id: 'subtopics', label: t('subtopics') },
+              { id: 'kpis', label: t('kpis') },
+              { id: 'questions', label: t('questions') },
+              { id: 'sample-answers', label: t('sampleAnswers') },
+              { id: 'training-examples', label: t('trainingExamples') },
+              { id: 'company-codes', label: t('companyCodes') },
+              { id: 'email-config', label: t('emailConfig') },
+              { id: 'ai-evaluation', label: t('aiEvaluation') }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1077,8 +1172,192 @@ const AdminConsole: React.FC = () => {
 
           {activeTab === 'training-examples' && (
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Training Examples</h2>
-              <p className="text-gray-600">Training examples management will be implemented here.</p>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">{t('trainingExamples')}</h2>
+              </div>
+
+              {/* Add Training Example Form */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">{t('addTrainingExample')}</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('question')} *
+                    </label>
+                    <select
+                      value={newTrainingExample.questionId || ''}
+                      onChange={(e) => setNewTrainingExample({ ...newTrainingExample, questionId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Valitse kysymys</option>
+                      {questions.map(question => (
+                        <option key={question.id} value={question.id}>
+                          {question.prompt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('grade')} (0-3)
+                    </label>
+                    <select
+                      value={newTrainingExample.qualityRating || 0}
+                      onChange={(e) => setNewTrainingExample({ ...newTrainingExample, qualityRating: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value={0}>{t('grade0')}</option>
+                      <option value={1}>{t('grade1')}</option>
+                      <option value={2}>{t('grade2')}</option>
+                      <option value={3}>{t('grade3')}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('exampleAnswer')} *
+                  </label>
+                  <textarea
+                    value={newTrainingExample.answerText || ''}
+                    onChange={(e) => setNewTrainingExample({ ...newTrainingExample, answerText: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Kirjoita mallivastaus tähän..."
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('selectKPIs')}
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {kpis.map(kpi => (
+                      <label key={kpi.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={newTrainingExample.detectedKPIs?.includes(kpi.id) || false}
+                          onChange={(e) => {
+                            const currentKPIs = newTrainingExample.detectedKPIs || []
+                            const updatedKPIs = e.target.checked
+                              ? [...currentKPIs, kpi.id]
+                              : currentKPIs.filter(id => id !== kpi.id)
+                            setNewTrainingExample({ ...newTrainingExample, detectedKPIs: updatedKPIs })
+                          }}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{kpi.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button
+                    onClick={() => setNewTrainingExample({
+                      questionId: '',
+                      answerText: '',
+                      qualityRating: 0,
+                      detectedKPIs: [],
+                      feedback: '',
+                      exampleType: 'training'
+                    })}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    onClick={handleAddTrainingExample}
+                    disabled={!newTrainingExample.questionId || !newTrainingExample.answerText}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('add')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Training Examples List */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Harjoitusesimerkit</h3>
+                  
+                  {trainingExamples.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">Ei harjoitusesimerkkejä vielä lisätty</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {trainingExamples.map((example) => {
+                        const question = questions.find(q => q.id === example.questionId)
+                        const selectedKPIs = kpis.filter(kpi => example.detectedKPIs.includes(kpi.id))
+                        
+                        return (
+                          <div key={example.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900 mb-2">
+                                  {question?.prompt || 'Kysymys ei löytynyt'}
+                                </h4>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {example.answerText}
+                                </p>
+                                <div className="flex items-center space-x-4">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    example.qualityRating >= 3 ? 'bg-green-100 text-green-800' :
+                                    example.qualityRating === 2 ? 'bg-blue-100 text-blue-800' :
+                                    example.qualityRating === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {example.qualityRating} pistettä
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    KPI:t: {selectedKPIs.map(kpi => kpi.name).join(', ') || 'Ei valittu'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleEditTrainingExample(example.id)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                  {t('edit')}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTrainingExample(example.id)}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  {t('delete')}
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {example.feedback && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                <h5 className="text-sm font-medium text-gray-700 mb-1">{t('aiEvaluation')}:</h5>
+                                <p className="text-sm text-gray-600">{example.feedback}</p>
+                              </div>
+                            )}
+                            
+                            {!example.feedback && (
+                              <div className="mt-3">
+                                <button
+                                  onClick={async () => {
+                                    const feedback = await generateAIEvaluation(example)
+                                    updateTrainingExample(example.id, { feedback })
+                                  }}
+                                  className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                                >
+                                  {t('submitForEvaluation')}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -1086,6 +1365,20 @@ const AdminConsole: React.FC = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Company Codes</h2>
               <p className="text-gray-600">Company codes management will be implemented here.</p>
+            </div>
+          )}
+
+          {/* AI Evaluation Rules Tab */}
+          {activeTab === 'ai-evaluation' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">{t('aiEvaluation')}</h2>
+              </div>
+              
+              <AIEvaluationRules 
+                rules={evaluationRules}
+                onRulesChange={setEvaluationRules}
+              />
             </div>
           )}
 

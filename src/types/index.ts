@@ -113,7 +113,7 @@ export interface TrainingExample {
   qualityRating: number // 0-3 scale
   detectedKPIs: string[]
   feedback: string
-  exampleType: 'grading' | 'evaluation'
+  exampleType: 'grading' | 'evaluation' | 'training'
   createdAt: string
   updatedAt: string
 }
