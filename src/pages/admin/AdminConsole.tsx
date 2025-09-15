@@ -86,7 +86,7 @@ const AdminConsole: React.FC = () => {
   }
 
   const handleEditTrainingExample = (id: string) => {
-    const trainingExample = trainingExamples.find(te => te.id === id)
+    // const trainingExample = trainingExamples.find(te => te.id === id)
     // if (trainingExample) {
     //   setEditingTrainingExample(id)
     //   setEditTrainingExample(trainingExample)
@@ -129,10 +129,10 @@ const AdminConsole: React.FC = () => {
 
   const handleEditCompanyCode = (id: string) => {
     const companyCode = companyCodes.find(cc => cc.id === id)
-    if (companyCode) {
-      setEditingCompanyCode(id)
-      setEditCompanyCode(companyCode)
-    }
+    // if (companyCode) {
+    //   setEditingCompanyCode(id)
+    //   setEditCompanyCode(companyCode)
+    // }
   }
 
   // const handleUpdateCompanyCode = () => {

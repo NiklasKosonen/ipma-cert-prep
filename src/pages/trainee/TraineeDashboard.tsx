@@ -4,7 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare } from 'lucide-react';
 
 export const TraineeDashboard: React.FC = () => {
-  const { t } = useLanguage();
+  // const { t } = useLanguage(); // Commented out to fix unused variable warning
   const { 
     topics, subtopics, questions, 
     users, getUserAttempts
@@ -35,11 +35,11 @@ export const TraineeDashboard: React.FC = () => {
   // Note: Score calculation would need to be done from AttemptItems
   const averageScore = 0; // Placeholder - would need to calculate from attempt items
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-100';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
-  };
+  // const getScoreColor = (score: number) => {
+  //   if (score >= 80) return 'text-green-600 bg-green-100';
+  //   if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+  //   return 'text-red-600 bg-red-100';
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50">
