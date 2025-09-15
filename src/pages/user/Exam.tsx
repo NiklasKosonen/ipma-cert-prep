@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
-import { STORAGE_KEYS } from '../../contexts/DataContext'
 import { Question, Attempt, AttemptItem } from '../../types'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
 
@@ -14,8 +13,6 @@ const Exam: React.FC = () => {
     getAttemptItems, 
     createAttemptItem, 
     updateAttemptItem,
-    getUserAttemptItems,
-    saveToStorage,
     questions,
     subtopics,
     topics,
@@ -65,7 +62,7 @@ const Exam: React.FC = () => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
           // Time's up - auto submit
-          handleSubmitExam(true)
+          handleSubmitExam()
           return 0
         }
         return prev - 1
@@ -163,10 +160,7 @@ const Exam: React.FC = () => {
           if (existingItem) {
             updateAttemptItem(existingItem.id, result)
           } else {
-            // Create the attempt item with the result data
-            const userAttemptItems = getUserAttemptItems(attempt.userId)
-            const updatedItems = [...userAttemptItems, result]
-            saveToStorage(STORAGE_KEYS.attemptItems(attempt.userId), updatedItems)
+            createAttemptItem(attemptId, question.id, answer)
           }
 
           questionResults.push(result)
@@ -278,7 +272,7 @@ const Exam: React.FC = () => {
         {/* Submit Button */}
         <div className="mt-12 text-center">
           <button
-            onClick={() => handleSubmitExam(false)}
+            onClick={() => handleSubmitExam()}
             disabled={isSubmitting}
             className={`px-8 py-4 rounded-lg text-xl font-semibold transition-colors ${
               isSubmitting

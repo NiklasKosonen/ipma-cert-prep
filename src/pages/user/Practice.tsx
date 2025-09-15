@@ -263,12 +263,7 @@ const Exam = ({ topic, onBack, onComplete }: {
       selectedQuestions.map(async (question) => {
         const answer = answers[question.id] || ''
         const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
-        const evaluation = await evaluateAnswer({
-          topic: question.topicId,
-          question: question.prompt,
-          answer: answer,
-          kpis: connectedKPIs
-        })
+        const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
         return {
           question,
           answer,

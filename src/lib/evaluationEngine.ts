@@ -1,4 +1,4 @@
-import { EvaluationResult, KPI, TrainingExample, SampleAnswer } from '../types'
+import { EvaluationResult, TrainingExample, SampleAnswer } from '../types'
 
 /**
  * Evaluation Engine for IPMA Level C Certification Prep
@@ -30,7 +30,7 @@ export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<Ev
   const feedback = generateFeedback(detectedKPIs, missingKPIs, score)
 
   return {
-    toteutuneet_kpi: detectedKPIs.map(kpi => kpi.name),
+    toteutuneet_kpi: detectedKPIs,
     puuttuvat_kpi: missingKPIs,
     pisteet: score,
     sanallinen_arvio: feedback
