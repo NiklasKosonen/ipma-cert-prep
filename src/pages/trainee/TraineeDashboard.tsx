@@ -6,7 +6,7 @@ import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare } from 'luci
 export const TraineeDashboard: React.FC = () => {
   const { t } = useLanguage();
   const { 
-    topics, subtopics, kpis, questions, 
+    topics, subtopics, questions, 
     users, getUserAttempts
   } = useData();
 
@@ -19,7 +19,7 @@ export const TraineeDashboard: React.FC = () => {
 
   // Filter attempts by selected topic and user
   const filteredAttempts = allStudentAttempts.filter(attempt => {
-    const question = questions.find(q => q.id === attempt.questionIds[0]);
+    const question = questions.find(q => q.id === attempt.selectedQuestionIds[0]);
     const subtopic = subtopics.find(s => s.id === question?.subtopicId);
     const topic = topics.find(t => t.id === subtopic?.topicId);
     
@@ -32,9 +32,8 @@ export const TraineeDashboard: React.FC = () => {
   // Calculate statistics
   const totalStudents = users.filter(u => u.role === 'user').length;
   const totalAttempts = filteredAttempts.length;
-  const averageScore = filteredAttempts.length > 0 
-    ? filteredAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / filteredAttempts.length 
-    : 0;
+  // Note: Score calculation would need to be done from AttemptItems
+  const averageScore = 0; // Placeholder - would need to calculate from attempt items
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-100';
@@ -177,7 +176,7 @@ export const TraineeDashboard: React.FC = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredAttempts.map((attempt) => {
                       const student = users.find(u => u.id === attempt.userId);
-                      const question = questions.find(q => q.id === attempt.questionIds[0]);
+                      const question = questions.find(q => q.id === attempt.selectedQuestionIds[0]);
                       const subtopic = subtopics.find(s => s.id === question?.subtopicId);
                       const topic = topics.find(t => t.id === subtopic?.topicId);
                       
@@ -193,8 +192,8 @@ export const TraineeDashboard: React.FC = () => {
                             {new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getScoreColor(attempt.score || 0)}`}>
-                              {attempt.score || 0}%
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                              N/A
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

@@ -14,7 +14,7 @@ const AdminConsole: React.FC = () => {
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
-    addCompanyCode, updateCompanyCode, deleteCompanyCode,
+    addCompanyCode, deleteCompanyCode,
   } = useData()
 
   const [activeTab, setActiveTab] = useState('topics')
@@ -42,8 +42,8 @@ const AdminConsole: React.FC = () => {
     expiresAt: '',
     isActive: true
   })
-  const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
-  const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({})
+  // const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
+  // const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({})
   
   // AI Evaluation Rules state
   const [evaluationRules, setEvaluationRules] = useState<EvaluationRule[]>([
@@ -87,10 +87,10 @@ const AdminConsole: React.FC = () => {
 
   const handleEditTrainingExample = (id: string) => {
     const trainingExample = trainingExamples.find(te => te.id === id)
-    if (trainingExample) {
-      setEditingTrainingExample(id)
-      setEditTrainingExample(trainingExample)
-    }
+    // if (trainingExample) {
+    //   setEditingTrainingExample(id)
+    //   setEditTrainingExample(trainingExample)
+    // }
   }
 
   // const handleUpdateTrainingExample = () => {
