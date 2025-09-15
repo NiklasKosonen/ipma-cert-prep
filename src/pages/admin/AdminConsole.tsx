@@ -1,0 +1,1098 @@
+import React, { useState } from 'react'
+import { useData } from '../../contexts/DataContext'
+import { Topic, Subtopic, KPI, Question } from '../../types'
+import * as XLSX from 'xlsx'
+
+const AdminConsole: React.FC = () => {
+  const { 
+    topics, subtopics, kpis, questions,
+    addTopic, updateTopic, deleteTopic,
+    addSubtopic, updateSubtopic, deleteSubtopic,
+    addKPI, updateKPI, deleteKPI,
+    addQuestion, updateQuestion, deleteQuestion,
+  } = useData()
+
+  const [activeTab, setActiveTab] = useState('topics')
+  
+  // Topic states
+  const [newTopic, setNewTopic] = useState({ title: '', description: '', isActive: true })
+  const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
+  const [editTopic, setEditTopic] = useState({ title: '', description: '' })
+
+  // Subtopic states
+  const [newSubtopic, setNewSubtopic] = useState({ title: '', description: '', topicId: '', isActive: true })
+  const [editingSubtopic, setEditingSubtopic] = useState<Subtopic | null>(null)
+  const [editSubtopic, setEditSubtopic] = useState({ title: '', description: '', topicId: '', isActive: true })
+
+  // KPI states
+  const [newKPI, setNewKPI] = useState({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+  const [editingKPI, setEditingKPI] = useState<KPI | null>(null)
+  const [editKPI, setEditKPI] = useState({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+
+  // Question states
+  const [newQuestion, setNewQuestion] = useState({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [] as string[], isActive: true })
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
+  const [editQuestion, setEditQuestion] = useState({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [] as string[], isActive: true })
+
+  const handleAddTopic = () => {
+    if (newTopic.title.trim()) {
+      addTopic(newTopic)
+      setNewTopic({ title: '', description: '', isActive: true })
+    }
+  }
+
+  const handleUpdateTopic = () => {
+    if (editingTopic && editTopic.title.trim()) {
+      updateTopic(editingTopic.id, editTopic)
+      setEditingTopic(null)
+      setEditTopic({ title: '', description: '' })
+    }
+  }
+
+  const handleDeleteTopic = (topicId: string) => {
+    if (window.confirm('Are you sure you want to delete this topic?')) {
+      deleteTopic(topicId)
+    }
+  }
+
+  const handleAddSubtopic = () => {
+    if (newSubtopic.title.trim() && newSubtopic.topicId) {
+      addSubtopic(newSubtopic)
+      setNewSubtopic({ title: '', description: '', topicId: '', isActive: true })
+    }
+  }
+
+  const handleUpdateSubtopic = () => {
+    if (editingSubtopic && editSubtopic.title.trim()) {
+      console.log('Updating subtopic:', editingSubtopic.id, 'with data:', editSubtopic)
+      updateSubtopic(editingSubtopic.id, editSubtopic)
+      setEditingSubtopic(null)
+      setEditSubtopic({ title: '', description: '', topicId: '', isActive: true })
+    }
+  }
+
+  const handleDeleteSubtopic = (subtopicId: string) => {
+    console.log('Attempting to delete subtopic:', subtopicId)
+    if (window.confirm(`Are you sure you want to delete this subtopic? (ID: ${subtopicId})`)) {
+      console.log('Confirmed deletion of subtopic:', subtopicId)
+      deleteSubtopic(subtopicId)
+    }
+  }
+
+  const handleAddKPI = () => {
+    if (newKPI.name.trim() && newKPI.subtopicId) {
+      addKPI({
+        ...newKPI,
+        connectedQuestions: []
+      })
+      setNewKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+    }
+  }
+
+  const handleUpdateKPI = () => {
+    if (editingKPI && editKPI.name.trim()) {
+      updateKPI(editingKPI.id, editKPI)
+      setEditingKPI(null)
+      setEditKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+    }
+  }
+
+  const handleDeleteKPI = (kpiId: string) => {
+    if (window.confirm('Are you sure you want to delete this KPI?')) {
+      deleteKPI(kpiId)
+    }
+  }
+
+  const handleAddQuestion = () => {
+    if (newQuestion.prompt.trim() && newQuestion.subtopicId) {
+      addQuestion(newQuestion)
+      setNewQuestion({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [], isActive: true })
+    }
+  }
+
+  const handleUpdateQuestion = () => {
+    if (editingQuestion && editQuestion.prompt.trim()) {
+      updateQuestion(editingQuestion.id, editQuestion)
+      setEditingQuestion(null)
+      setEditQuestion({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [], isActive: true })
+    }
+  }
+
+  const handleDeleteQuestion = (questionId: string) => {
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      deleteQuestion(questionId)
+    }
+  }
+
+  const handleExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+      // Process the Excel data
+      const processedData = jsonData as any[]
+      
+      // Group by subtopic to understand the structure
+      const subtopicGroups = new Map<string, any[]>()
+      
+      processedData.forEach((row: any) => {
+        const subtopic = row.subtopic?.trim()
+        if (subtopic && row.question?.trim()) {
+          if (!subtopicGroups.has(subtopic)) {
+            subtopicGroups.set(subtopic, [])
+          }
+          subtopicGroups.get(subtopic)!.push(row)
+        }
+      })
+
+      // Get the main topic (from first row)
+      const mainTopic = processedData[0]?.topic?.trim() || 'Imported Topic'
+      const topicDescription = processedData[0]?.topic_description?.trim() || ''
+
+      // Create or find the main topic
+      let topicId = topics.find(t => t.title === mainTopic)?.id
+      if (!topicId) {
+        const newTopic = { title: mainTopic, description: topicDescription, isActive: true }
+        addTopic(newTopic)
+        // Wait a bit for the topic to be created
+        setTimeout(() => {
+          topicId = topics.find(t => t.title === mainTopic)?.id || ''
+        }, 100)
+      }
+
+      // Process each subtopic group
+      for (const [subtopicName, subtopicRows] of subtopicGroups) {
+        // Create subtopic
+        let subtopicId = subtopics.find(s => s.title === subtopicName && s.topicId === topicId)?.id
+        if (!subtopicId && topicId) {
+          const newSubtopic = { 
+            title: subtopicName, 
+            description: '', 
+            topicId: topicId, 
+            isActive: true 
+          }
+          addSubtopic(newSubtopic)
+          // Wait a bit for the subtopic to be created
+          setTimeout(() => {
+            subtopicId = subtopics.find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
+          }, 100)
+        }
+
+        // Process KPIs for this subtopic (from first row of the subtopic)
+        const firstRow = subtopicRows[0]
+        const kpiNames = firstRow.kpis?.split(';').map((k: string) => k.trim()).filter((k: string) => k) || []
+        
+        // Create KPIs for this subtopic
+        const createdKPIs: string[] = []
+        for (const kpiName of kpiNames) {
+          if (kpiName && subtopicId) {
+            // Check if KPI already exists
+            const existingKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
+            if (!existingKPI) {
+              const newKPI = {
+                name: kpiName,
+                isEssential: true,
+                topicId: topicId || '',
+                subtopicId: subtopicId,
+                connectedQuestions: []
+              }
+              addKPI(newKPI)
+              // Wait a bit for the KPI to be created
+              setTimeout(() => {
+                const createdKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
+                if (createdKPI) {
+                  createdKPIs.push(createdKPI.id)
+                }
+              }, 100)
+            } else {
+              createdKPIs.push(existingKPI.id)
+            }
+          }
+        }
+
+        // Create questions for this subtopic
+        setTimeout(() => {
+          subtopicRows.forEach((row: any) => {
+            if (row.question?.trim() && subtopicId) {
+              const questionPrompt = row.question.trim()
+              
+              // Check if question already exists
+              const existingQuestion = questions.find(q => q.prompt === questionPrompt && q.subtopicId === subtopicId)
+              if (!existingQuestion) {
+                const newQuestion = {
+                  prompt: questionPrompt,
+                  topicId: topicId || '',
+                  subtopicId: subtopicId,
+                  connectedKPIs: createdKPIs,
+                  isActive: true
+                }
+                addQuestion(newQuestion)
+              }
+            }
+          })
+        }, 200) // Wait for KPIs to be created
+      }
+
+      alert('Excel import completed successfully!')
+      // Reset the file input
+      event.target.value = ''
+    } catch (error) {
+      console.error('Error importing Excel file:', error)
+      alert('Error importing Excel file. Please check the format.')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Console</h1>
+        
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200">
+            {[
+              { id: 'topics', label: 'Topics' },
+              { id: 'subtopics', label: 'Subtopics' },
+              { id: 'kpis', label: 'KPIs' },
+              { id: 'questions', label: 'Questions' },
+              { id: 'sample-answers', label: 'Sample Answers' },
+              { id: 'training-examples', label: 'Training Examples' },
+              { id: 'company-codes', label: 'Company Codes' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Topics Tab */}
+          {activeTab === 'topics' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Topics Management</h2>
+                <button
+                  onClick={handleAddTopic}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  Add Topic
+                </button>
+              </div>
+
+              {/* Add Topic Form */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-medium mb-4">Add New Topic</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newTopic.title}
+                      onChange={(e) => setNewTopic({ ...newTopic, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter topic title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={newTopic.description}
+                      onChange={(e) => setNewTopic({ ...newTopic, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter topic description"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Topics List */}
+              <div className="space-y-4">
+                {topics.map((topic) => (
+                  <div key={topic.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                    {editingTopic?.id === topic.id ? (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Edit Topic</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Title *
+                            </label>
+                            <input
+                              type="text"
+                              value={editTopic.title}
+                              onChange={(e) => setEditTopic({ ...editTopic, title: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description
+                            </label>
+                            <input
+                              type="text"
+                              value={editTopic.description}
+                              onChange={(e) => setEditTopic({ ...editTopic, description: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={handleUpdateTopic}
+                            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                          >
+                            Update Topic
+                          </button>
+                          <button
+                            onClick={() => setEditingTopic(null)}
+                            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">{topic.title}</h3>
+                          <p className="text-gray-600 mt-1">{topic.description}</p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingTopic(topic)
+                              setEditTopic({ title: topic.title, description: topic.description })
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTopic(topic.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subtopics Tab */}
+          {activeTab === 'subtopics' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Subtopics Management</h2>
+                <button
+                  onClick={handleAddSubtopic}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  Add Subtopic
+                </button>
+              </div>
+
+              {/* Add Subtopic Form */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-medium mb-4">Add New Subtopic</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Topic *
+                    </label>
+                    <select
+                      value={newSubtopic.topicId}
+                      onChange={(e) => setNewSubtopic({ ...newSubtopic, topicId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a topic</option>
+                      {topics.map((topic) => (
+                        <option key={topic.id} value={topic.id}>
+                          {topic.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newSubtopic.title}
+                      onChange={(e) => setNewSubtopic({ ...newSubtopic, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter subtopic title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={newSubtopic.description}
+                      onChange={(e) => setNewSubtopic({ ...newSubtopic, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter subtopic description"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Subtopics List */}
+              <div className="space-y-6">
+                {topics.map((topic) => {
+                  const topicSubtopics = subtopics.filter(s => s.topicId === topic.id)
+                  if (topicSubtopics.length === 0) return null
+                  
+                  return (
+                    <div key={topic.id} className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-2">
+                        {topic.title}
+                      </h3>
+                      <div className="space-y-3 ml-4">
+                        {topicSubtopics.map((subtopic) => (
+                          <div key={subtopic.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      {editingSubtopic && editingSubtopic.id === subtopic.id ? (
+                        <div className="space-y-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                          <h3 className="text-lg font-medium text-blue-900">
+                            Edit Subtopic: {subtopic.title} (ID: {subtopic.id})
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Topic *
+                              </label>
+                              <select
+                                value={editSubtopic.topicId}
+                                onChange={(e) => setEditSubtopic({ ...editSubtopic, topicId: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select a topic</option>
+                                {topics.map((topic) => (
+                                  <option key={topic.id} value={topic.id}>
+                                    {topic.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Title *
+                              </label>
+                              <input
+                                type="text"
+                                value={editSubtopic.title}
+                                onChange={(e) => setEditSubtopic({ ...editSubtopic, title: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Description
+                              </label>
+                              <input
+                                type="text"
+                                value={editSubtopic.description}
+                                onChange={(e) => setEditSubtopic({ ...editSubtopic, description: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={handleUpdateSubtopic}
+                              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                            >
+                              Update Subtopic
+                            </button>
+                            <button
+                              onClick={() => setEditingSubtopic(null)}
+                              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {subtopic.title} (ID: {subtopic.id.slice(-4)})
+                            </h3>
+                            <p className="text-gray-600 mt-1">{subtopic.description}</p>
+                            <p className="text-sm text-gray-500 mt-1">Under: {topic?.title || 'Unknown Topic'}</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                console.log('Editing subtopic:', subtopic.id, subtopic.title)
+                                setEditingSubtopic(subtopic)
+                                setEditSubtopic({ 
+                                  title: subtopic.title, 
+                                  description: subtopic.description, 
+                                  topicId: subtopic.topicId, 
+                                  isActive: subtopic.isActive 
+                                })
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                console.log('Delete button clicked for subtopic:', subtopic.id, subtopic.title)
+                                handleDeleteSubtopic(subtopic.id)
+                              }}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* KPIs Tab */}
+          {activeTab === 'kpis' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">KPIs Management</h2>
+              </div>
+
+              {/* Add KPI Form */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-medium mb-4">Add New KPI</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subtopic *
+                    </label>
+                    <select
+                      value={newKPI.subtopicId}
+                      onChange={(e) => setNewKPI({ ...newKPI, subtopicId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a subtopic</option>
+                      {subtopics.map((subtopic) => {
+                        const topic = topics.find(t => t.id === subtopic.topicId)
+                        return (
+                          <option key={subtopic.id} value={subtopic.id}>
+                            {topic?.title} - {subtopic.title}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      KPI Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newKPI.name}
+                      onChange={(e) => setNewKPI({ ...newKPI, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter KPI name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Essential
+                    </label>
+                    <select
+                      value={newKPI.isEssential.toString()}
+                      onChange={(e) => setNewKPI({ ...newKPI, isEssential: e.target.value === 'true' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleAddKPI}
+                      className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                    >
+                      Add KPI
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPIs List */}
+              <div className="space-y-6">
+                {topics.map((topic) => {
+                  const topicSubtopics = subtopics.filter(s => s.topicId === topic.id)
+                  const topicKPIs = kpis.filter(k => topicSubtopics.some(st => st.id === k.subtopicId))
+                  if (topicKPIs.length === 0) return null
+                  
+                  return (
+                    <div key={topic.id} className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-2">
+                        {topic.title}
+                      </h3>
+                      <div className="space-y-4 ml-4">
+                        {topicSubtopics.map((subtopic) => {
+                          const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id)
+                          if (subtopicKPIs.length === 0) return null
+                          
+                          return (
+                            <div key={subtopic.id} className="space-y-2">
+                              <h4 className="text-md font-medium text-gray-700 border-l-2 border-gray-300 pl-3">
+                                {subtopic.title}
+                              </h4>
+                              <div className="space-y-2 ml-4">
+                                {subtopicKPIs.map((kpi) => (
+                                  <div key={kpi.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      {editingKPI?.id === kpi.id ? (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium">Edit KPI: {kpi.name}</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Subtopic *
+                              </label>
+                              <select
+                                value={editKPI.subtopicId}
+                                onChange={(e) => setEditKPI({ ...editKPI, subtopicId: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select a subtopic</option>
+                                {subtopics.map((subtopic) => {
+                                  const topic = topics.find(t => t.id === subtopic.topicId)
+                                  return (
+                                    <option key={subtopic.id} value={subtopic.id}>
+                                      {topic?.title} - {subtopic.title}
+                                    </option>
+                                  )
+                                })}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                KPI Name *
+                              </label>
+                              <input
+                                type="text"
+                                value={editKPI.name}
+                                onChange={(e) => setEditKPI({ ...editKPI, name: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Essential
+                              </label>
+                              <select
+                                value={editKPI.isEssential.toString()}
+                                onChange={(e) => setEditKPI({ ...editKPI, isEssential: e.target.value === 'true' })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                              </select>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={handleUpdateKPI}
+                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                              >
+                                Update
+                              </button>
+                              <button
+                                onClick={() => setEditingKPI(null)}
+                                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">{kpi.name}</h3>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {topic?.title} - {subtopic?.title}
+                            </p>
+                            <span className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
+                              kpi.isEssential ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {kpi.isEssential ? 'Essential' : 'Non-essential'}
+                            </span>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                setEditingKPI(kpi)
+                                setEditKPI({ name: kpi.name, isEssential: kpi.isEssential, topicId: kpi.topicId, subtopicId: kpi.subtopicId })
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteKPI(kpi.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Questions Tab */}
+          {activeTab === 'questions' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Questions Management</h2>
+                <div className="flex space-x-3">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelImport}
+                    className="hidden"
+                    id="excel-import"
+                  />
+                  <label
+                    htmlFor="excel-import"
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
+                  >
+                    Import Excel
+                  </label>
+                  <button
+                    onClick={handleAddQuestion}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  >
+                    Add Question
+                  </button>
+                </div>
+              </div>
+
+              {/* Excel Import Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-medium text-blue-900 mb-2">Excel Import Format</h3>
+                <p className="text-sm text-blue-800 mb-2">
+                  Upload an Excel file with the following columns:
+                </p>
+                <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
+                  <li><strong>topic</strong> - Main topic name (will be created if doesn't exist)</li>
+                  <li><strong>topic_description</strong> - Description for the topic (optional)</li>
+                  <li><strong>subtopic</strong> - Subtopic name (will be created if doesn't exist)</li>
+                  <li><strong>question</strong> - The question prompt</li>
+                  <li><strong>kpis</strong> - KPI names separated by semicolons (;)</li>
+                  <li><strong>example_answer</strong> - Sample answer for training (optional)</li>
+                  <li><strong>evaluation_detected</strong> - KPIs found in the answer (optional)</li>
+                  <li><strong>evaluation_missing</strong> - KPIs missing from the answer (optional)</li>
+                  <li><strong>score</strong> - Score 0-3 for the example answer (optional)</li>
+                  <li><strong>evaluation_criteria</strong> - Feedback/coaching notes (optional)</li>
+                </ul>
+                <p className="text-sm text-blue-800 mt-2">
+                  <strong>Structure:</strong> Each subtopic should have multiple questions. All questions within a subtopic will share the same KPIs.
+                </p>
+              </div>
+
+              {/* Add Question Form */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-medium mb-4">Add New Question</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subtopic *
+                    </label>
+                    <select
+                      value={newQuestion.subtopicId}
+                      onChange={(e) => {
+                        const selectedSubtopic = subtopics.find(s => s.id === e.target.value)
+                        setNewQuestion({ 
+                          ...newQuestion, 
+                          subtopicId: e.target.value,
+                          topicId: selectedSubtopic?.topicId || ''
+                        })
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select a subtopic</option>
+                      {subtopics.map((subtopic) => {
+                        const topic = topics.find(t => t.id === subtopic.topicId)
+                        return (
+                          <option key={subtopic.id} value={subtopic.id}>
+                            {topic?.title} - {subtopic.title}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Question Prompt *
+                    </label>
+                    <textarea
+                      value={newQuestion.prompt}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, prompt: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                      placeholder="Enter the question prompt"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Connect KPIs
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                      {kpis
+                        .filter(k => k.subtopicId === newQuestion.subtopicId)
+                        .map((kpi) => (
+                          <label key={kpi.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={newQuestion.connectedKPIs.includes(kpi.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewQuestion({
+                                    ...newQuestion,
+                                    connectedKPIs: [...newQuestion.connectedKPIs, kpi.id]
+                                  })
+                                } else {
+                                  setNewQuestion({
+                                    ...newQuestion,
+                                    connectedKPIs: newQuestion.connectedKPIs.filter(id => id !== kpi.id)
+                                  })
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">{kpi.name}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions List */}
+              <div className="space-y-4">
+                {questions.map((question) => {
+                  const subtopic = subtopics.find(s => s.id === question.subtopicId)
+                  const topic = topics.find(t => t.id === subtopic?.topicId)
+                  return (
+                    <div key={question.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      {editingQuestion?.id === question.id ? (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium">Edit Question</h3>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Subtopic *
+                              </label>
+                              <select
+                                value={editQuestion.subtopicId}
+                                onChange={(e) => setEditQuestion({ ...editQuestion, subtopicId: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select a subtopic</option>
+                                {subtopics.map((subtopic) => {
+                                  const topic = topics.find(t => t.id === subtopic.topicId)
+                                  return (
+                                    <option key={subtopic.id} value={subtopic.id}>
+                                      {topic?.title} - {subtopic.title}
+                                    </option>
+                                  )
+                                })}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Question Prompt *
+                              </label>
+                              <textarea
+                                value={editQuestion.prompt}
+                                onChange={(e) => setEditQuestion({ ...editQuestion, prompt: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                rows={3}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Connect KPIs
+                              </label>
+                              <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                                {kpis
+                                  .filter(k => k.subtopicId === editQuestion.subtopicId)
+                                  .map((kpi) => (
+                                    <label key={kpi.id} className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={editQuestion.connectedKPIs.includes(kpi.id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setEditQuestion({
+                                              ...editQuestion,
+                                              connectedKPIs: [...editQuestion.connectedKPIs, kpi.id]
+                                            })
+                                          } else {
+                                            setEditQuestion({
+                                              ...editQuestion,
+                                              connectedKPIs: editQuestion.connectedKPIs.filter(id => id !== kpi.id)
+                                            })
+                                          }
+                                        }}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm">{kpi.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={handleUpdateQuestion}
+                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                              >
+                                Update Question
+                              </button>
+                              <button
+                                onClick={() => setEditingQuestion(null)}
+                                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-medium text-gray-900">{question.prompt}</h3>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {topic?.title} - {subtopic?.title}
+                            </p>
+                            <div className="mt-2">
+                              <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                question.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {question.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            {question.connectedKPIs.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-sm text-gray-600">Connected KPIs:</p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {question.connectedKPIs.map((kpiId) => {
+                                    const kpi = kpis.find(k => k.id === kpiId)
+                                    return kpi ? (
+                                      <span key={kpiId} className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                                        {kpi.name}
+                                      </span>
+                                    ) : null
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => {
+                                setEditingQuestion(question)
+                                setEditQuestion({
+                                  prompt: question.prompt,
+                                  topicId: question.topicId,
+                                  subtopicId: question.subtopicId || '',
+                                  connectedKPIs: question.connectedKPIs,
+                                  isActive: question.isActive
+                                })
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuestion(question.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Other tabs placeholder */}
+          {activeTab === 'sample-answers' && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Sample Answers</h2>
+              <p className="text-gray-600">Sample answers management will be implemented here.</p>
+            </div>
+          )}
+
+          {activeTab === 'training-examples' && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Training Examples</h2>
+              <p className="text-gray-600">Training examples management will be implemented here.</p>
+            </div>
+          )}
+
+          {activeTab === 'company-codes' && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Company Codes</h2>
+              <p className="text-gray-600">Company codes management will be implemented here.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default AdminConsole
+
+

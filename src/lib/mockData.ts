@@ -1,0 +1,237 @@
+import { Topic, Question, KPI, CompanyCode, UserProfile, Subtopic, SampleAnswer, TrainingExample } from '../types'
+
+export const mockSubtopics: Subtopic[] = [
+  {
+    id: 'subtopic_1',
+    title: 'Project Scheduling',
+    description: 'Creating and managing project schedules',
+    isActive: true,
+    topicId: '1',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'subtopic_2',
+    title: 'Resource Management',
+    description: 'Managing project resources effectively',
+    isActive: true,
+    topicId: '1',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'subtopic_3',
+    title: 'Risk Identification',
+    description: 'Identifying potential project risks',
+    isActive: true,
+    topicId: '2',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockTopics: Topic[] = [
+  {
+    id: '1',
+    title: 'Project Planning and Control',
+    description: 'Fundamentals of project planning, scheduling, and control mechanisms',
+    isActive: true,
+    subtopics: mockSubtopics.filter(s => s.topicId === '1'),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    title: 'Risk Management',
+    description: 'Identifying, assessing, and managing project risks effectively',
+    isActive: true,
+    subtopics: mockSubtopics.filter(s => s.topicId === '2'),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockQuestions: Question[] = [
+  {
+    id: '1',
+    topicId: '1',
+    subtopicId: 'subtopic_1',
+    prompt: 'Describe the key components of a project charter and explain how it contributes to project success.',
+    isActive: true,
+    connectedKPIs: ['1', '2'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    topicId: '1',
+    subtopicId: 'subtopic_1',
+    prompt: 'Explain the difference between Gantt charts and PERT diagrams. When would you use each?',
+    isActive: true,
+    connectedKPIs: ['3'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '3',
+    topicId: '2',
+    subtopicId: 'subtopic_3',
+    prompt: 'Outline a comprehensive risk management process for a software development project.',
+    isActive: true,
+    connectedKPIs: ['4', '5'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockKPIs: KPI[] = [
+  {
+    id: '1',
+    topicId: '1',
+    subtopicId: 'subtopic_1',
+    name: 'Project Charter',
+    isEssential: true,
+    connectedQuestions: ['1'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    topicId: '1',
+    subtopicId: 'subtopic_2',
+    name: 'Work Breakdown Structure',
+    isEssential: true,
+    connectedQuestions: ['1'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '3',
+    topicId: '1',
+    subtopicId: 'subtopic_1',
+    name: 'Schedule Management',
+    isEssential: true,
+    connectedQuestions: ['2'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '4',
+    topicId: '2',
+    subtopicId: 'subtopic_3',
+    name: 'Risk Identification',
+    isEssential: true,
+    connectedQuestions: ['3'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '5',
+    topicId: '2',
+    subtopicId: 'subtopic_3',
+    name: 'Risk Mitigation',
+    isEssential: true,
+    connectedQuestions: ['3'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockCompanyCodes: CompanyCode[] = [
+  {
+    id: '1',
+    code: 'ACME001',
+    companyName: 'Acme Corporation',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    code: 'TECH002',
+    companyName: 'Tech Solutions Ltd',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '3',
+    code: 'CONS003',
+    companyName: 'Consulting Partners',
+    isActive: false,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockSampleAnswers: SampleAnswer[] = [
+  {
+    id: 'sample_1',
+    questionId: '1',
+    answer: 'A project charter is a formal document that authorizes the existence of a project and provides the project manager with the authority to apply organizational resources to project activities. Key components include: project purpose/justification, measurable project objectives, high-level requirements, project description, high-level risks, summary milestone schedule, summary budget, stakeholder list, project approval requirements, assigned project manager, and authorization.',
+    quality: 3,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'sample_2',
+    questionId: '1',
+    answer: 'Project charter has objectives and scope. It helps start the project.',
+    quality: 0,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockTrainingExamples: TrainingExample[] = [
+  {
+    id: 'training_1',
+    questionId: '1',
+    sampleAnswer: 'A project charter is a formal document that authorizes the existence of a project and provides the project manager with the authority to apply organizational resources to project activities. Key components include: project purpose/justification, measurable project objectives, high-level requirements, project description, high-level risks, summary milestone schedule, summary budget, stakeholder list, project approval requirements, assigned project manager, and authorization.',
+    score: 3,
+    feedback: 'Excellent answer! You clearly identified all key components of a project charter and explained how it contributes to project success by providing authorization and clear objectives.',
+    language: 'en',
+    detectedKPIs: ['1', '2'],
+    missingKPIs: [],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'training_2',
+    questionId: '1',
+    sampleAnswer: 'Project charter has objectives and scope. It helps start the project.',
+    score: 1,
+    feedback: 'Your answer is too brief and lacks detail. A project charter includes many more components like measurable objectives, high-level requirements, risks, milestone schedule, budget, stakeholder list, and authorization. Please provide more comprehensive coverage.',
+    language: 'en',
+    detectedKPIs: ['1'],
+    missingKPIs: ['2'],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
+
+export const mockUserProfiles: UserProfile[] = [
+  {
+    id: '1',
+    email: 'admin@example.com',
+    role: 'admin',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    email: 'trainer@example.com',
+    role: 'trainer',
+    companyCode: 'ACME001',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '3',
+    email: 'user@example.com',
+    role: 'user',
+    companyCode: 'TECH002',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
