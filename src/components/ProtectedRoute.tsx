@@ -34,7 +34,7 @@ export const ProtectedRoute = ({
       admin: '/admin',
       trainer: '/coach/dashboard',
       trainee: '/trainee/dashboard',
-      user: '/app/home',
+      user: '/user/dashboard',
     }
     return <Navigate to={roleRedirects[user.role]} replace />
   }

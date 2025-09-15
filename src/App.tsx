@@ -67,6 +67,14 @@ function AppContent() {
 
         {/* Protected User Routes */}
         <Route
+          path="/user/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <UserHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/home"
           element={
             <ProtectedRoute allowedRoles={['user']}>
@@ -83,10 +91,26 @@ function AppContent() {
           }
         />
         <Route
+          path="/user/history"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <UserHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/app/history"
           element={
             <ProtectedRoute allowedRoles={['user']}>
               <UserHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/exam-selection"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <ExamSelection />
             </ProtectedRoute>
           }
         />
@@ -99,10 +123,26 @@ function AppContent() {
           }
         />
         <Route
+          path="/user/exam/:topicId"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <Exam />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/exam/:attemptId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
               <Exam />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/exam-results/:attemptId"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <ExamResults />
             </ProtectedRoute>
           }
         />
