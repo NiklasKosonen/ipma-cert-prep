@@ -8,12 +8,13 @@ import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluation
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
   const { 
-    topics, subtopics, kpis, questions, trainingExamples,
+    topics, subtopics, kpis, questions, trainingExamples, companyCodes,
     addTopic, updateTopic, deleteTopic,
     addSubtopic, updateSubtopic, deleteSubtopic,
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
+    addCompanyCode, updateCompanyCode, deleteCompanyCode,
   } = useData()
 
   const [activeTab, setActiveTab] = useState('topics')
@@ -32,6 +33,17 @@ const AdminConsole: React.FC = () => {
   })
   const [editingTrainingExample, setEditingTrainingExample] = useState<string | null>(null)
   const [editTrainingExample, setEditTrainingExample] = useState<Partial<TrainingExample>>({})
+  
+  // Company Code states
+  const [newCompanyCode, setNewCompanyCode] = useState<Partial<CompanyCode>>({
+    code: '',
+    companyName: '',
+    maxUsers: 1,
+    expiresAt: '',
+    isActive: true
+  })
+  const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
+  const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({})
   
   // AI Evaluation Rules state
   const [evaluationRules, setEvaluationRules] = useState<EvaluationRule[]>([
@@ -86,6 +98,51 @@ const AdminConsole: React.FC = () => {
   const handleDeleteTrainingExample = (id: string) => {
     if (confirm('Haluatko varmasti poistaa tämän harjoitusesimerkin?')) {
       deleteTrainingExample(id)
+    }
+  }
+
+  // Company Code handlers
+  const handleAddCompanyCode = () => {
+    if (newCompanyCode.code && newCompanyCode.companyName) {
+      addCompanyCode({
+        id: `company_${Date.now()}`,
+        code: newCompanyCode.code,
+        companyName: newCompanyCode.companyName,
+        maxUsers: newCompanyCode.maxUsers || 1,
+        expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      setNewCompanyCode({
+        code: '',
+        companyName: '',
+        maxUsers: 1,
+        expiresAt: '',
+        isActive: true
+      })
+    }
+  }
+
+  const handleEditCompanyCode = (id: string) => {
+    const companyCode = companyCodes.find(cc => cc.id === id)
+    if (companyCode) {
+      setEditingCompanyCode(id)
+      setEditCompanyCode(companyCode)
+    }
+  }
+
+  const handleUpdateCompanyCode = () => {
+    if (editingCompanyCode && editCompanyCode) {
+      updateCompanyCode(editingCompanyCode, editCompanyCode)
+      setEditingCompanyCode(null)
+      setEditCompanyCode({})
+    }
+  }
+
+  const handleDeleteCompanyCode = (id: string) => {
+    if (confirm('Haluatko varmasti poistaa tämän yrityskoodin?')) {
+      deleteCompanyCode(id)
     }
   }
 
@@ -354,7 +411,6 @@ const AdminConsole: React.FC = () => {
               { id: 'subtopics', label: t('subtopics') },
               { id: 'kpis', label: t('kpis') },
               { id: 'questions', label: t('questions') },
-              { id: 'sample-answers', label: t('sampleAnswers') },
               { id: 'training-examples', label: t('trainingExamples') },
               { id: 'company-codes', label: t('companyCodes') },
               { id: 'email-config', label: t('emailConfig') },
@@ -1163,12 +1219,6 @@ const AdminConsole: React.FC = () => {
           )}
 
           {/* Other tabs placeholder */}
-          {activeTab === 'sample-answers' && (
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Sample Answers</h2>
-              <p className="text-gray-600">Sample answers management will be implemented here.</p>
-            </div>
-          )}
 
           {activeTab === 'training-examples' && (
             <div className="p-6">
@@ -1191,11 +1241,15 @@ const AdminConsole: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Valitse kysymys</option>
-                      {questions.map(question => (
-                        <option key={question.id} value={question.id}>
-                          {question.prompt}
-                        </option>
-                      ))}
+                      {questions.map(question => {
+                        const subtopic = subtopics.find(s => s.id === question.subtopicId)
+                        const topic = topics.find(t => t.id === subtopic?.topicId)
+                        return (
+                          <option key={question.id} value={question.id}>
+                            {topic?.title} → {subtopic?.title} → {question.prompt}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
 
@@ -1289,12 +1343,17 @@ const AdminConsole: React.FC = () => {
                     <div className="space-y-4">
                       {trainingExamples.map((example) => {
                         const question = questions.find(q => q.id === example.questionId)
+                        const subtopic = subtopics.find(s => s.id === question?.subtopicId)
+                        const topic = topics.find(t => t.id === subtopic?.topicId)
                         const selectedKPIs = kpis.filter(kpi => example.detectedKPIs.includes(kpi.id))
                         
                         return (
                           <div key={example.id} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
+                                <div className="text-sm text-blue-600 mb-1">
+                                  {topic?.title} → {subtopic?.title}
+                                </div>
                                 <h4 className="font-medium text-gray-900 mb-2">
                                   {question?.prompt || 'Kysymys ei löytynyt'}
                                 </h4>
@@ -1363,8 +1422,166 @@ const AdminConsole: React.FC = () => {
 
           {activeTab === 'company-codes' && (
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Company Codes</h2>
-              <p className="text-gray-600">Company codes management will be implemented here.</p>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">{t('companyCodes')}</h2>
+              </div>
+
+              {/* Add Company Code Form */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Lisää yrityskoodi</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yrityskoodi *
+                    </label>
+                    <input
+                      type="text"
+                      value={newCompanyCode.code || ''}
+                      onChange={(e) => setNewCompanyCode({ ...newCompanyCode, code: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="esim. YRITYS2024"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yrityksen nimi *
+                    </label>
+                    <input
+                      type="text"
+                      value={newCompanyCode.companyName || ''}
+                      onChange={(e) => setNewCompanyCode({ ...newCompanyCode, companyName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="esim. Acme Corporation"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Maksimi käyttäjät *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newCompanyCode.maxUsers || 1}
+                      onChange={(e) => setNewCompanyCode({ ...newCompanyCode, maxUsers: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Viimeinen voimassaolopäivä
+                  </label>
+                  <input
+                    type="date"
+                    value={newCompanyCode.expiresAt || ''}
+                    onChange={(e) => setNewCompanyCode({ ...newCompanyCode, expiresAt: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button
+                    onClick={() => setNewCompanyCode({
+                      code: '',
+                      companyName: '',
+                      maxUsers: 1,
+                      expiresAt: '',
+                      isActive: true
+                    })}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    onClick={handleAddCompanyCode}
+                    disabled={!newCompanyCode.code || !newCompanyCode.companyName}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('add')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Company Codes List */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Yrityskoodit</h3>
+                  
+                  {companyCodes.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">Ei yrityskoodeja vielä lisätty</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Koodi
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Yritys
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Max käyttäjät
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Viimeinen päivä
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Toiminnot
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {companyCodes.map((code) => (
+                            <tr key={code.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {code.code}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {code.companyName}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {code.maxUsers}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(code.expiresAt).toLocaleDateString('fi-FI')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {code.isActive ? 'Aktiivinen' : 'Poistettu käytöstä'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button
+                                  onClick={() => handleEditCompanyCode(code.id)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  {t('edit')}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteCompanyCode(code.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  {t('delete')}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

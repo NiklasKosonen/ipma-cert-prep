@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { LogOut, User, Globe } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../contexts/LanguageContext'
-import { languages } from '../contexts/LanguageContext'
 
 export const Header = () => {
   const { user, signOut } = useAuth()
@@ -11,6 +10,11 @@ export const Header = () => {
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+  
+  const languages = [
+    { code: 'fi', name: 'Suomi' },
+    { code: 'en', name: 'English' }
+  ]
 
   const handleSignOut = async () => {
     await signOut()
@@ -18,8 +22,8 @@ export const Header = () => {
     setShowUserMenu(false)
   }
 
-  const handleLanguageChange = (newLanguage: typeof language) => {
-    setLanguage(newLanguage)
+  const handleLanguageChange = (newLanguage: { code: string; name: string }) => {
+    setLanguage(newLanguage.code as 'fi' | 'en')
     setShowLanguageMenu(false)
   }
 
@@ -70,10 +74,9 @@ export const Header = () => {
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang)}
                       className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 flex items-center space-x-3 transition-colors ${
-                        language.code === lang.code ? 'bg-primary-50 text-primary-800 font-semibold' : 'text-gray-700'
+                        language === lang.code ? 'bg-primary-50 text-primary-800 font-semibold' : 'text-gray-700'
                       }`}
                     >
-                      <span className="text-lg">{lang.flag}</span>
                       <span>{lang.name}</span>
                     </button>
                   ))}

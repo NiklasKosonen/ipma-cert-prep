@@ -38,7 +38,6 @@ export const FINNISH_TRANSLATIONS = {
   grade2: '2 pistettä = 2 KPI',
   grade3: '3 pistettä = ≥3 KPI',
   submitForEvaluation: 'Lähetä arvioitavaksi',
-  aiEvaluation: 'AI Arviointi',
   evaluationRules: 'Arviointisäännöt',
   
   // AI Evaluation Rules
@@ -122,7 +121,6 @@ export const ENGLISH_TRANSLATIONS = {
   grade2: '2 points = 2 KPIs',
   grade3: '3 points = ≥3 KPIs',
   submitForEvaluation: 'Submit for Evaluation',
-  aiEvaluation: 'AI Evaluation',
   evaluationRules: 'Evaluation Rules',
   
   // AI Evaluation Rules

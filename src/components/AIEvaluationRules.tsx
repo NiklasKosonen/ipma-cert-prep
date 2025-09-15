@@ -57,10 +57,22 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('evaluationRules')}</h3>
-        <p className="text-sm text-gray-600">{t('ruleDescription')}</p>
-      </div>
+        <div className="mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t('evaluationRules')}</h3>
+          <p className="text-sm text-gray-600 mb-4">{t('ruleDescription')}</p>
+          
+          {/* AI Evaluation Tips */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 className="text-md font-medium text-blue-900 mb-3">💡 AI Arviointivinkit</h4>
+            <div className="space-y-2 text-sm text-blue-800">
+              <p>• <strong>KPI:t eivät tarvitse olla kirjoitettu sanatarkasti</strong> - AI ymmärtää niiden olemassaolon vastauksen kontekstista</p>
+              <p>• <strong>Synonyymit ja liittyvät käsitteet</strong> lasketaan KPI:ksi jos ne liittyvät aiheeseen</p>
+              <p>• <strong>Implisiittiset viittaukset</strong> ovat yhtä arvokkaita kuin suorat maininnat</p>
+              <p>• <strong>Vastauksen laadun arviointi</strong> perustuu kokonaisuuteen, ei vain KPI-määrään</p>
+              <p>• <strong>Ymmärryksen taso</strong> näkyy vastauksen syvyydessä ja perustelujen laadussa</p>
+            </div>
+          </div>
+        </div>
 
       {/* Default Scoring Rules */}
       <div className="mb-6">
