@@ -237,9 +237,19 @@ export const useAuth = () => {
     }
   }, [session?.token, updateSessionActivity])
 
-  const signIn = async (email: string, _password: string, role: UserRole) => {
+  const signIn = async (email: string, password: string, role: UserRole) => {
     try {
-      // Mock authentication - accept any email/password
+      // Validate specific credentials
+      const validCredentials = {
+        email: 'niklas.kosonen@talentnetwork.fi',
+        password: 'Niipperi2026ipm#'
+      }
+      
+      if (email !== validCredentials.email || password !== validCredentials.password) {
+        return { data: null, error: 'Invalid email or password' }
+      }
+
+      // Create authenticated user
       const mockUser: AuthUser = {
         id: `user_${Date.now()}`,
         email,
