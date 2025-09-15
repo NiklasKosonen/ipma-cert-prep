@@ -12,6 +12,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.38.4",
     "clsx": "^2.0.0",
     "lucide-react": "^0.294.0",

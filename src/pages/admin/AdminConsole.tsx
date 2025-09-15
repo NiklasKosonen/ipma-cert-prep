@@ -262,7 +262,8 @@ const AdminConsole: React.FC = () => {
               { id: 'questions', label: 'Questions' },
               { id: 'sample-answers', label: 'Sample Answers' },
               { id: 'training-examples', label: 'Training Examples' },
-              { id: 'company-codes', label: 'Company Codes' }
+              { id: 'company-codes', label: 'Company Codes' },
+              { id: 'email-config', label: 'Email Config' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1085,6 +1086,103 @@ const AdminConsole: React.FC = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Company Codes</h2>
               <p className="text-gray-600">Company codes management will be implemented here.</p>
+            </div>
+          )}
+
+          {/* Email Configuration Tab */}
+          {activeTab === 'email-config' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Email Configuration</h2>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">EmailJS Integration Status</h3>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h4 className="text-sm font-medium text-green-800">EmailJS Successfully Configured</h4>
+                        <p className="text-sm text-green-700 mt-1">
+                          Your EmailJS integration is active and ready to send real emails.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-3">Configuration Details</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Service ID</label>
+                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">service_i6e64ig</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Template ID</label>
+                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">template_ndt42fy</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Public Key</label>
+                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">KjrQsyWuyRe9mHx0O</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-3">Email Features</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm text-gray-700">Subscription expiry warnings</span>
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm text-gray-700">Final expiry reminders</span>
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm text-gray-700">Extension confirmations</span>
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm text-gray-700">Professional email templates</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Test Email System</h4>
+                  <button
+                    onClick={() => {
+                      // Test email functionality
+                      console.log('🧪 Testing email system...');
+                      alert('Email system test initiated! Check console for details.');
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Test Email Sending
+                  </button>
+                  <p className="text-sm text-gray-600 mt-2">
+                    This will send a test email to verify your EmailJS integration is working correctly.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

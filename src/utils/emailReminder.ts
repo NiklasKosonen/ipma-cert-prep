@@ -1,4 +1,5 @@
 import { UserProfile, Subscription } from '../types';
+import { emailService } from '../services/emailService';
 
 export interface EmailTemplate {
   subject: string;
@@ -150,54 +151,30 @@ export const sendEmail = async (
   body: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> => {
   try {
-    // Simulate email sending delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use real email service
+    const result = await emailService.sendEmail({
+      to_email: to,
+      to_name: to.split('@')[0], // Extract name from email
+      subject: subject,
+      message: body,
+    });
     
-    // In development, just log the email
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📧 EMAIL SENT:', {
-        to,
-        subject,
-        body: body.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
-      });
-      
+    if (result.success) {
       return {
         success: true,
-        messageId: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        messageId: `email_${Date.now()}`,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Unknown error',
       };
     }
-
-    // In production, this would integrate with a real email service
-    // Example with SendGrid:
-    /*
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    
-    const msg = {
-      to,
-      from: 'noreply@ipma-prep.com',
-      subject,
-      text: body,
-      html: body.replace(/\n/g, '<br>')
-    };
-    
-    const response = await sgMail.send(msg);
-    return {
-      success: true,
-      messageId: response[0].headers['x-message-id']
-    };
-    */
-
-    return {
-      success: true,
-      messageId: `sent_${Date.now()}`
-    };
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('❌ Failed to send email:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
