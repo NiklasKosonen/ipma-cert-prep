@@ -34,6 +34,7 @@ export const FINNISH_TRANSLATIONS = {
   
   // Training Examples
   addTrainingExample: 'Lisää harjoitusesimerkki',
+  question: 'Kysymys',
   trainingExampleQuestion: 'Kysymys',
   exampleAnswer: 'Mallivastaus',
   selectKPIs: 'Valitse KPI:t',
@@ -169,7 +170,7 @@ export const FINNISH_TRANSLATIONS = {
   // Trainee dashboard translations
   totalStudents: 'Yhteensä opiskelijoita',
   totalExamAttempts: 'Yhteensä tenttisuorituksia',
-  averageScore: 'Keskiarvo',
+  traineeAverageScore: 'Keskiarvo',
   filters: 'Suodattimet',
   filterByTopic: 'Suodata aiheen mukaan',
   filterByStudent: 'Suodata opiskelijan mukaan',
@@ -209,6 +210,7 @@ export const ENGLISH_TRANSLATIONS = {
   
   // Training Examples
   addTrainingExample: 'Add Training Example',
+  question: 'Question',
   trainingExampleQuestion: 'Question',
   exampleAnswer: 'Example Answer',
   selectKPIs: 'Select KPIs',
@@ -344,7 +346,7 @@ export const ENGLISH_TRANSLATIONS = {
   // Trainee dashboard translations
   totalStudents: 'Total Students',
   totalExamAttempts: 'Total Exam Attempts',
-  averageScore: 'Average Score',
+  traineeAverageScore: 'Average Score',
   filters: 'Filters',
   filterByTopic: 'Filter by Topic',
   filterByStudent: 'Filter by Student',
