@@ -104,6 +104,48 @@ export const FINNISH_TRANSLATIONS = {
   score: 'Pisteet',
   feedback: 'Palaute',
   
+  // User Dashboard
+  chooseTopicPractice: 'Valitse aihe harjoittelemiseen ja paranna IPMA Level C -taitojasi.',
+  totalPractices: 'Yhteensä harjoituksia',
+  timeSpent: 'Käytetty aika',
+  averageScore: 'Keskipistemäärä',
+  active: 'Aktiivinen',
+  questionsAvailable: 'kysymystä saatavilla',
+  practice: 'Harjoittele',
+  exam: 'Tentti',
+  recentPracticeSessions: 'Viimeisimmät harjoitussessiot',
+  viewAll: 'Näytä kaikki',
+  excellent: 'Erinomainen',
+  good: 'Hyvä',
+  needsImprovement: 'Tarvitsee parannusta',
+  poor: 'Heikko',
+  
+  // Exam Instructions
+  examInstructions: 'Tentin ohjeet',
+  passingCriteria: 'Läpäisykriteerit',
+  examDuration: 'Tentin kesto',
+  minutesPerQuestion: 'minuuttia kysymystä kohti',
+  totalQuestions: 'Yhteensä kysymyksiä',
+  passingScore: 'Läpäisypistemäärä',
+  answerInstructions: 'Vastaa jokaiseen kysymykseen 3-5 lauseella tai luettelopisteinä.',
+  startExamButton: 'Aloita tentti',
+  examStructure: 'Tentin rakenne',
+  timeAllocation: 'Aikajakso',
+  answerFormat: 'Vastausmuoto',
+  navigation: 'Navigointi',
+  autoSubmit: 'Automaattinen lähetys',
+  chooseTopic: 'Valitse aihe',
+  subtopicsInExam: 'Aliaiheet tässä tentissä',
+  kpisRequired: '80% vaadituista KPI:ista',
+  totalPoints: '50% kokonaispisteistä',
+  
+  // Exam Flow
+  examInProgress: 'Tentti käynnissä',
+  question: 'Kysymys',
+  of: 'kysymyksestä',
+  submitAnswers: 'Lähetä vastaukset',
+  timeUp: 'Aika loppui!',
+  
   // Auth translations
   'auth.logout': 'Kirjaudu ulos',
   'auth.login': 'Kirjaudu sisään',
@@ -236,6 +278,39 @@ export const ENGLISH_TRANSLATIONS = {
   examCompleted: 'Exam Completed',
   score: 'Score',
   feedback: 'Feedback',
+  
+  // User Dashboard
+  chooseTopicPractice: 'Choose a topic to start practicing and improve your IPMA Level C skills.',
+  totalPractices: 'Total Practices',
+  timeSpent: 'Time Spent',
+  averageScore: 'Average Score',
+  active: 'Active',
+  questionsAvailable: 'questions available',
+  practice: 'Practice',
+  exam: 'Exam',
+  recentPracticeSessions: 'Recent Practice Sessions',
+  viewAll: 'View all',
+  excellent: 'Excellent',
+  good: 'Good',
+  needsImprovement: 'Needs Improvement',
+  poor: 'Poor',
+  
+  // Exam Instructions
+  examInstructions: 'Exam Instructions',
+  passingCriteria: 'Passing Criteria',
+  examDuration: 'Exam Duration',
+  minutesPerQuestion: 'minutes per question',
+  totalQuestions: 'Total Questions',
+  passingScore: 'Passing Score',
+  answerInstructions: 'Answer each question with 3-5 sentences or bullet points.',
+  startExamButton: 'Start Exam',
+  
+  // Exam Flow
+  examInProgress: 'Exam in Progress',
+  question: 'Question',
+  of: 'of',
+  submitAnswers: 'Submit Answers',
+  timeUp: 'Time\'s Up!',
   
   // Auth translations
   'auth.logout': 'Logout',

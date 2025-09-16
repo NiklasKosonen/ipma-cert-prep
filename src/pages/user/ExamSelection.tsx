@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const ExamSelection: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const { topics, subtopics, selectRandomQuestions, createAttempt } = useData()
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
 
@@ -39,36 +41,36 @@ const ExamSelection: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-6">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Start IPMA Certification Exam</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('startExam')}</h1>
           
           {/* Exam Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-blue-900 mb-4">Exam Instructions</h2>
+            <h2 className="text-xl font-semibold text-blue-900 mb-4">{t('examInstructions')}</h2>
             <div className="space-y-3 text-blue-800">
-              <p><strong>Exam Structure:</strong> One question per subtopic within your selected topic</p>
-              <p><strong>Time Allocation:</strong> 3 minutes per question (total: {examDuration} minutes)</p>
-              <p><strong>Answer Format:</strong> Answer each question with 3–5 sentences or bullet points</p>
-              <p><strong>Navigation:</strong> All questions are shown on one page - scroll to navigate</p>
-              <p><strong>Auto-Submit:</strong> Exam automatically submits when time runs out</p>
+              <p><strong>{t('examStructure')}:</strong> Yksi kysymys per aliaihe valitusta aiheesta</p>
+              <p><strong>{t('timeAllocation')}:</strong> 3 minuuttia kysymystä kohti (yhteensä: {examDuration} minuuttia)</p>
+              <p><strong>{t('answerFormat')}:</strong> {t('answerInstructions')}</p>
+              <p><strong>{t('navigation')}:</strong> Kaikki kysymykset näytetään yhdellä sivulla - selaa navigoidaksesi</p>
+              <p><strong>{t('autoSubmit')}:</strong> Tentti lähetetään automaattisesti kun aika loppuu</p>
             </div>
           </div>
 
           {/* Passing Criteria */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-green-900 mb-4">Passing Criteria</h2>
+            <h2 className="text-xl font-semibold text-green-900 mb-4">{t('passingCriteria')}</h2>
             <div className="space-y-2 text-green-800">
-              <p>✓ <strong>80% of required KPIs</strong> must be detected in your answers</p>
-              <p>✓ <strong>50% of total answer points</strong> must be achieved</p>
+              <p>✓ <strong>{t('kpisRequired')}</strong> on havaittava vastauksistasi</p>
+              <p>✓ <strong>{t('totalPoints')}</strong> on saavutettava</p>
             </div>
           </div>
 
           {/* Topic Selection */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Select Topic for Exam</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">{t('selectTopic')}</h2>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose a topic:
+{t('chooseTopic')}:
               </label>
               <select
                 value={selectedTopicId}
@@ -97,7 +99,7 @@ const ExamSelection: React.FC = () => {
                 <p className="text-gray-600 mb-4">{selectedTopic.description}</p>
                 
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900">Subtopics in this exam:</h4>
+                  <h4 className="font-medium text-gray-900">{t('subtopicsInExam')}:</h4>
                   <ul className="list-disc list-inside space-y-1 text-gray-600">
                     {topicSubtopics.map((subtopic) => (
                       <li key={subtopic.id}>{subtopic.title}</li>
@@ -124,7 +126,7 @@ const ExamSelection: React.FC = () => {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Start Exam
+{t('startExamButton')}
               </button>
             </div>
           </div>

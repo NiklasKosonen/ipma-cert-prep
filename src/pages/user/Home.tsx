@@ -32,7 +32,7 @@ export const UserHome = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{t('topics.title')}</h1>
           <p className="mt-2 text-gray-600">
-            Choose a topic to start practicing and improve your IPMA Level C skills.
+            {t('chooseTopicPractice')}
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export const UserHome = () => {
                 <Play className="h-8 w-8 text-primary-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Practices</p>
+                <p className="text-sm font-medium text-gray-500">{t('totalPractices')}</p>
                 <p className="text-2xl font-semibold text-gray-900">12</p>
               </div>
             </div>
@@ -56,7 +56,7 @@ export const UserHome = () => {
                 <Clock className="h-8 w-8 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Time Spent</p>
+                <p className="text-sm font-medium text-gray-500">{t('timeSpent')}</p>
                 <p className="text-2xl font-semibold text-gray-900">3h 24m</p>
               </div>
             </div>
@@ -68,7 +68,7 @@ export const UserHome = () => {
                 <BarChart3 className="h-8 w-8 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Average Score</p>
+                <p className="text-sm font-medium text-gray-500">{t('averageScore')}</p>
                 <p className="text-2xl font-semibold text-gray-900">2.4/3</p>
               </div>
             </div>
@@ -90,14 +90,14 @@ export const UserHome = () => {
                 </div>
                 <div className="ml-4">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Active
+                    {t('active')}
                   </span>
                 </div>
               </div>
               
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-500">
-                  3 questions available
+                  {t('questionsAvailable')}
                 </div>
                 <div className="flex space-x-2">
                   <Link
@@ -105,14 +105,14 @@ export const UserHome = () => {
                     className="btn-primary flex items-center space-x-1"
                   >
                     <Play className="w-4 h-4" />
-                    <span>Practice</span>
+                    <span>{t('practice')}</span>
                   </Link>
                   <Link
                     to={`/exam-selection?topic=${topic.id}`}
                     className="btn-secondary flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white"
                   >
                     <BarChart3 className="w-4 h-4" />
-                    <span>Exam</span>
+                    <span>{t('exam')}</span>
                   </Link>
                 </div>
               </div>
@@ -123,12 +123,12 @@ export const UserHome = () => {
         {/* Recent Attempts */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Practice Sessions</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t('recentPracticeSessions')}</h2>
             <Link
               to="/app/history"
               className="text-primary-600 hover:text-primary-500 font-medium"
             >
-              View all
+              {t('viewAll')}
             </Link>
           </div>
           
@@ -147,9 +147,9 @@ export const UserHome = () => {
                       Score: {attempt.score}/3
                     </div>
                     <div className="text-xs text-gray-500">
-                      {attempt.score === 3 ? 'Excellent' : 
-                       attempt.score === 2 ? 'Good' : 
-                       attempt.score === 1 ? 'Needs Improvement' : 'Poor'}
+                      {attempt.score === 3 ? t('excellent') : 
+                       attempt.score === 2 ? t('good') : 
+                       attempt.score === 1 ? t('needsImprovement') : t('poor')}
                     </div>
                   </div>
                   <div className={`w-3 h-3 rounded-full ${
