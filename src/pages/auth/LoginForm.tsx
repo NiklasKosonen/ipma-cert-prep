@@ -44,12 +44,15 @@ export const LoginForm = ({ role }: LoginFormProps) => {
     setError('')
 
     try {
-      const { error } = await signIn(email, password, role)
+      const { data, error } = await signIn(email, password, role)
       
       if (error) {
         setError(error)
-      } else {
+      } else if (data && data.user) {
+        // Successful login - navigate to the appropriate dashboard
         navigate(from, { replace: true })
+      } else {
+        setError('Login failed - please try again')
       }
     } catch (err) {
       setError('An unexpected error occurred')
