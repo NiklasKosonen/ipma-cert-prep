@@ -185,29 +185,33 @@ export const useAuth = () => {
 
         if (sessionToken && savedUser && validateSession(sessionToken)) {
           const userData = JSON.parse(savedUser)
-          const users = JSON.parse(localStorage.getItem('ipma_users') || '[]')
-          const userProfile = users.find((u: UserProfile) => u.id === userData.id)
+          const savedUserProfile = localStorage.getItem('auth_user_profile')
 
-          if (userProfile) {
+          if (savedUserProfile) {
+            const userProfile = JSON.parse(savedUserProfile)
             setUser(userData)
             setUserProfile(userProfile)
             setSession({ token: sessionToken } as UserSession)
             updateSessionActivity(sessionToken)
+            console.log('✅ Restored user session:', { email: userData.email, role: userData.role })
           } else {
             // Clear invalid session
             localStorage.removeItem('auth_user')
             localStorage.removeItem('auth_session_token')
+            localStorage.removeItem('auth_user_profile')
           }
         } else {
           // Clear expired session
           localStorage.removeItem('auth_user')
           localStorage.removeItem('auth_session_token')
+          localStorage.removeItem('auth_user_profile')
         }
       } catch (error) {
         console.error('❌ Auth initialization error:', error)
         // Clear any corrupted data
         localStorage.removeItem('auth_user')
         localStorage.removeItem('auth_session_token')
+        localStorage.removeItem('auth_user_profile')
       } finally {
         setLoading(false)
       }
@@ -262,6 +266,7 @@ export const useAuth = () => {
       // Save auth state
       localStorage.setItem('auth_user', JSON.stringify(mockUser))
       localStorage.setItem('auth_session_token', userSession.token)
+      localStorage.setItem('auth_user_profile', JSON.stringify(userProfile))
 
       console.log('✅ User signed in:', { email, role, sessionToken: userSession.token })
       
@@ -333,6 +338,7 @@ export const useAuth = () => {
       // Clear auth state
       localStorage.removeItem('auth_user')
       localStorage.removeItem('auth_session_token')
+      localStorage.removeItem('auth_user_profile')
 
       // Clear user-specific data (but keep global data)
       const userSpecificKeys = ['ipma_attempts', 'ipma_attempt_items']

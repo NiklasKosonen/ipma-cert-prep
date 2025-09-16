@@ -53,8 +53,13 @@ export const LoginForm = ({ role }: LoginFormProps) => {
         setError(error)
       } else if (data && data.user) {
         console.log('✅ Login successful, navigating to:', from)
-        // Successful login - navigate to the appropriate dashboard
-        navigate(from, { replace: true })
+        console.log('✅ User data:', data.user)
+        console.log('✅ From location:', from)
+        
+        // Add a small delay to ensure state is set
+        setTimeout(() => {
+          navigate(from, { replace: true })
+        }, 100)
       } else {
         console.log('❌ Login failed - no data or user')
         setError('Login failed - please try again')
