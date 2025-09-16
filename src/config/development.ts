@@ -4,7 +4,7 @@ export const DEVELOPMENT_CONFIG = {
   
   // Auto-login settings for development
   AUTO_LOGIN: {
-    enabled: true,
+    enabled: false, // Disabled to allow manual login testing
     adminEmail: 'admin@ipma-prep.com',
     adminPassword: 'admin123',
     adminName: 'Admin User',

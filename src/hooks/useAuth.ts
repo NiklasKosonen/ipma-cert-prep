@@ -269,6 +269,24 @@ export const useAuth = () => {
       localStorage.setItem('auth_session_token', userSession.token)
 
       console.log('✅ User signed in:', { email, role, sessionToken: userSession.token })
+      
+      // Get redirect path based on role
+      const getRedirectPath = (userRole: UserRole): string => {
+        switch (userRole) {
+          case 'admin': return '/admin'
+          case 'trainer': return '/coach/dashboard'
+          case 'trainee': return '/trainee/dashboard'
+          case 'user': return '/user/dashboard'
+          default: return '/'
+        }
+      }
+      
+      console.log('✅ Auth state set:', { 
+        user: mockUser, 
+        userProfile, 
+        session: userSession,
+        redirectPath: getRedirectPath(role)
+      })
 
       return { data: { user: mockUser }, error: null }
     } catch (error) {

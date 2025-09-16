@@ -44,17 +44,23 @@ export const LoginForm = ({ role }: LoginFormProps) => {
     setError('')
 
     try {
+      console.log('🔐 Attempting login:', { email, role, redirectTo: from })
       const { data, error } = await signIn(email, password, role)
+      console.log('🔐 Login response:', { data, error })
       
       if (error) {
+        console.log('❌ Login error:', error)
         setError(error)
       } else if (data && data.user) {
+        console.log('✅ Login successful, navigating to:', from)
         // Successful login - navigate to the appropriate dashboard
         navigate(from, { replace: true })
       } else {
+        console.log('❌ Login failed - no data or user')
         setError('Login failed - please try again')
       }
     } catch (err) {
+      console.log('❌ Login exception:', err)
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
