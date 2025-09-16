@@ -34,7 +34,7 @@ export const FINNISH_TRANSLATIONS = {
   
   // Training Examples
   addTrainingExample: 'Lisää harjoitusesimerkki',
-  question: 'Kysymys',
+  trainingExampleQuestion: 'Kysymys',
   exampleAnswer: 'Mallivastaus',
   selectKPIs: 'Valitse KPI:t',
   grade: 'Arvosana',
@@ -141,8 +141,8 @@ export const FINNISH_TRANSLATIONS = {
   
   // Exam Flow
   examInProgress: 'Tentti käynnissä',
-  question: 'Kysymys',
-  of: 'kysymyksestä',
+  examQuestion: 'Kysymys',
+  examOf: 'kysymyksestä',
   submitAnswers: 'Lähetä vastaukset',
   timeUp: 'Aika loppui!',
   
@@ -209,7 +209,7 @@ export const ENGLISH_TRANSLATIONS = {
   
   // Training Examples
   addTrainingExample: 'Add Training Example',
-  question: 'Question',
+  trainingExampleQuestion: 'Question',
   exampleAnswer: 'Example Answer',
   selectKPIs: 'Select KPIs',
   grade: 'Grade',
@@ -304,11 +304,20 @@ export const ENGLISH_TRANSLATIONS = {
   passingScore: 'Passing Score',
   answerInstructions: 'Answer each question with 3-5 sentences or bullet points.',
   startExamButton: 'Start Exam',
+  examStructure: 'Exam Structure',
+  timeAllocation: 'Time Allocation',
+  answerFormat: 'Answer Format',
+  navigation: 'Navigation',
+  autoSubmit: 'Auto Submit',
+  chooseTopic: 'Choose a topic',
+  subtopicsInExam: 'Subtopics in this exam',
+  kpisRequired: '80% of required KPIs',
+  totalPoints: '50% of total answer points',
   
   // Exam Flow
   examInProgress: 'Exam in Progress',
-  question: 'Question',
-  of: 'of',
+  examQuestion: 'Question',
+  examOf: 'of',
   submitAnswers: 'Submit Answers',
   timeUp: 'Time\'s Up!',
   
