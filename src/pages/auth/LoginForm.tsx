@@ -27,8 +27,10 @@ export const LoginForm = ({ role }: LoginFormProps) => {
         return '/admin'
       case 'trainer':
         return '/coach/dashboard'
+      case 'trainee':
+        return '/trainee/dashboard'
       case 'user':
-        return '/app/home'
+        return '/user/dashboard'
       default:
         return '/'
     }

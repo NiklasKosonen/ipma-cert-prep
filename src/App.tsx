@@ -61,6 +61,7 @@ function AppContent() {
         <Route path="/auth" element={<RolePicker />} />
         <Route path="/auth/user" element={<LoginForm role="user" />} />
         <Route path="/auth/trainer" element={<LoginForm role="trainer" />} />
+        <Route path="/auth/trainee" element={<LoginForm role="trainee" />} />
         <Route path="/auth/admin" element={<LoginForm role="admin" />} />
         <Route path="/auth/reset" element={<ResetPassword />} />
         <Route path="/auth/update-password" element={<UpdatePassword />} />
