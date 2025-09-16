@@ -958,12 +958,6 @@ const AdminConsole: React.FC = () => {
                   >
                     Import Excel
                   </label>
-                  <button
-                    onClick={handleAddQuestion}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                  >
-                    Add Question
-                  </button>
                 </div>
               </div>
 
@@ -1044,18 +1038,14 @@ const AdminConsole: React.FC = () => {
                         .map((kpi) => (
                           <label key={kpi.id} className="flex items-center space-x-2">
                             <input
-                              type="checkbox"
+                              type="radio"
+                              name="selectedKPI"
                               checked={newQuestion.connectedKPIs.includes(kpi.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setNewQuestion({
                                     ...newQuestion,
-                                    connectedKPIs: [...newQuestion.connectedKPIs, kpi.id]
-                                  })
-                                } else {
-                                  setNewQuestion({
-                                    ...newQuestion,
-                                    connectedKPIs: newQuestion.connectedKPIs.filter(id => id !== kpi.id)
+                                    connectedKPIs: [kpi.id] // Single selection only
                                   })
                                 }
                               }}
