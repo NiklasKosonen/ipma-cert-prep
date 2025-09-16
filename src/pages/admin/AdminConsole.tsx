@@ -257,12 +257,6 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleAddQuestion = () => {
-    if (newQuestion.prompt.trim() && newQuestion.subtopicId) {
-      addQuestion(newQuestion)
-      setNewQuestion({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [], isActive: true })
-    }
-  }
 
   const handleUpdateQuestion = () => {
     if (editingQuestion && editQuestion.prompt.trim()) {
