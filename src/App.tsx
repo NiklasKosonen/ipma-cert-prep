@@ -76,14 +76,6 @@ function AppContent() {
           }
         />
         <Route
-          path="/app/home"
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/practice/:topicId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
@@ -93,14 +85,6 @@ function AppContent() {
         />
         <Route
           path="/user/history"
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserHistory />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/app/history"
           element={
             <ProtectedRoute allowedRoles={['user']}>
               <UserHistory />
