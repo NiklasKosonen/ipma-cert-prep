@@ -239,14 +239,9 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string, role: UserRole) => {
     try {
-      // Validate specific credentials
-      const validCredentials = {
-        email: 'niklas.kosonen@talentnetwork.fi',
-        password: 'Niipperi2026ipm#'
-      }
-      
-      if (email !== validCredentials.email || password !== validCredentials.password) {
-        return { data: null, error: 'Invalid email or password' }
+      // Accept any valid email format and non-empty password
+      if (!email || !password || !email.includes('@') || password.length < 3) {
+        return { data: null, error: 'Please enter a valid email and password' }
       }
 
       // Create authenticated user
