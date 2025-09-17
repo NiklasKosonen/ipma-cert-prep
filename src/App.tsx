@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { Landing } from './pages/Landing'
 import { RolePicker } from './pages/auth/RolePicker'
 import { LoginForm } from './pages/auth/LoginForm'
+import { CompanyLogin } from './pages/auth/CompanyLogin'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { UpdatePassword } from './pages/auth/UpdatePassword'
 
@@ -62,6 +63,7 @@ function AppContent() {
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<RolePicker />} />
+        <Route path="/auth/company" element={<CompanyLogin />} />
         <Route path="/auth/user" element={<LoginForm role="user" />} />
         <Route path="/auth/trainer" element={<LoginForm role="trainer" />} />
         <Route path="/auth/trainee" element={<LoginForm role="trainee" />} />

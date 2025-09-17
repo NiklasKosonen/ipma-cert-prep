@@ -1,11 +1,19 @@
 import { Link } from 'react-router-dom'
-import { User, GraduationCap, Settings } from 'lucide-react'
+import { User, GraduationCap, Settings, Building2 } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 export const RolePicker = () => {
   const { t } = useLanguage()
 
   const roles = [
+    {
+      id: 'company',
+      title: 'Company Login',
+      description: 'Login with your company code',
+      icon: Building2,
+      path: '/auth/company',
+      color: 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100',
+    },
     {
       id: 'user',
       title: t('roleUser'),
@@ -54,7 +62,7 @@ export const RolePicker = () => {
             {t('rolePickerTitle')}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {roles.map((role) => {
               const Icon = role.icon
               return (
