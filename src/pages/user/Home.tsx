@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 
 export const UserHome = () => {
   const { t } = useLanguage()
-  const { topics, subtopics, getUserAttempts } = useData()
+  const { topics, subtopics, getUserAttempts, getAttemptItems } = useData()
   const { user } = useAuth()
   const navigate = useNavigate()
   
@@ -28,7 +28,7 @@ export const UserHome = () => {
   const averageScore = userAttempts.length > 0 
     ? userAttempts.reduce((sum, attempt) => {
         // Calculate score from attempt items
-        const attemptItems = attempt.items || []
+        const attemptItems = getAttemptItems(attempt.id)
         const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
         return sum + totalScore
       }, 0) / userAttempts.length 
@@ -50,7 +50,7 @@ export const UserHome = () => {
       const date = new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')
       
       // Calculate score from attempt items
-      const attemptItems = attempt.items || []
+      const attemptItems = getAttemptItems(attempt.id)
       const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
       
       return {
