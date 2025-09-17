@@ -75,6 +75,24 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        {/* Add the missing /app/home route */}
+        <Route
+          path="/app/home"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <UserHome />
+            </ProtectedRoute>
+          }
+        />
+        {/* Add the missing /app/history route */}
+        <Route
+          path="/app/history"
+          element={
+            <ProtectedRoute allowedRoles={['user']}>
+              <UserHistory />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/practice/:topicId"
           element={
@@ -187,6 +205,8 @@ function AppContent() {
                     ? '/admin'
                     : user.role === 'trainer'
                     ? '/coach/dashboard'
+                    : user.role === 'trainee'
+                    ? '/trainee/dashboard'
                     : '/app/home'
                 }
                 replace

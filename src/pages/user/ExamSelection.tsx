@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 
@@ -7,7 +7,16 @@ const ExamSelection: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useLanguage()
   const { topics, subtopics, selectRandomQuestions, createAttempt } = useData()
+  const [searchParams] = useSearchParams()
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
+
+  // Set initial topic from URL params
+  useEffect(() => {
+    const topicFromUrl = searchParams.get('topic')
+    if (topicFromUrl) {
+      setSelectedTopicId(topicFromUrl)
+    }
+  }, [searchParams])
 
   const handleStartExam = () => {
     if (!selectedTopicId) return
