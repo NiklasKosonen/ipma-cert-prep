@@ -15,6 +15,7 @@ const AdminConsole: React.FC = () => {
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
     addCompanyCode, deleteCompanyCode,
+    selectRandomQuestions,
   } = useData()
 
   const [activeTab, setActiveTab] = useState('topics')
@@ -410,6 +411,7 @@ const AdminConsole: React.FC = () => {
               { id: 'questions', label: t('questions') },
               { id: 'training-examples', label: t('trainingExamples') },
               { id: 'company-codes', label: t('companyCodes') },
+              { id: 'simulation', label: t('simulation') },
               { id: 'email-config', label: t('emailConfig') },
               { id: 'ai-evaluation', label: t('aiEvaluation') }
             ].map((tab) => (
@@ -1585,6 +1587,233 @@ const AdminConsole: React.FC = () => {
                 tips={aiTips}
                 onTipsChange={setAiTips}
               />
+            </div>
+          )}
+
+          {/* Simulation Tab */}
+          {activeTab === 'simulation' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">🧪 Simulation & Testing</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Simulation */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">👤 User Experience Simulation</h3>
+                  <p className="text-gray-600 mb-4">Test the complete user journey from login to exam completion</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        // Simulate user login and redirect to user dashboard
+                        window.open('/user/dashboard', '_blank')
+                      }}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      🏠 Test User Dashboard
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Simulate exam selection
+                        window.open('/exam-selection', '_blank')
+                      }}
+                      className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      📝 Test Exam Selection
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Simulate taking an exam
+                        const topicId = topics[0]?.id
+                        if (topicId) {
+                          window.open(`/exam?topicId=${topicId}`, '_blank')
+                        } else {
+                          alert('Please add topics first before testing exams')
+                        }
+                      }}
+                      className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                    >
+                      ⏱️ Test Exam Timer & Questions
+                    </button>
+                  </div>
+                </div>
+
+                {/* Trainee Dashboard Simulation */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">🎓 Trainee Dashboard Simulation</h3>
+                  <p className="text-gray-600 mb-4">Test the trainee analytics and progress tracking</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        // Simulate trainee dashboard
+                        window.open('/trainee/dashboard', '_blank')
+                      }}
+                      className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      📊 Test Trainee Dashboard
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Generate sample trainee data for testing
+                        const sampleData = {
+                          totalAttempts: 15,
+                          passedExams: 8,
+                          studyHours: 24.5,
+                          averageScore: 2.3,
+                          progressByTopic: [
+                            { topic: 'Project Planning', attempts: 5, passed: 3, avgScore: 2.1 },
+                            { topic: 'Risk Management', attempts: 4, passed: 2, avgScore: 1.8 },
+                            { topic: 'Quality Management', attempts: 6, passed: 3, avgScore: 2.6 }
+                          ]
+                        }
+                        localStorage.setItem('sampleTraineeData', JSON.stringify(sampleData))
+                        alert('Sample trainee data generated! Refresh trainee dashboard to see analytics.')
+                      }}
+                      className="w-full bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                    >
+                      📈 Generate Sample Analytics Data
+                    </button>
+                  </div>
+                </div>
+
+                {/* Exam System Testing */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">🎯 Exam System Testing</h3>
+                  <p className="text-gray-600 mb-4">Test exam generation, timing, and evaluation</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        // Test random question selection
+                        const topicId = topics[0]?.id
+                        if (topicId) {
+                          const topicSubtopics = subtopics.filter(s => s.topicId === topicId && s.isActive)
+                          const selectedQuestions = selectRandomQuestions(topicId)
+                          alert(`Topic: ${topics.find(t => t.id === topicId)?.title}\nSubtopics: ${topicSubtopics.length}\nSelected Questions: ${selectedQuestions.length}\nTotal Time: ${topicSubtopics.length * 3} minutes`)
+                        } else {
+                          alert('Please add topics and subtopics first')
+                        }
+                      }}
+                      className="w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 transition-colors"
+                    >
+                      🎲 Test Random Question Selection
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Test exam timer
+                        const testDuration = 5 // 5 minutes for testing
+                        const startTime = Date.now()
+                        const endTime = startTime + (testDuration * 60 * 1000)
+                        localStorage.setItem('testExamTimer', JSON.stringify({
+                          startTime,
+                          endTime,
+                          duration: testDuration,
+                          isActive: true
+                        }))
+                        alert(`Test timer started for ${testDuration} minutes. Check exam page to see timer in action.`)
+                      }}
+                      className="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      ⏰ Test Exam Timer (5 min)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Data Validation */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">✅ Data Validation</h3>
+                  <p className="text-gray-600 mb-4">Validate system data integrity and completeness</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        const validation = {
+                          topics: topics.length,
+                          activeTopics: topics.filter(t => t.isActive).length,
+                          subtopics: subtopics.length,
+                          activeSubtopics: subtopics.filter(s => s.isActive).length,
+                          kpis: kpis.length,
+                          questions: questions.length,
+                          activeQuestions: questions.filter(q => q.isActive).length,
+                          trainingExamples: trainingExamples.length,
+                          companyCodes: companyCodes.length
+                        }
+                        
+                        const issues = []
+                        if (validation.topics === 0) issues.push('No topics found')
+                        if (validation.activeTopics === 0) issues.push('No active topics')
+                        if (validation.subtopics === 0) issues.push('No subtopics found')
+                        if (validation.questions === 0) issues.push('No questions found')
+                        
+                        if (issues.length === 0) {
+                          alert(`✅ All systems operational!\n\nData Summary:\n- Topics: ${validation.topics} (${validation.activeTopics} active)\n- Subtopics: ${validation.subtopics} (${validation.activeSubtopics} active)\n- KPIs: ${validation.kpis}\n- Questions: ${validation.questions} (${validation.activeQuestions} active)\n- Training Examples: ${validation.trainingExamples}\n- Company Codes: ${validation.companyCodes}`)
+                        } else {
+                          alert(`⚠️ Issues found:\n${issues.join('\n')}\n\nPlease address these before testing exams.`)
+                        }
+                      }}
+                      className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      🔍 Validate System Data
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Export current data for backup
+                        const data = {
+                          topics,
+                          subtopics,
+                          kpis,
+                          questions,
+                          trainingExamples,
+                          companyCodes,
+                          exportDate: new Date().toISOString()
+                        }
+                        const dataStr = JSON.stringify(data, null, 2)
+                        const dataBlob = new Blob([dataStr], {type: 'application/json'})
+                        const url = URL.createObjectURL(dataBlob)
+                        const link = document.createElement('a')
+                        link.href = url
+                        link.download = `ipma-data-backup-${new Date().toISOString().split('T')[0]}.json`
+                        link.click()
+                        URL.revokeObjectURL(url)
+                        alert('Data backup exported successfully!')
+                      }}
+                      className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      💾 Export Data Backup
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="mt-8 bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">📊 System Overview</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{topics.length}</div>
+                    <div className="text-sm text-gray-600">Topics</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{subtopics.length}</div>
+                    <div className="text-sm text-gray-600">Subtopics</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{questions.length}</div>
+                    <div className="text-sm text-gray-600">Questions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">{trainingExamples.length}</div>
+                    <div className="text-sm text-gray-600">Training Examples</div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

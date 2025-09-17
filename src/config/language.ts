@@ -29,6 +29,7 @@ export const FINNISH_TRANSLATIONS = {
   sampleAnswers: 'Mallivastaukset',
   trainingExamples: 'Harjoitusesimerkit',
   companyCodes: 'Yrityskoodit',
+  simulation: 'Simulaatio',
   emailConfig: 'Sähköpostiasetukset',
   aiEvaluation: 'AI Arviointisäännöt',
   
@@ -205,6 +206,7 @@ export const ENGLISH_TRANSLATIONS = {
   sampleAnswers: 'Sample Answers',
   trainingExamples: 'Training Examples',
   companyCodes: 'Company Codes',
+  simulation: 'Simulation',
   emailConfig: 'Email Configuration',
   aiEvaluation: 'AI Evaluation Rules',
   

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
-// import { useLanguage } from '../../contexts/LanguageContext';
-import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare, Clock, Target, Award, AlertCircle } from 'lucide-react';
 
 export const TraineeDashboard: React.FC = () => {
-  // const { t } = useLanguage(); // Commented out to fix unused variable warning
+  const { t } = useLanguage();
   const { 
     topics, subtopics, questions, 
     users, getUserAttempts
@@ -12,6 +12,19 @@ export const TraineeDashboard: React.FC = () => {
 
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const [sampleData, setSampleData] = useState<any>(null);
+
+  // Load sample data from localStorage if available
+  useEffect(() => {
+    const stored = localStorage.getItem('sampleTraineeData');
+    if (stored) {
+      try {
+        setSampleData(JSON.parse(stored));
+      } catch (error) {
+        console.error('Error parsing sample data:', error);
+      }
+    }
+  }, []);
 
   // Get all student attempts
   const studentUsers = users.filter(u => u.role === 'user');
@@ -57,7 +70,7 @@ export const TraineeDashboard: React.FC = () => {
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Opiskelijat</p>
+                <p className="text-sm font-medium text-gray-600">{t('totalStudents')}</p>
                 <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
               </div>
             </div>
@@ -69,8 +82,8 @@ export const TraineeDashboard: React.FC = () => {
                 <BookOpen className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tenttisuoritukset</p>
-                <p className="text-2xl font-bold text-gray-900">{totalAttempts}</p>
+                <p className="text-sm font-medium text-gray-600">{t('totalExamAttempts')}</p>
+                <p className="text-2xl font-bold text-gray-900">{sampleData?.totalAttempts || totalAttempts}</p>
               </div>
             </div>
           </div>
@@ -81,8 +94,8 @@ export const TraineeDashboard: React.FC = () => {
                 <TrendingUp className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Keskiarvo</p>
-                <p className="text-2xl font-bold text-gray-900">{averageScore.toFixed(1)}%</p>
+                <p className="text-sm font-medium text-gray-600">{t('traineeAverageScore')}</p>
+                <p className="text-2xl font-bold text-gray-900">{sampleData?.averageScore || averageScore.toFixed(1)}</p>
               </div>
             </div>
           </div>
@@ -90,15 +103,133 @@ export const TraineeDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
+                <Clock className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Aiheita</p>
-                <p className="text-2xl font-bold text-gray-900">{topics.length}</p>
+                <p className="text-sm font-medium text-gray-600">Opiskelutunnit</p>
+                <p className="text-2xl font-bold text-gray-900">{sampleData?.studyHours || '0'}</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Enhanced Analytics Section */}
+        {sampleData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Progress Chart */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                Edistyminen aiheittain
+              </h3>
+              <div className="space-y-4">
+                {sampleData.progressByTopic?.map((topic: any, index: number) => {
+                  const passRate = (topic.passed / topic.attempts) * 100;
+                  return (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-medium text-gray-900">{topic.topic}</h4>
+                        <span className="text-sm text-gray-600">{topic.passed}/{topic.attempts} läpäisty</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${passRate}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Keskiarvo: {topic.avgScore}/3</span>
+                        <span>Läpäisyprosentti: {passRate.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Coaching Insights */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Target className="h-5 w-5 mr-2 text-green-600" />
+                Valmennusnäkökulmia
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <Award className="h-5 w-5 text-green-600 mr-2" />
+                    <h4 className="font-medium text-green-900">Keskimääräinen läpäisymäärä</h4>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Opiskelijat läpäisevät tentin keskimäärin {Math.round(sampleData.totalAttempts / sampleData.passedExams)} yrityksellä
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <Clock className="h-5 w-5 text-blue-600 mr-2" />
+                    <h4 className="font-medium text-blue-900">Opiskeluaika</h4>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Keskimääräinen opiskeluaika on {sampleData.studyHours} tuntia per opiskelija
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
+                    <h4 className="font-medium text-yellow-900">Kehitettävää</h4>
+                  </div>
+                  <p className="text-sm text-yellow-700">
+                    Risk Management -aihe vaatii enemmän harjoittelua (keskiarvo: {sampleData.progressByTopic?.find((t: any) => t.topic === 'Risk Management')?.avgScore}/3)
+                  </p>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <TrendingUp className="h-5 w-5 text-purple-600 mr-2" />
+                    <h4 className="font-medium text-purple-900">Suositus</h4>
+                  </div>
+                  <p className="text-sm text-purple-700">
+                    Lisää harjoitustehtäviä Risk Management -aiheeseen ja anna yksilöllistä ohjausta heikommille opiskelijoille
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sample Data Generator */}
+        {!sampleData && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-yellow-600 mr-3" />
+              <h3 className="text-lg font-medium text-yellow-900">Valmennusanalytiikkaa ei ole vielä</h3>
+            </div>
+            <p className="text-yellow-700 mb-4">
+              Luo esimerkkidata nähdäksesi analytiikkaa ja valmennusnäkökulmia. Tämä auttaa ymmärtämään, miten järjestelmä toimii valmennuksen yhteydessä.
+            </p>
+            <button
+              onClick={() => {
+                const sampleData = {
+                  totalAttempts: 15,
+                  passedExams: 8,
+                  studyHours: 24.5,
+                  averageScore: 2.3,
+                  progressByTopic: [
+                    { topic: 'Project Planning', attempts: 5, passed: 3, avgScore: 2.1 },
+                    { topic: 'Risk Management', attempts: 4, passed: 2, avgScore: 1.8 },
+                    { topic: 'Quality Management', attempts: 6, passed: 3, avgScore: 2.6 }
+                  ]
+                };
+                localStorage.setItem('sampleTraineeData', JSON.stringify(sampleData));
+                setSampleData(sampleData);
+              }}
+              className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+            >
+              Luo esimerkkidata
+            </button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">

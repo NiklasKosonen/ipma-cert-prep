@@ -46,11 +46,28 @@ const ExamSelection: React.FC = () => {
   const topicSubtopics = subtopics.filter(s => s.topicId === selectedTopicId && s.isActive)
   const examDuration = topicSubtopics.length * 3 // 3 minutes per subtopic
 
+  const handleGoBack = () => {
+    navigate('/app/home')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-6">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('startExam')}</h1>
+          {/* Header with go back button */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={handleGoBack}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Takaisin</span>
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">{t('startExam')}</h1>
+            <div></div> {/* Spacer for centering */}
+          </div>
           
           {/* Exam Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">

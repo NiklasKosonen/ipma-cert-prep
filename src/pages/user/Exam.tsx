@@ -207,6 +207,9 @@ const Exam: React.FC = () => {
                 {formatTime(timeRemaining)}
               </div>
               <p className="text-sm text-gray-500">
+                3min × {examQuestions.length} questions
+              </p>
+              <p className="text-xs text-gray-400">
                 {timeRemaining < 300 ? 'Time running out!' : 'Time remaining'}
               </p>
             </div>
