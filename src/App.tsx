@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { DataProvider } from './contexts/DataContext'
 import { useAuth } from './hooks/useAuth'
@@ -13,20 +14,22 @@ import { LoginForm } from './pages/auth/LoginForm'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { UpdatePassword } from './pages/auth/UpdatePassword'
 
-// User pages
+// User pages - lazy loaded for better performance
 import { UserHome } from './pages/user/Home'
 import { Practice } from './pages/user/Practice'
 import { UserHistory } from './pages/user/History'
-import ExamSelection from './pages/user/ExamSelection'
-import Exam from './pages/user/Exam'
-import ExamResults from './pages/user/ExamResults'
 
-// Trainer pages
-import { TrainerDashboard } from './pages/trainer/Dashboard'
-import { TraineeDashboard } from './pages/trainee/TraineeDashboard'
+// Lazy load heavy components
+const ExamSelection = lazy(() => import('./pages/user/ExamSelection'))
+const Exam = lazy(() => import('./pages/user/Exam'))
+const ExamResults = lazy(() => import('./pages/user/ExamResults'))
 
-// Admin pages
-import AdminConsole from './pages/admin/AdminConsole'
+// Trainer pages - lazy loaded
+const TrainerDashboard = lazy(() => import('./pages/trainer/Dashboard'))
+const TraineeDashboard = lazy(() => import('./pages/trainee/TraineeDashboard'))
+
+// Admin pages - lazy loaded (largest component)
+const AdminConsole = lazy(() => import('./pages/admin/AdminConsole'))
 
 function App() {
   return (
@@ -113,7 +116,9 @@ function AppContent() {
           path="/user/exam-selection"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <ExamSelection />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <ExamSelection />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -121,7 +126,9 @@ function AppContent() {
           path="/exam-selection"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <ExamSelection />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <ExamSelection />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -129,7 +136,9 @@ function AppContent() {
           path="/user/exam/:topicId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <Exam />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <Exam />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -137,7 +146,9 @@ function AppContent() {
           path="/exam/:attemptId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <Exam />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <Exam />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -145,7 +156,9 @@ function AppContent() {
           path="/user/exam-results/:attemptId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <ExamResults />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <ExamResults />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -153,7 +166,9 @@ function AppContent() {
           path="/exam-results/:attemptId"
           element={
             <ProtectedRoute allowedRoles={['user']}>
-              <ExamResults />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <ExamResults />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -163,7 +178,9 @@ function AppContent() {
           path="/coach/dashboard"
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
-              <TrainerDashboard />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <TrainerDashboard />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -171,7 +188,9 @@ function AppContent() {
           path="/trainee/dashboard"
           element={
             <ProtectedRoute allowedRoles={['trainee']}>
-              <TraineeDashboard />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <TraineeDashboard />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -181,7 +200,9 @@ function AppContent() {
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminConsole />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <AdminConsole />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -189,7 +210,9 @@ function AppContent() {
           path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminConsole />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                <AdminConsole />
+              </Suspense>
             </ProtectedRoute>
           }
         />
