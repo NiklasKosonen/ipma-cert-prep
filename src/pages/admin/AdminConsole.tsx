@@ -1725,6 +1725,205 @@ const AdminConsole: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Sample Data Creation */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">🎭 Create Sample Data</h3>
+                  <p className="text-gray-600 mb-4">Generate comprehensive sample data for testing</p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        // Create sample topics
+                        const sampleTopics = [
+                          { title: 'Project Planning', description: 'Project planning fundamentals and methodologies', isActive: true },
+                          { title: 'Risk Management', description: 'Identifying, assessing, and managing project risks', isActive: true },
+                          { title: 'Quality Management', description: 'Quality assurance and control in projects', isActive: true },
+                          { title: 'Stakeholder Management', description: 'Managing project stakeholders effectively', isActive: true }
+                        ]
+                        
+                        sampleTopics.forEach(topic => {
+                          addTopic(topic)
+                        })
+                        
+                        // Wait a bit for topics to be created, then create subtopics
+                        setTimeout(() => {
+                          const createdTopics = topics.filter(t => sampleTopics.some(st => st.title === t.title))
+                          
+                          const sampleSubtopics = [
+                            // Project Planning subtopics
+                            { title: 'Project Scope Definition', description: 'Defining project scope and deliverables', topicId: createdTopics[0]?.id, isActive: true },
+                            { title: 'Work Breakdown Structure', description: 'Creating WBS and task decomposition', topicId: createdTopics[0]?.id, isActive: true },
+                            { title: 'Project Schedule Planning', description: 'Creating project timelines and schedules', topicId: createdTopics[0]?.id, isActive: true },
+                            
+                            // Risk Management subtopics
+                            { title: 'Risk Identification', description: 'Identifying potential project risks', topicId: createdTopics[1]?.id, isActive: true },
+                            { title: 'Risk Assessment', description: 'Assessing risk probability and impact', topicId: createdTopics[1]?.id, isActive: true },
+                            { title: 'Risk Response Planning', description: 'Developing risk mitigation strategies', topicId: createdTopics[1]?.id, isActive: true },
+                            
+                            // Quality Management subtopics
+                            { title: 'Quality Planning', description: 'Planning quality management activities', topicId: createdTopics[2]?.id, isActive: true },
+                            { title: 'Quality Assurance', description: 'Ensuring quality processes are followed', topicId: createdTopics[2]?.id, isActive: true },
+                            { title: 'Quality Control', description: 'Monitoring and controlling quality', topicId: createdTopics[2]?.id, isActive: true },
+                            
+                            // Stakeholder Management subtopics
+                            { title: 'Stakeholder Identification', description: 'Identifying project stakeholders', topicId: createdTopics[3]?.id, isActive: true },
+                            { title: 'Stakeholder Analysis', description: 'Analyzing stakeholder needs and influence', topicId: createdTopics[3]?.id, isActive: true },
+                            { title: 'Stakeholder Engagement', description: 'Engaging and communicating with stakeholders', topicId: createdTopics[3]?.id, isActive: true }
+                          ]
+                          
+                          sampleSubtopics.forEach(subtopic => {
+                            if (subtopic.topicId) {
+                              addSubtopic(subtopic)
+                            }
+                          })
+                          
+                          // Wait for subtopics to be created, then create KPIs and questions
+                          setTimeout(() => {
+                            const createdSubtopics = subtopics.filter(s => sampleSubtopics.some(ss => ss.title === s.title))
+                            
+                            // Create KPIs for each subtopic
+                            const sampleKPIs = [
+                              // Project Planning KPIs
+                              { name: 'Scope Statement Clarity', isEssential: true, topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[0]?.id },
+                              { name: 'WBS Completeness', isEssential: true, topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[1]?.id },
+                              { name: 'Schedule Accuracy', isEssential: true, topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[2]?.id },
+                              
+                              // Risk Management KPIs
+                              { name: 'Risk Register Completeness', isEssential: true, topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[3]?.id },
+                              { name: 'Risk Probability Assessment', isEssential: true, topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[4]?.id },
+                              { name: 'Risk Mitigation Strategy', isEssential: true, topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[5]?.id },
+                              
+                              // Quality Management KPIs
+                              { name: 'Quality Metrics Definition', isEssential: true, topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[6]?.id },
+                              { name: 'Quality Process Implementation', isEssential: true, topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[7]?.id },
+                              { name: 'Quality Control Effectiveness', isEssential: true, topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[8]?.id },
+                              
+                              // Stakeholder Management KPIs
+                              { name: 'Stakeholder Mapping', isEssential: true, topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[9]?.id },
+                              { name: 'Stakeholder Influence Assessment', isEssential: true, topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[10]?.id },
+                              { name: 'Communication Effectiveness', isEssential: true, topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[11]?.id }
+                            ]
+                            
+                            sampleKPIs.forEach(kpi => {
+                              if (kpi.subtopicId) {
+                                addKPI({
+                                  ...kpi,
+                                  connectedQuestions: []
+                                })
+                              }
+                            })
+                            
+                            // Wait for KPIs to be created, then create questions
+                            setTimeout(() => {
+                              const createdKPIs = kpis.filter(k => sampleKPIs.some(sk => sk.name === k.name))
+                              
+                              const sampleQuestions = [
+                                // Project Planning Questions
+                                { prompt: 'How would you define the scope of a software development project? What key elements should be included?', topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[0]?.id, connectedKPIs: [createdKPIs[0]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'Describe the process of creating a Work Breakdown Structure (WBS). What are the main benefits?', topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[1]?.id, connectedKPIs: [createdKPIs[1]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'What factors should be considered when planning a project schedule? How do you handle dependencies?', topicId: createdTopics[0]?.id, subtopicId: createdSubtopics[2]?.id, connectedKPIs: [createdKPIs[2]?.id].filter(Boolean), isActive: true },
+                                
+                                // Risk Management Questions
+                                { prompt: 'Identify and explain the main types of risks that can affect a project. How would you categorize them?', topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[3]?.id, connectedKPIs: [createdKPIs[3]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'How do you assess the probability and impact of project risks? What tools or methods would you use?', topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[4]?.id, connectedKPIs: [createdKPIs[4]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'Describe different risk response strategies. When would you use each approach?', topicId: createdTopics[1]?.id, subtopicId: createdSubtopics[5]?.id, connectedKPIs: [createdKPIs[5]?.id].filter(Boolean), isActive: true },
+                                
+                                // Quality Management Questions
+                                { prompt: 'What is quality planning in project management? What key deliverables are involved?', topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[6]?.id, connectedKPIs: [createdKPIs[6]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'Explain the difference between quality assurance and quality control. How do they work together?', topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[7]?.id, connectedKPIs: [createdKPIs[7]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'What quality control techniques would you use to monitor project deliverables?', topicId: createdTopics[2]?.id, subtopicId: createdSubtopics[8]?.id, connectedKPIs: [createdKPIs[8]?.id].filter(Boolean), isActive: true },
+                                
+                                // Stakeholder Management Questions
+                                { prompt: 'How do you identify project stakeholders? What criteria would you use?', topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[9]?.id, connectedKPIs: [createdKPIs[9]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'Describe the stakeholder analysis process. How do you assess stakeholder influence and interest?', topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[10]?.id, connectedKPIs: [createdKPIs[10]?.id].filter(Boolean), isActive: true },
+                                { prompt: 'What strategies would you use to engage stakeholders effectively throughout the project?', topicId: createdTopics[3]?.id, subtopicId: createdSubtopics[11]?.id, connectedKPIs: [createdKPIs[11]?.id].filter(Boolean), isActive: true }
+                              ]
+                              
+                              sampleQuestions.forEach(question => {
+                                if (question.subtopicId) {
+                                  addQuestion(question)
+                                }
+                              })
+                              
+                              alert('✅ Sample data created successfully!\n\n- 4 Topics\n- 12 Subtopics\n- 12 KPIs\n- 12 Questions\n\nYou can now test exams and see the trainee dashboard!')
+                            }, 500)
+                          }, 500)
+                        }, 500)
+                      }}
+                      className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      🎭 Create Complete Sample Data
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Generate sample exam attempts and results
+                        const sampleAttempts = [
+                          {
+                            userId: 'sample-user-1',
+                            topicId: topics[0]?.id,
+                            selectedQuestionIds: questions.filter(q => q.topicId === topics[0]?.id).slice(0, 3).map(q => q.id),
+                            answers: [
+                              'Project scope should include deliverables, boundaries, and acceptance criteria. Key elements: project objectives, deliverables, milestones, constraints, and assumptions.',
+                              'WBS breaks down work into manageable components. Benefits include better estimation, resource allocation, and progress tracking.',
+                              'Schedule planning considers task dependencies, resource availability, and critical path. Dependencies are handled through precedence relationships.'
+                            ],
+                            score: 2.3,
+                            submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+                          },
+                          {
+                            userId: 'sample-user-2',
+                            topicId: topics[1]?.id,
+                            selectedQuestionIds: questions.filter(q => q.topicId === topics[1]?.id).slice(0, 3).map(q => q.id),
+                            answers: [
+                              'Main risk types: technical, external, organizational, and project management risks. Categorized by probability and impact.',
+                              'Risk assessment uses probability-impact matrix and qualitative/quantitative analysis methods.',
+                              'Risk response strategies: avoid, mitigate, transfer, accept. Choice depends on risk tolerance and cost-benefit analysis.'
+                            ],
+                            score: 1.8,
+                            submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+                          },
+                          {
+                            userId: 'sample-user-3',
+                            topicId: topics[2]?.id,
+                            selectedQuestionIds: questions.filter(q => q.topicId === topics[2]?.id).slice(0, 3).map(q => q.id),
+                            answers: [
+                              'Quality planning defines quality standards and metrics. Key deliverables include quality management plan and quality metrics.',
+                              'QA focuses on processes, QC focuses on deliverables. They work together to ensure quality throughout the project.',
+                              'Quality control techniques include inspections, testing, and statistical sampling to monitor deliverables.'
+                            ],
+                            score: 2.6,
+                            submittedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+                          }
+                        ]
+                        
+                        // Store sample attempts in localStorage for trainee dashboard
+                        localStorage.setItem('sampleExamAttempts', JSON.stringify(sampleAttempts))
+                        
+                        // Create enhanced sample trainee data
+                        const enhancedSampleData = {
+                          totalAttempts: 15,
+                          passedExams: 8,
+                          studyHours: 24.5,
+                          averageScore: 2.3,
+                          progressByTopic: [
+                            { topic: 'Project Planning', attempts: 5, passed: 3, avgScore: 2.1 },
+                            { topic: 'Risk Management', attempts: 4, passed: 2, avgScore: 1.8 },
+                            { topic: 'Quality Management', attempts: 6, passed: 3, avgScore: 2.6 }
+                          ],
+                          recentAttempts: sampleAttempts
+                        }
+                        localStorage.setItem('sampleTraineeData', JSON.stringify(enhancedSampleData))
+                        
+                        alert('✅ Sample test results generated!\n\n- 3 Sample exam attempts\n- Realistic scores and answers\n- Enhanced trainee dashboard data\n\nCheck the trainee dashboard to see the results!')
+                      }}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      📊 Generate Sample Test Results
+                    </button>
+                  </div>
+                </div>
+
                 {/* Data Validation */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">✅ Data Validation</h3>

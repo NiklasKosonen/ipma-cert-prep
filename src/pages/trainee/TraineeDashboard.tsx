@@ -26,6 +26,17 @@ export const TraineeDashboard: React.FC = () => {
     }
   }, []);
 
+  // Get sample exam attempts for detailed view
+  const getSampleExamAttempts = () => {
+    try {
+      const stored = localStorage.getItem('sampleExamAttempts');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error parsing sample exam attempts:', error);
+      return [];
+    }
+  };
+
   // Get all student attempts
   const studentUsers = users.filter(u => u.role === 'user');
   const allStudentAttempts = studentUsers.flatMap(student => getUserAttempts(student.id));
@@ -271,6 +282,94 @@ export const TraineeDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Sample Exam Results - Detailed View */}
+        {sampleData && getSampleExamAttempts().length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Eye className="h-5 w-5 mr-2 text-blue-600" />
+                Esimerkkitenttisuoritukset - Yksityiskohtainen näkymä
+              </h3>
+              
+              <div className="space-y-6">
+                {getSampleExamAttempts().map((attempt: any, index: number) => {
+                  const topic = topics.find(t => t.id === attempt.topicId);
+                  const userNames = ['Anna Virtanen', 'Mikko Koskinen', 'Sari Nieminen'];
+                  const userName = userNames[index] || `Opiskelija ${index + 1}`;
+                  
+                  return (
+                    <div key={index} className="border border-gray-200 rounded-lg p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">{userName}</h4>
+                          <p className="text-sm text-gray-600">{topic?.title || 'Tuntematon aihe'}</p>
+                          <p className="text-xs text-gray-500">
+                            Suoritettu: {new Date(attempt.submittedAt).toLocaleDateString('fi-FI')} klo {new Date(attempt.submittedAt).toLocaleTimeString('fi-FI')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-2xl font-bold ${
+                            attempt.score >= 2.5 ? 'text-green-600' : 
+                            attempt.score >= 2.0 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {attempt.score}/3
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {attempt.score >= 2.5 ? 'Erinomainen' : 
+                             attempt.score >= 2.0 ? 'Hyvä' : 'Tarvitsee parannusta'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {attempt.answers.map((answer: string, answerIndex: number) => {
+                          const question = questions.find(q => q.id === attempt.selectedQuestionIds[answerIndex]);
+                          const subtopic = subtopics.find(s => s.id === question?.subtopicId);
+                          
+                          return (
+                            <div key={answerIndex} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <h5 className="font-medium text-gray-900 text-sm">
+                                  Kysymys {answerIndex + 1}: {subtopic?.title || 'Tuntematon aliaihe'}
+                                </h5>
+                                <span className="text-xs text-gray-500">
+                                  {question?.connectedKPIs?.length || 0} KPI
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700 mb-2">{question?.prompt}</p>
+                              <div className="bg-white rounded border p-3">
+                                <p className="text-sm text-gray-800">{answer}</p>
+                              </div>
+                              <div className="mt-2 flex items-center space-x-4 text-xs text-gray-600">
+                                <span>✅ KPI:t havaittu</span>
+                                <span>📝 Rakenne: Hyvä</span>
+                                <span>🎯 Vastaus: Täydellinen</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <span>⏱️ Aikaa käytetty: ~15 min</span>
+                            <span>📊 KPI:t: {attempt.answers.length}/3</span>
+                            <span>🎯 Tarkkuus: {Math.round((attempt.score / 3) * 100)}%</span>
+                          </div>
+                          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            Anna palautetta →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Student Attempts */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
