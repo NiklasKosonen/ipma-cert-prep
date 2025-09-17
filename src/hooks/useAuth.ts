@@ -295,68 +295,6 @@ export const useAuth = () => {
     }
   }
 
-  // Company code authentication
-  const signInWithCompanyCode = async (email: string, companyCode: string) => {
-    try {
-      // Validate company code
-      const companyCodes = JSON.parse(localStorage.getItem('ipma_company_codes') || '[]')
-      const company = companyCodes.find((cc: any) => 
-        cc.code.toUpperCase() === companyCode.toUpperCase() && 
-        cc.isActive
-      )
-
-      if (!company) {
-        return { data: null, error: 'Invalid company code' }
-      }
-
-      // Check expiration
-      if (new Date(company.expiresAt) < new Date()) {
-        return { data: null, error: 'Company code has expired. Please contact your administrator.' }
-      }
-
-      // Create authenticated user with company info
-      const mockUser: AuthUser = {
-        id: `user_${Date.now()}`,
-        email,
-        role: 'user',
-        companyCode: companyCode.toUpperCase(),
-      }
-
-      const userProfile = getOrCreateUserProfile(
-        email, 
-        email.split('@')[0], 
-        'user', 
-        companyCode.toUpperCase()
-      )
-      
-      // Update user profile with company name
-      userProfile.companyName = company.companyName
-      
-      const userSession = createSession(userProfile.id)
-
-      setUser(mockUser)
-      setUserProfile(userProfile)
-      setSession(userSession)
-
-      // Save auth state
-      localStorage.setItem('auth_user', JSON.stringify(mockUser))
-      localStorage.setItem('auth_session_token', userSession.token)
-      localStorage.setItem('auth_user_profile', JSON.stringify(userProfile))
-
-      console.log('✅ User signed in with company code:', { 
-        email, 
-        companyCode, 
-        companyName: company.companyName,
-        sessionToken: userSession.token 
-      })
-
-      return { data: { user: mockUser }, error: null }
-    } catch (error) {
-      console.error('❌ Company code sign in error:', error)
-      return { data: null, error: 'Company code authentication failed' }
-    }
-  }
-
   const signUp = async (email: string, _password: string, role: UserRole, name?: string) => {
     try {
       const mockUser: AuthUser = {
@@ -498,7 +436,6 @@ export const useAuth = () => {
     session: session ? { user, session } : null,
     loading,
     signIn,
-    signInWithCompanyCode,
     signUp,
     signOut,
     resetPassword,
