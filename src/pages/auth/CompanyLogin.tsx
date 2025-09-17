@@ -51,7 +51,7 @@ export const CompanyLogin = () => {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Company Login
+            User Login
           </h2>
           <p className="text-gray-600">
             Enter your email and company code to access your training platform
@@ -120,17 +120,17 @@ export const CompanyLogin = () => {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Sending Login Link...' : 'Send Login Link'}
+                {loading ? 'Logging In...' : 'Log In'}
               </button>
             </div>
 
             <div className="text-center">
               <Link
-                to="/auth"
+                to="/"
                 className="flex items-center justify-center text-sm text-gray-600 hover:text-gray-500"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to role selection
+                Back to Landing Page
               </Link>
             </div>
           </form>
