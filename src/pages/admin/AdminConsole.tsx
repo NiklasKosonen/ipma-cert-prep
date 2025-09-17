@@ -4,7 +4,6 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
-import { supabase } from '../../lib/supabase'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()

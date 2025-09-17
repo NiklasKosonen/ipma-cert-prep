@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Building2, Mail, Key } from 'lucide-react'
-import { useLanguage } from '../../contexts/LanguageContext'
-import { useData } from '../../contexts/DataContext'
 import { useAuth } from '../../hooks/useAuth'
 
 export const CompanyLogin = () => {
