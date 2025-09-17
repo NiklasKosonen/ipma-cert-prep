@@ -25,8 +25,8 @@ const Exam = lazy(() => import('./pages/user/Exam'))
 const ExamResults = lazy(() => import('./pages/user/ExamResults'))
 
 // Trainer pages - lazy loaded
-const TrainerDashboard = lazy(() => import('./pages/trainer/Dashboard'))
-const TraineeDashboard = lazy(() => import('./pages/trainee/TraineeDashboard'))
+const TrainerDashboard = lazy(() => import('./pages/trainer/Dashboard').then(module => ({ default: module.TrainerDashboard })))
+const TraineeDashboard = lazy(() => import('./pages/trainee/TraineeDashboard').then(module => ({ default: module.TraineeDashboard })))
 
 // Admin pages - lazy loaded (largest component)
 const AdminConsole = lazy(() => import('./pages/admin/AdminConsole'))
