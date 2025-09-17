@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { DataProvider } from './contexts/DataContext'
@@ -45,7 +45,7 @@ function App() {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
 
   if (loading) {
     return (
