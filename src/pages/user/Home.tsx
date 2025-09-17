@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 
 export const UserHome = () => {
   const { t } = useLanguage()
-  const { topics, subtopics, questions, getUserAttempts } = useData()
+  const { topics, subtopics, getUserAttempts } = useData()
   const { user } = useAuth()
   const navigate = useNavigate()
   
@@ -26,7 +26,12 @@ export const UserHome = () => {
   }, 0)
   
   const averageScore = userAttempts.length > 0 
-    ? userAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / userAttempts.length 
+    ? userAttempts.reduce((sum, attempt) => {
+        // Calculate score from attempt items
+        const attemptItems = attempt.items || []
+        const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
+        return sum + totalScore
+      }, 0) / userAttempts.length 
     : 0
 
   // Filter attempts by selected topic
@@ -44,10 +49,14 @@ export const UserHome = () => {
       const duration = `${subtopicCount * 3} min`
       const date = new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')
       
+      // Calculate score from attempt items
+      const attemptItems = attempt.items || []
+      const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
+      
       return {
         id: attempt.id,
         topic: topic?.title || 'Tuntematon aihe',
-        score: attempt.score || 0,
+        score: totalScore,
         date,
         duration,
         topicId: attempt.topicId

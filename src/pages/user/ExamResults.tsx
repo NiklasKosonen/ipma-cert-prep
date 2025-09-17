@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
 import { Attempt, AttemptItem } from '../../types'
-import { CheckCircle, XCircle, AlertCircle, ArrowLeft, Target, BookOpen } from 'lucide-react'
+import { CheckCircle, XCircle, AlertCircle, ArrowLeft, Target } from 'lucide-react'
 
 const ExamResults: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>()
@@ -156,7 +156,7 @@ const ExamResults: React.FC = () => {
           </h3>
           
           {attemptItems.map((item, index) => {
-            const { question, subtopic, topic, questionKPIs } = getQuestionContext(item.questionId)
+            const { question, subtopic, topic } = getQuestionContext(item.questionId)
             
             return (
               <div key={item.id} className="bg-white rounded-lg shadow-lg p-6">
