@@ -1,19 +1,11 @@
-import { Link } from 'react-router-dom'
-import { User, GraduationCap, Settings, Building2, Users } from 'lucide-react'
+﻿import { Link } from 'react-router-dom'
+import { User, Settings, Users } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 export const RolePicker = () => {
   const { t } = useLanguage()
 
   const roles = [
-    {
-      id: 'company',
-      title: 'Company Login',
-      description: 'Login with your company code',
-      icon: Building2,
-      path: '/auth/company',
-      color: 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100',
-    },
     {
       id: 'user',
       title: t('roleUser'),
@@ -29,14 +21,6 @@ export const RolePicker = () => {
       icon: Users,
       path: '/admin-login/trainer',
       color: 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100',
-    },
-    {
-      id: 'trainee',
-      title: t('roleTrainee'),
-      description: t('roleTraineeDesc'),
-      icon: GraduationCap,
-      path: '/admin-login/trainee',
-      color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100',
     },
     {
       id: 'admin',
@@ -70,14 +54,14 @@ export const RolePicker = () => {
             {t('rolePickerTitle')}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {roles.map((role) => {
               const Icon = role.icon
               return (
                 <Link
                   key={role.id}
                   to={role.path}
-                  className={`p-6 rounded-2xl border-2 transition-all duration-200 ${role.color}`}
+                  className={p-6 rounded-2xl border-2 transition-all duration-200 }
                 >
                   <div className="text-center">
                     <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center">
