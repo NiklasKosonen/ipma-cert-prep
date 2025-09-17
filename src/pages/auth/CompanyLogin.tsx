@@ -12,8 +12,6 @@ export const CompanyLogin = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
-  const { t } = useLanguage()
-  const { companyCodes } = useData()
   const { signInWithCompanyCode } = useAuth()
   const navigate = useNavigate()
 
