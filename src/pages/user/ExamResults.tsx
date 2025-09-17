@@ -1,100 +1,43 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
-import { Attempt, AttemptItem, ExamResult } from '../../types'
+import { Attempt, AttemptItem } from '../../types'
+import { CheckCircle, XCircle, AlertCircle, ArrowLeft, Target, BookOpen } from 'lucide-react'
 
 const ExamResults: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>()
   const navigate = useNavigate()
-  const { getAttempt, getAttemptItems, questions, subtopics, topics } = useData()
-  
+  const { 
+    getAttempt, 
+    getAttemptItems, 
+    questions,
+    subtopics,
+    topics,
+    kpis
+  } = useData()
+
   const [attempt, setAttempt] = useState<Attempt | null>(null)
-  const [results, setResults] = useState<ExamResult | null>(null)
+  const [attemptItems, setAttemptItems] = useState<AttemptItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!attemptId) return
+    if (!attemptId) {
+      navigate('/app/home')
+      return
+    }
 
     const currentAttempt = getAttempt(attemptId)
     if (!currentAttempt) {
-      navigate('/exam-selection')
+      navigate('/app/home')
       return
     }
 
     setAttempt(currentAttempt)
-
-    // Calculate results
-    const attemptItems = getAttemptItems(attemptId)
-    const examResults = calculateExamResults(currentAttempt, attemptItems)
-    setResults(examResults)
+    setAttemptItems(getAttemptItems(attemptId))
+    setLoading(false)
   }, [attemptId, getAttempt, getAttemptItems, navigate])
 
-  const calculateExamResults = (attempt: Attempt, items: AttemptItem[]): ExamResult => {
-    const totalQuestions = attempt.selectedQuestionIds.length
-    let totalKpis = 0
-    let kpisDetected = 0
-    let kpisMissing = 0
-    let totalScore = 0
-    let maxScore = 0
-
-    const questionResults: AttemptItem[] = []
-
-    attempt.selectedQuestionIds.forEach(questionId => {
-      const question = questions.find(q => q.id === questionId)
-      const item = items.find(i => i.questionId === questionId)
-      
-      if (question && item) {
-        const questionKPIs = question.connectedKPIs.length
-        totalKpis += questionKPIs
-        kpisDetected += item.kpisDetected.length
-        kpisMissing += item.kpisMissing.length
-        totalScore += item.score
-        maxScore += item.maxScore
-        
-        questionResults.push(item)
-      }
-    })
-
-    const kpiPercentage = totalKpis > 0 ? (kpisDetected / totalKpis) * 100 : 0
-    const scorePercentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0
-
-    const passed = kpiPercentage >= 80 && scorePercentage >= 50
-
-    return {
-      attemptId: attempt.id,
-      totalQuestions,
-      totalKpis,
-      kpisDetected,
-      kpisMissing,
-      totalScore,
-      maxScore,
-      kpiPercentage,
-      scorePercentage,
-      passed,
-      feedback: passed 
-        ? 'Congratulations! You have passed the exam.'
-        : 'Unfortunately, you did not meet the passing criteria. Review the feedback and try again.',
-      questionResults
-    }
-  }
-
-  const getQuestionContext = (questionId: string) => {
-    const question = questions.find(q => q.id === questionId)
-    const subtopic = subtopics.find(s => s.id === question?.subtopicId)
-    const topic = topics.find(t => t.id === subtopic?.topicId)
-    return { question, subtopic, topic }
-  }
-
-  const handleRetakeExam = () => {
-    if (attempt) {
-      navigate(`/exam-selection?topic=${attempt.topicId}`)
-    }
-  }
-
-  const handleBackToHome = () => {
-    navigate('/user/home')
-  }
-
-  if (!attempt || !results) {
+  if (loading || !attempt) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -105,181 +48,210 @@ const ExamResults: React.FC = () => {
     )
   }
 
-  const topic = topics.find(t => t.id === attempt.topicId)
+  // Calculate overall score
+  const totalScore = attemptItems.reduce((sum, item) => sum + (item.score || 0), 0)
+  const maxScore = attemptItems.length * 3
+  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0
+  const passed = percentage >= 50
+
+  // Get question context
+  const getQuestionContext = (questionId: string) => {
+    const question = questions.find(q => q.id === questionId)
+    const subtopic = subtopics.find(s => s.id === question?.subtopicId)
+    const topic = topics.find(t => t.id === subtopic?.topicId)
+    const questionKPIs = kpis.filter(k => question?.connectedKPIs.includes(k.id))
+
+    return { question, subtopic, topic, questionKPIs }
+  }
+
+  // Get score color
+  const getScoreColor = (score: number) => {
+    if (score >= 2.5) return 'text-green-600 bg-green-100'
+    if (score >= 2.0) return 'text-yellow-600 bg-yellow-100'
+    if (score >= 1.0) return 'text-orange-600 bg-orange-100'
+    return 'text-red-600 bg-red-100'
+  }
+
+  // Get overall result color
+  const getOverallResultColor = () => {
+    if (passed) return 'text-green-600 bg-green-100'
+    return 'text-red-600 bg-red-100'
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/app/home')}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span>Back to Dashboard</span>
+              </button>
+            </div>
+            <div className="text-right">
+              <h1 className="text-2xl font-bold text-gray-900">Exam Results</h1>
+              <p className="text-gray-600">
+                {topics.find(t => t.id === attempt.topicId)?.title}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Overall Results */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Exam Results</h1>
-            <p className="text-xl text-gray-600 mb-6">
-              Topic: {topic?.title}
-            </p>
+            <div className="flex justify-center mb-4">
+              {passed ? (
+                <CheckCircle className="h-16 w-16 text-green-600" />
+              ) : (
+                <XCircle className="h-16 w-16 text-red-600" />
+              )}
+            </div>
             
-            {/* Overall Result */}
-            <div className={`inline-flex items-center px-6 py-3 rounded-full text-xl font-semibold ${
-              results.passed 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {results.passed ? '✓ PASSED' : '✗ NOT PASSED'}
-            </div>
-          </div>
-        </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {passed ? 'Congratulations!' : 'Keep Learning!'}
+            </h2>
+            
+            <p className="text-xl text-gray-600 mb-6">
+              {passed ? 'You passed the exam!' : 'You need to improve your score.'}
+            </p>
 
-        {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">
-              {results.kpiPercentage.toFixed(1)}%
-            </div>
-            <div className="text-gray-600">KPIs Detected</div>
-            <div className="text-sm text-gray-500">
-              {results.kpisDetected} / {results.totalKpis} KPIs
-            </div>
-            <div className={`text-sm font-medium mt-2 ${
-              results.kpiPercentage >= 80 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {results.kpiPercentage >= 80 ? '✓ Requirement Met' : '✗ Below 80%'}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">
-              {results.scorePercentage.toFixed(1)}%
-            </div>
-            <div className="text-gray-600">Score Achieved</div>
-            <div className="text-sm text-gray-500">
-              {results.totalScore} / {results.maxScore} points
-            </div>
-            <div className={`text-sm font-medium mt-2 ${
-              results.scorePercentage >= 50 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {results.scorePercentage >= 50 ? '✓ Requirement Met' : '✗ Below 50%'}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-orange-600 mb-2">
-              {results.totalQuestions}
-            </div>
-            <div className="text-gray-600">Questions Answered</div>
-            <div className="text-sm text-gray-500">
-              {attempt.status === 'timeout' ? 'Auto-submitted' : 'Manually submitted'}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-gray-600 mb-2">
-              {attempt.totalTime}
-            </div>
-            <div className="text-gray-600">Minutes Allocated</div>
-            <div className="text-sm text-gray-500">
-              {attempt.status === 'timeout' ? 'Time expired' : 'Completed on time'}
-            </div>
-          </div>
-        </div>
-
-        {/* Detailed Question Results */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Question-by-Question Feedback</h2>
-          
-          <div className="space-y-6">
-            {results.questionResults.map((item, index) => {
-              const { question, subtopic, topic } = getQuestionContext(item.questionId)
-              
-              if (!question) return null
-
-              return (
-                <div key={item.id} className="border border-gray-200 rounded-lg p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                          Question {index + 1}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {topic?.title} - {subtopic?.title}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {question.prompt}
-                      </h3>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-2xl font-bold ${
-                        item.score > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {item.score}/{item.maxScore}
-                      </div>
-                      <div className="text-sm text-gray-500">points</div>
-                    </div>
-                  </div>
-
-                  {/* Answer */}
-                  <div className="mb-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Your Answer:</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap">{item.answer || 'No answer provided'}</p>
-                    </div>
-                  </div>
-
-                  {/* KPIs */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <h4 className="font-medium text-green-700 mb-2">✓ KPIs Detected:</h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        {item.kpisDetected.length > 0 ? (
-                          item.kpisDetected.map((kpi, i) => (
-                            <li key={i} className="text-green-600">{kpi}</li>
-                          ))
-                        ) : (
-                          <li className="text-gray-500">None detected</li>
-                        )}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-red-700 mb-2">✗ KPIs Missing:</h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        {item.kpisMissing.length > 0 ? (
-                          item.kpisMissing.map((kpi, i) => (
-                            <li key={i} className="text-red-600">{kpi}</li>
-                          ))
-                        ) : (
-                          <li className="text-gray-500">All KPIs covered</li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Feedback */}
-                  {item.feedback && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-medium text-blue-900 mb-2">AI Feedback:</h4>
-                      <p className="text-blue-800">{item.feedback}</p>
-                    </div>
-                  )}
+            <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto">
+              <div className="text-center">
+                <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg font-semibold ${getOverallResultColor()}`}>
+                  {totalScore}/{maxScore}
                 </div>
-              )
-            })}
+                <p className="text-sm text-gray-600 mt-2">Total Score</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {percentage.toFixed(0)}%
+                </div>
+                <p className="text-sm text-gray-600 mt-2">Percentage</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {attemptItems.length}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">Questions</p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Question Results */}
+        <div className="space-y-6">
+          <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+            <Target className="h-6 w-6 mr-2 text-blue-600" />
+            Question-by-Question Results
+          </h3>
+          
+          {attemptItems.map((item, index) => {
+            const { question, subtopic, topic, questionKPIs } = getQuestionContext(item.questionId)
+            
+            return (
+              <div key={item.id} className="bg-white rounded-lg shadow-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        Question {index + 1}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {topic?.title} - {subtopic?.title}
+                      </span>
+                    </div>
+                    
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                      {question?.prompt}
+                    </h4>
+                  </div>
+                  
+                  <div className={`px-4 py-2 rounded-full text-lg font-bold ${getScoreColor(item.score || 0)}`}>
+                    {item.score || 0}/3
+                  </div>
+                </div>
+
+                {/* Your Answer */}
+                <div className="mb-4">
+                  <h5 className="font-medium text-gray-900 mb-2">Your Answer:</h5>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-800">{item.answer}</p>
+                  </div>
+                </div>
+
+                {/* KPI Analysis */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h5 className="font-medium text-green-900 mb-2 flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Detected KPIs
+                    </h5>
+                    {item.kpisDetected && item.kpisDetected.length > 0 ? (
+                      <ul className="space-y-1">
+                        {item.kpisDetected.map(kpiId => {
+                          const kpi = kpis.find(k => k.id === kpiId)
+                          return kpi ? (
+                            <li key={kpiId} className="text-sm text-green-800">✓ {kpi.name}</li>
+                          ) : null
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-green-800">No KPIs detected</p>
+                    )}
+                  </div>
+
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h5 className="font-medium text-red-900 mb-2 flex items-center">
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Missing KPIs
+                    </h5>
+                    {item.kpisMissing && item.kpisMissing.length > 0 ? (
+                      <ul className="space-y-1">
+                        {item.kpisMissing.map(kpiId => {
+                          const kpi = kpis.find(k => k.id === kpiId)
+                          return kpi ? (
+                            <li key={kpiId} className="text-sm text-red-800">✗ {kpi.name}</li>
+                          ) : null
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-red-800">All KPIs covered!</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Feedback */}
+                {item.feedback && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h5 className="font-medium text-blue-900 mb-2 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      AI Feedback
+                    </h5>
+                    <p className="text-sm text-blue-800">{item.feedback}</p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center space-x-4">
+        <div className="mt-12 text-center">
           <button
-            onClick={handleRetakeExam}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 font-medium"
+            onClick={() => navigate('/app/home')}
+            className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg"
           >
-            Retake Exam
-          </button>
-          <button
-            onClick={handleBackToHome}
-            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:ring-4 focus:ring-gray-200 font-medium"
-          >
-            Back to Home
+            Back to Dashboard
           </button>
         </div>
       </div>
