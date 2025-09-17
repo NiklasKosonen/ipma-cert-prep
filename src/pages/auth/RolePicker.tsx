@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { User, GraduationCap, Settings, Building2 } from 'lucide-react'
+import { User, GraduationCap, Settings, Building2, Users } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 export const RolePicker = () => {
@@ -19,15 +19,23 @@ export const RolePicker = () => {
       title: t('roleUser'),
       description: t('roleUserDesc'),
       icon: User,
-      path: '/auth/user',
+      path: '/admin-login/user',
       color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100',
+    },
+    {
+      id: 'trainer',
+      title: t('roleTrainer'),
+      description: t('roleTrainerDesc'),
+      icon: Users,
+      path: '/admin-login/trainer',
+      color: 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100',
     },
     {
       id: 'trainee',
       title: t('roleTrainee'),
       description: t('roleTraineeDesc'),
       icon: GraduationCap,
-      path: '/auth/trainee',
+      path: '/admin-login/trainee',
       color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100',
     },
     {
@@ -35,7 +43,7 @@ export const RolePicker = () => {
       title: t('roleAdmin'),
       description: t('roleAdminDesc'),
       icon: Settings,
-      path: '/auth/admin',
+      path: '/admin-login/admin',
       color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100',
     },
   ]
@@ -62,7 +70,7 @@ export const RolePicker = () => {
             {t('rolePickerTitle')}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {roles.map((role) => {
               const Icon = role.icon
               return (
