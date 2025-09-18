@@ -19,7 +19,7 @@ const AdminConsole: React.FC = () => {
   } = useData()
 
   // Auto backup functionality
-  const { createBackup, restoreBackup, syncToSupabase, syncFromSupabase } = useAutoBackup({
+  const { syncToSupabase, syncFromSupabase } = useAutoBackup({
     enabled: true,
     interval: 30, // 30 minutes
     beforeUnload: true,
