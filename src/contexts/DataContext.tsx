@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Topic, Question, KPI, CompanyCode, Subtopic, SampleAnswer, TrainingExample, Attempt, AttemptItem, UserProfile, Subscription } from '../types'
 import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, mockSampleAnswers, mockTrainingExamples } from '../lib/mockData'
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
+import { supabase } from '../lib/supabase'
 
 // Data persistence utilities with user-specific storage
 const STORAGE_KEYS = {
@@ -203,6 +204,118 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setTrainingExamples(loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples))
     setUsers(loadFromStorage(STORAGE_KEYS.users, []))
     setSubscriptions(loadFromStorage(STORAGE_KEYS.subscriptions, []))
+  }, [])
+
+  // Auto-restore from Supabase if localStorage is empty (after deployments)
+  useEffect(() => {
+    const autoRestoreFromSupabase = async () => {
+      try {
+        // Check if we have any data in localStorage
+        const hasTopics = localStorage.getItem(STORAGE_KEYS.topics)
+        const hasQuestions = localStorage.getItem(STORAGE_KEYS.questions)
+        const hasKPIs = localStorage.getItem(STORAGE_KEYS.kpis)
+        
+        // If localStorage is empty or only has mock data, try to restore from Supabase
+        if (!hasTopics || !hasQuestions || !hasKPIs) {
+          console.log('🔄 localStorage appears empty, attempting auto-restore from Supabase...')
+          
+          // Check if Supabase is configured
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+          
+          if (!supabaseUrl || !supabaseKey) {
+            console.log('⚠️ Supabase not configured, skipping auto-restore')
+            return
+          }
+          
+          // Try to get the latest backup from Supabase
+          const { data: backups, error } = await supabase
+            .from('data_backups')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+          
+          if (error) {
+            console.warn('⚠️ Could not fetch backups from Supabase:', error)
+            return
+          }
+          
+          if (backups && backups.length > 0) {
+            const latestBackup = backups[0]
+            console.log('📦 Found backup in Supabase:', latestBackup.backup_name)
+            
+            // Restore data from the backup
+            const backupData = latestBackup.data_snapshot
+            
+            if (backupData.topics && backupData.topics.length > 0) {
+              setTopics(backupData.topics)
+              saveToStorage(STORAGE_KEYS.topics, backupData.topics)
+              console.log('✅ Restored topics from Supabase:', backupData.topics.length)
+            }
+            
+            if (backupData.questions && backupData.questions.length > 0) {
+              setQuestions(backupData.questions)
+              saveToStorage(STORAGE_KEYS.questions, backupData.questions)
+              console.log('✅ Restored questions from Supabase:', backupData.questions.length)
+            }
+            
+            if (backupData.kpis && backupData.kpis.length > 0) {
+              setKpis(backupData.kpis)
+              saveToStorage(STORAGE_KEYS.kpis, backupData.kpis)
+              console.log('✅ Restored KPIs from Supabase:', backupData.kpis.length)
+            }
+            
+            if (backupData.companyCodes && backupData.companyCodes.length > 0) {
+              setCompanyCodes(backupData.companyCodes)
+              saveToStorage(STORAGE_KEYS.companyCodes, backupData.companyCodes)
+              console.log('✅ Restored company codes from Supabase:', backupData.companyCodes.length)
+            }
+            
+            if (backupData.subtopics && backupData.subtopics.length > 0) {
+              setSubtopics(backupData.subtopics)
+              saveToStorage(STORAGE_KEYS.subtopics, backupData.subtopics)
+              console.log('✅ Restored subtopics from Supabase:', backupData.subtopics.length)
+            }
+            
+            if (backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
+              setSampleAnswers(backupData.sampleAnswers)
+              saveToStorage(STORAGE_KEYS.sampleAnswers, backupData.sampleAnswers)
+              console.log('✅ Restored sample answers from Supabase:', backupData.sampleAnswers.length)
+            }
+            
+            if (backupData.trainingExamples && backupData.trainingExamples.length > 0) {
+              setTrainingExamples(backupData.trainingExamples)
+              saveToStorage(STORAGE_KEYS.trainingExamples, backupData.trainingExamples)
+              console.log('✅ Restored training examples from Supabase:', backupData.trainingExamples.length)
+            }
+            
+            if (backupData.users && backupData.users.length > 0) {
+              setUsers(backupData.users)
+              saveToStorage(STORAGE_KEYS.users, backupData.users)
+              console.log('✅ Restored users from Supabase:', backupData.users.length)
+            }
+            
+            if (backupData.subscriptions && backupData.subscriptions.length > 0) {
+              setSubscriptions(backupData.subscriptions)
+              saveToStorage(STORAGE_KEYS.subscriptions, backupData.subscriptions)
+              console.log('✅ Restored subscriptions from Supabase:', backupData.subscriptions.length)
+            }
+            
+            console.log('🎉 Auto-restore from Supabase completed successfully!')
+          } else {
+            console.log('📭 No backups found in Supabase')
+          }
+        } else {
+          console.log('✅ localStorage has data, skipping auto-restore')
+        }
+      } catch (error) {
+        console.warn('⚠️ Auto-restore failed:', error)
+      }
+    }
+    
+    // Run auto-restore after a short delay to ensure initial data loading is complete
+    const timer = setTimeout(autoRestoreFromSupabase, 1000)
+    return () => clearTimeout(timer)
   }, [])
 
   // Save global data to localStorage whenever it changes
