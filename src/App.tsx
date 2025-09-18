@@ -6,7 +6,7 @@ import { useAuth } from './hooks/useAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { useAutoBackup, useDeploymentDetection } from './hooks/useAutoBackup'
+import { useAutoBackup } from './hooks/useAutoBackup'
 
 // Pages
 import { Landing } from './pages/Landing'
