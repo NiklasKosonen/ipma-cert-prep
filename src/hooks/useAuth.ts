@@ -281,6 +281,25 @@ export const useAuth = () => {
         return { data: { user: adminUser }, error: null };
       }
 
+      // Working test credentials
+      if (email.toLowerCase() === 'admin@test.com' && password === 'admin123') {
+        const adminUser: AuthUser = {
+          id: 'admin_test',
+          email: 'admin@test.com',
+          role: 'admin' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+        const adminProfile = getOrCreateUserProfile('admin@test.com', 'Test Admin', 'admin' as UserRole, 'TEST_COMPANY');
+        const adminSession = createSession(adminProfile.id);
+        setUser(adminUser);
+        setUserProfile(adminProfile);
+        setSession(adminSession);
+        localStorage.setItem('auth_user', JSON.stringify(adminUser));
+        localStorage.setItem('auth_session_token', adminSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
+        return { data: { user: adminUser }, error: null };
+      }
+
       // Accept any valid email format and non-empty password
       if (!email || !password || !email.includes('@') || password.length < 3) {
         return { data: null, error: 'Please enter a valid email and password' }
