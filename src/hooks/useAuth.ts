@@ -191,9 +191,20 @@ export const useAuth = () => {
             const userProfile = JSON.parse(savedUserProfile)
             setUser(userData)
             setUserProfile(userProfile)
-            setSession({ token: sessionToken } as UserSession)
-            updateSessionActivity(sessionToken)
-            console.log('✅ Restored user session:', { email: userData.email, role: userData.role })
+            // Find the complete session object
+            const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
+            const completeSession = sessions.find((s) => s.token === sessionToken)
+            
+            if (completeSession) {
+              setSession(completeSession)
+              updateSessionActivity(sessionToken)
+              console.log('✅ Restored user session:', { email: userData.email, role: userData.role })
+            } else {
+              // Clear invalid session
+              localStorage.removeItem('auth_user')
+              localStorage.removeItem('auth_session_token')
+              localStorage.removeItem('auth_user_profile')
+            }
           } else {
             // Clear invalid session
             localStorage.removeItem('auth_user')
