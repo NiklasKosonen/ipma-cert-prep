@@ -243,184 +243,169 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string, role: UserRole) => {
     try {
-      // Accept any valid email format and non-empty password
       // Working credentials for testing
-const workingCredentials = {
-  admin: { email: 'admin@test.com', password: 'admin123' },
-  user: { email: 'user@test.com', password: 'user123' },
-  trainer: { email: 'trainer@test.com', password: 'trainer123' },
-  niklas: { email: 'niklas.kosonen@talentnetwork.fi', password: 'Niipperi2026ipm#' }
-};
+      const workingCredentials = {
+        admin: { email: 'admin@test.com', password: 'admin123' },
+        user: { email: 'user@test.com', password: 'user123' },
+        trainer: { email: 'trainer@test.com', password: 'trainer123' },
+        niklas: { email: 'niklas.kosonen@talentnetwork.fi', password: 'Niipperi2026ipm#' }
+      };
 
-// Check Niklas admin credentials first
-if (email.toLowerCase() === workingCredentials.niklas.email.toLowerCase() && password === workingCredentials.niklas.password) {
-  console.log('🔐 Niklas admin login detected');
-  
-  const adminUser: AuthUser = {
-    id: 'admin_niklas_kosonen',
-    email: workingCredentials.niklas.email,
-    role: 'admin' as UserRole,
-    companyCode: 'TALENT_NETWORK',
-  };
+      // Check Niklas admin credentials first
+      if (email.toLowerCase() === workingCredentials.niklas.email.toLowerCase() && password === workingCredentials.niklas.password) {
+        console.log('🔐 Niklas admin login detected');
+        
+        const adminUser: AuthUser = {
+          id: 'admin_niklas_kosonen',
+          email: workingCredentials.niklas.email,
+          role: 'admin' as UserRole,
+          companyCode: 'TALENT_NETWORK',
+        };
 
-  const adminProfile = getOrCreateUserProfile(
-    workingCredentials.niklas.email, 
-    'Niklas Kosonen', 
-    'admin' as UserRole, 
-    'TALENT_NETWORK'
-  );
-  
-  const adminSession = createSession(adminProfile.id);
-
-  setUser(adminUser);
-  setUserProfile(adminProfile);
-  setSession(adminSession);
-
-  localStorage.setItem('auth_user', JSON.stringify(adminUser));
-  localStorage.setItem('auth_session_token', adminSession.token);
-  localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
-
-  console.log('✅ Niklas admin signed in:', { 
-    email: workingCredentials.niklas.email, 
-    role: 'admin', 
-    sessionToken: adminSession.token,
-    name: 'Niklas Kosonen'
-  });
-
-  return { data: { user: adminUser }, error: null };
-}
-
-// Check working admin credentials
-if (email.toLowerCase() === workingCredentials.admin.email.toLowerCase() && password === workingCredentials.admin.password) {
-  console.log('🔐 Working admin login detected');
-  
-  const adminUser: AuthUser = {
-    id: 'admin_test',
-    email: workingCredentials.admin.email,
-    role: 'admin' as UserRole,
-    companyCode: 'TEST_COMPANY',
-  };
-
-  const adminProfile = getOrCreateUserProfile(
-    workingCredentials.admin.email, 
-    'Test Admin', 
-    'admin' as UserRole, 
-    'TEST_COMPANY'
-  );
-  
-  const adminSession = createSession(adminProfile.id);
-
-  setUser(adminUser);
-  setUserProfile(adminProfile);
-  setSession(adminSession);
-
-  localStorage.setItem('auth_user', JSON.stringify(adminUser));
-  localStorage.setItem('auth_session_token', adminSession.token);
-  localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
-
-  console.log('✅ Working admin signed in:', { 
-    email: workingCredentials.admin.email, 
-    role: 'admin', 
-    sessionToken: adminSession.token
-  });
-
-  return { data: { user: adminUser }, error: null };
-}
-
-// Check working user credentials
-if (email.toLowerCase() === workingCredentials.user.email.toLowerCase() && password === workingCredentials.user.password) {
-  console.log('�� Working user login detected');
-  
-  const userUser: AuthUser = {
-    id: 'user_test',
-    email: workingCredentials.user.email,
-    role: 'user' as UserRole,
-    companyCode: 'TEST_COMPANY',
-  };
-
-  const userProfile = getOrCreateUserProfile(
-    workingCredentials.user.email, 
-    'Test User', 
-    'user' as UserRole, 
-    'TEST_COMPANY'
-  );
-  
-  const userSession = createSession(userProfile.id);
-
-  setUser(userUser);
-  setUserProfile(userProfile);
-  setSession(userSession);
-
-  localStorage.setItem('auth_user', JSON.stringify(userUser));
-  localStorage.setItem('auth_session_token', userSession.token);
-  localStorage.setItem('auth_user_profile', JSON.stringify(userProfile));
-
-  console.log('✅ Working user signed in:', { 
-    email: workingCredentials.user.email, 
-    role: 'user', 
-    sessionToken: userSession.token
-  });
-
-  return { data: { user: userUser }, error: null };
-}
-
-// Check working trainer credentials
-if (email.toLowerCase() === workingCredentials.trainer.email.toLowerCase() && password === workingCredentials.trainer.password) {
-  console.log('🔐 Working trainer login detected');
-  
-  const trainerUser: AuthUser = {
-    id: 'trainer_test',
-    email: workingCredentials.trainer.email,
-    role: 'trainer' as UserRole,
-    companyCode: 'TEST_COMPANY',
-  };
-
-  const trainerProfile = getOrCreateUserProfile(
-    workingCredentials.trainer.email, 
-    'Test Trainer', 
-    'trainer' as UserRole, 
-    'TEST_COMPANY'
-  );
-  
-  const trainerSession = createSession(trainerProfile.id);
-
-  setUser(trainerUser);
-  setUserProfile(trainerProfile);
-  setSession(trainerSession);
-
-  localStorage.setItem('auth_user', JSON.stringify(trainerUser));
-  localStorage.setItem('auth_session_token', trainerSession.token);
-  localStorage.setItem('auth_user_profile', JSON.stringify(trainerProfile));
-
-  console.log('✅ Working trainer signed in:', { 
-    email: workingCredentials.trainer.email, 
-    role: 'trainer', 
-    sessionToken: trainerSession.token
-  });
-
-  return { data: { user: trainerUser }, error: null };
-}
-
-if (!email || !password || !email.includes('@') || password.length < 3) {
-  return { data: null, error: 'Please enter a valid email and password' }
-}
-      
-      // Check if this is Niklas admin login
-      if (email.toLowerCase() === adminCredentials.email.toLowerCase() && password === adminCredentials.password) {
-        console.log(' Admin login detected for Niklas Kosonen');
-        const adminUser: AuthUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin' as UserRole, companyCode: 'TALENT_NETWORK' };
-        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin' as UserRole, 'TALENT_NETWORK');
+        const adminProfile = getOrCreateUserProfile(
+          workingCredentials.niklas.email, 
+          'Niklas Kosonen', 
+          'admin' as UserRole, 
+          'TALENT_NETWORK'
+        );
+        
         const adminSession = createSession(adminProfile.id);
-        setUser(adminUser); setUserProfile(adminProfile); setSession(adminSession);
+
+        setUser(adminUser);
+        setUserProfile(adminProfile);
+        setSession(adminSession);
+
         localStorage.setItem('auth_user', JSON.stringify(adminUser));
         localStorage.setItem('auth_session_token', adminSession.token);
         localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
-        console.log(' Admin signed in:', { email: adminCredentials.email, role: 'admin', sessionToken: adminSession.token, name: 'Niklas Kosonen' });
+
+        console.log('✅ Niklas admin signed in:', { 
+          email: workingCredentials.niklas.email, 
+          role: 'admin', 
+          sessionToken: adminSession.token,
+          name: 'Niklas Kosonen'
+        });
+
         return { data: { user: adminUser }, error: null };
       }
+
+      // Check working admin credentials
+      if (email.toLowerCase() === workingCredentials.admin.email.toLowerCase() && password === workingCredentials.admin.password) {
+        console.log('🔐 Working admin login detected');
+        
+        const adminUser: AuthUser = {
+          id: 'admin_test',
+          email: workingCredentials.admin.email,
+          role: 'admin' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+
+        const adminProfile = getOrCreateUserProfile(
+          workingCredentials.admin.email, 
+          'Test Admin', 
+          'admin' as UserRole, 
+          'TEST_COMPANY'
+        );
+        
+        const adminSession = createSession(adminProfile.id);
+
+        setUser(adminUser);
+        setUserProfile(adminProfile);
+        setSession(adminSession);
+
+        localStorage.setItem('auth_user', JSON.stringify(adminUser));
+        localStorage.setItem('auth_session_token', adminSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
+
+        console.log('✅ Working admin signed in:', { 
+          email: workingCredentials.admin.email, 
+          role: 'admin', 
+          sessionToken: adminSession.token
+        });
+
+        return { data: { user: adminUser }, error: null };
       }
 
-      // Create authenticated user
+      // Check working user credentials
+      if (email.toLowerCase() === workingCredentials.user.email.toLowerCase() && password === workingCredentials.user.password) {
+        console.log('🔐 Working user login detected');
+        
+        const userUser: AuthUser = {
+          id: 'user_test',
+          email: workingCredentials.user.email,
+          role: 'user' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+
+        const userProfile = getOrCreateUserProfile(
+          workingCredentials.user.email, 
+          'Test User', 
+          'user' as UserRole, 
+          'TEST_COMPANY'
+        );
+        
+        const userSession = createSession(userProfile.id);
+
+        setUser(userUser);
+        setUserProfile(userProfile);
+        setSession(userSession);
+
+        localStorage.setItem('auth_user', JSON.stringify(userUser));
+        localStorage.setItem('auth_session_token', userSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(userProfile));
+
+        console.log('✅ Working user signed in:', { 
+          email: workingCredentials.user.email, 
+          role: 'user', 
+          sessionToken: userSession.token
+        });
+
+        return { data: { user: userUser }, error: null };
+      }
+
+      // Check working trainer credentials
+      if (email.toLowerCase() === workingCredentials.trainer.email.toLowerCase() && password === workingCredentials.trainer.password) {
+        console.log('🔐 Working trainer login detected');
+        
+        const trainerUser: AuthUser = {
+          id: 'trainer_test',
+          email: workingCredentials.trainer.email,
+          role: 'trainer' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+
+        const trainerProfile = getOrCreateUserProfile(
+          workingCredentials.trainer.email, 
+          'Test Trainer', 
+          'trainer' as UserRole, 
+          'TEST_COMPANY'
+        );
+        
+        const trainerSession = createSession(trainerProfile.id);
+
+        setUser(trainerUser);
+        setUserProfile(trainerProfile);
+        setSession(trainerSession);
+
+        localStorage.setItem('auth_user', JSON.stringify(trainerUser));
+        localStorage.setItem('auth_session_token', trainerSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(trainerProfile));
+
+        console.log('✅ Working trainer signed in:', { 
+          email: workingCredentials.trainer.email, 
+          role: 'trainer', 
+          sessionToken: trainerSession.token
+        });
+
+        return { data: { user: trainerUser }, error: null };
+      }
+
+      // Accept any valid email format and non-empty password for other users
+      if (!email || !password || !email.includes('@') || password.length < 3) {
+        return { data: null, error: 'Please enter a valid email and password' }
+      }
+
+      // Create authenticated user for any other valid email/password
       const mockUser: AuthUser = {
         id: `user_${Date.now()}`,
         email,
@@ -441,24 +426,6 @@ if (!email || !password || !email.includes('@') || password.length < 3) {
       localStorage.setItem('auth_user_profile', JSON.stringify(userProfile))
 
       console.log('✅ User signed in:', { email, role, sessionToken: userSession.token })
-      
-      // Get redirect path based on role
-      const getRedirectPath = (userRole: UserRole): string => {
-        switch (userRole) {
-          case 'admin': return '/admin'
-          case 'trainer': return '/coach/dashboard'
-          case 'trainee': return '/trainee/dashboard'
-          case 'user': return '/user/dashboard'
-          default: return '/'
-        }
-      }
-      
-      console.log('✅ Auth state set:', { 
-        user: mockUser, 
-        userProfile, 
-        session: userSession,
-        redirectPath: getRedirectPath(role)
-      })
 
       return { data: { user: mockUser }, error: null }
     } catch (error) {
