@@ -37,7 +37,7 @@ export const validateDataIntegrity = (): Record<string, ValidationResult> => {
         results[key] = { status: 'missing', count: 0 }
       }
     } catch (error: any) {
-      results[key] = { status: 'error', error: error.message }
+      results[key] = { status: 'error', count: 0, error: error.message }
     }
   })
   
