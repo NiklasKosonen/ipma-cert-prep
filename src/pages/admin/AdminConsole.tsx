@@ -9,7 +9,7 @@ import { useAutoBackup } from '../../hooks/useAutoBackup'
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
   const { 
-    topics, subtopics, kpis, questions, trainingExamples, companyCodes,
+    topics, subtopics, kpis, questions, trainingExamples, companyCodes, sampleAnswers, users, subscriptions,
     addTopic, updateTopic, deleteTopic,
     addSubtopic, updateSubtopic, deleteSubtopic,
     addKPI, updateKPI, deleteKPI,
@@ -39,35 +39,6 @@ const AdminConsole: React.FC = () => {
     }
   }, [])
 
-  // Backup functions
-  const handleCreateBackup = async () => {
-    setBackupStatus('backing_up')
-    try {
-      const backupName = await createBackup()
-      setLastBackupTime(new Date().toISOString())
-      alert(`✅ Backup created successfully: ${backupName}`)
-    } catch (error) {
-      alert(`❌ Backup failed: ${error}`)
-    } finally {
-      setBackupStatus('idle')
-    }
-  }
-
-  const handleRestoreBackup = async () => {
-    if (!confirm('⚠️ This will restore data from the last backup. Current data will be replaced. Continue?')) {
-      return
-    }
-    
-    setBackupStatus('restoring')
-    try {
-      await restoreBackup()
-      alert('✅ Data restored successfully!')
-    } catch (error) {
-      alert(`❌ Restore failed: ${error}`)
-    } finally {
-      setBackupStatus('idle')
-    }
-  }
 
   const handleSyncToSupabase = async () => {
     setBackupStatus('syncing')
@@ -1911,22 +1882,6 @@ const AdminConsole: React.FC = () => {
                   <div className="space-y-3">
                     <button
                       onClick={() => {
-                        // Save all current data to localStorage
-                        const dataToSave = {
-                          timestamp: new Date().toISOString(),
-                          data: {
-                            topics: topics,
-                            questions: questions,
-                            kpis: kpis,
-                            companyCodes: companyCodes,
-                            subtopics: subtopics,
-                            sampleAnswers: sampleAnswers,
-                            trainingExamples: trainingExamples,
-                            users: users,
-                            subscriptions: subscriptions
-                          }
-                        }
-                        
                         // Save each data type individually
                         localStorage.setItem('ipma_topics', JSON.stringify({
                           timestamp: new Date().toISOString(),
