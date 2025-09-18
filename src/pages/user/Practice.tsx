@@ -8,10 +8,16 @@ import { Question, Topic, Subtopic } from '../../types'
 const selectRandomQuestions = (questions: Question[], subtopics: Subtopic[]): Question[] => {
   const selectedQuestions: Question[] = []
   
+  console.log('Selecting random questions:', {
+    totalQuestions: questions.length,
+    subtopics: subtopics.length,
+    subtopicIds: subtopics.map(s => s.id)
+  })
+  
   // Group questions by subtopic
   const questionsBySubtopic = new Map<string, Question[]>()
   questions.forEach(question => {
-    if (question.subtopicId) {
+    if (question.subtopicId && question.isActive) {
       if (!questionsBySubtopic.has(question.subtopicId)) {
         questionsBySubtopic.set(question.subtopicId, [])
       }
@@ -19,21 +25,25 @@ const selectRandomQuestions = (questions: Question[], subtopics: Subtopic[]): Qu
     }
   })
   
+  console.log('Questions by subtopic:', Array.from(questionsBySubtopic.entries()).map(([id, qs]) => ({
+    subtopicId: id,
+    questionCount: qs.length
+  })))
+  
   // Select 1 random question from each subtopic
   subtopics.forEach(subtopic => {
     const subtopicQuestions = questionsBySubtopic.get(subtopic.id) || []
     if (subtopicQuestions.length > 0) {
-      // Ensure we have 3-5 questions per subtopic for proper randomization
-      if (subtopicQuestions.length >= 3) {
-        const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
-        selectedQuestions.push(subtopicQuestions[randomIndex])
-      } else {
-        // If less than 3 questions, take all available
-        selectedQuestions.push(...subtopicQuestions)
-      }
+      // Select 1 random question from this subtopic
+      const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
+      selectedQuestions.push(subtopicQuestions[randomIndex])
+      console.log(`Selected question from subtopic ${subtopic.id}:`, subtopicQuestions[randomIndex].id)
+    } else {
+      console.warn(`No questions found for subtopic: ${subtopic.id} (${subtopic.title})`)
     }
   })
   
+  console.log('Final selected questions:', selectedQuestions.length)
   return selectedQuestions
 }
 
@@ -439,14 +449,21 @@ const Exam = ({ topic, onBack, onComplete }: {
   if (selectedQuestions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md mx-auto p-6">
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
             No Questions Available
           </h2>
           <p className="text-gray-600 mb-4">
-            There are no questions available for this topic yet.
+            There are no questions available for this topic yet. Please contact your administrator to add questions.
           </p>
+          <div className="space-y-2 text-sm text-gray-500 mb-6">
+            <p><strong>Debug Info:</strong></p>
+            <p>Topic: {topic.title}</p>
+            <p>Subtopics: {subtopics.filter(s => s.topicId === topic.id && s.isActive).length}</p>
+            <p>Total Questions: {questions.length}</p>
+            <p>Active Questions: {questions.filter(q => q.isActive).length}</p>
+          </div>
           <button
             onClick={onBack}
             className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"

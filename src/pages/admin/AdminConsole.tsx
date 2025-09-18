@@ -1054,6 +1054,18 @@ const AdminConsole: React.FC = () => {
                   >
                     Add Question
                   </button>
+                  <button
+                    onClick={() => {
+                      // Force save all data to localStorage
+                      localStorage.setItem('ipma_questions', JSON.stringify(questions))
+                      localStorage.setItem('ipma_subtopics', JSON.stringify(subtopics))
+                      localStorage.setItem('ipma_topics', JSON.stringify(topics))
+                      alert('Data manually saved to localStorage!')
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                  >
+                    Force Save
+                  </button>
                   <input
                     type="file"
                     accept=".xlsx,.xls"
@@ -1829,8 +1841,27 @@ const AdminConsole: React.FC = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Backup & Data Sync</h2>
-                <div className="text-sm text-gray-500">
-                  {lastBackupTime && `Last backup: ${new Date(lastBackupTime).toLocaleString()}`}
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-gray-500">
+                    {lastBackupTime && `Last backup: ${new Date(lastBackupTime).toLocaleString()}`}
+                  </div>
+                  <button
+                    onClick={() => {
+                      console.log('Current data state:', {
+                        topics: topics.length,
+                        questions: questions.length,
+                        subtopics: subtopics.length,
+                        kpis: kpis.length,
+                        companyCodes: companyCodes.length
+                      })
+                      console.log('Questions:', questions)
+                      console.log('Subtopics:', subtopics)
+                      alert('Debug info logged to console. Check browser console for details.')
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Debug Data
+                  </button>
                 </div>
               </div>
 
