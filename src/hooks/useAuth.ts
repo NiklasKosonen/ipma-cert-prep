@@ -292,6 +292,44 @@ export const useAuth = () => {
         return { data: { user: adminUser }, error: null };
       }
 
+      // Working test credentials for user
+      if (email.toLowerCase() === 'user@test.com' && password === 'user123') {
+        const userUser: AuthUser = {
+          id: 'user_test',
+          email: 'user@test.com',
+          role: 'user' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+        const userProfile = getOrCreateUserProfile('user@test.com', 'Test User', 'user' as UserRole, 'TEST_COMPANY');
+        const userSession = createSession(userProfile.id);
+        setUser(userUser);
+        setUserProfile(userProfile);
+        setSession(userSession);
+        localStorage.setItem('auth_user', JSON.stringify(userUser));
+        localStorage.setItem('auth_session_token', userSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(userProfile));
+        return { data: { user: userUser }, error: null };
+      }
+
+      // Working test credentials for trainer
+      if (email.toLowerCase() === 'trainer@test.com' && password === 'trainer123') {
+        const trainerUser: AuthUser = {
+          id: 'trainer_test',
+          email: 'trainer@test.com',
+          role: 'trainer' as UserRole,
+          companyCode: 'TEST_COMPANY',
+        };
+        const trainerProfile = getOrCreateUserProfile('trainer@test.com', 'Test Trainer', 'trainer' as UserRole, 'TEST_COMPANY');
+        const trainerSession = createSession(trainerProfile.id);
+        setUser(trainerUser);
+        setUserProfile(trainerProfile);
+        setSession(trainerSession);
+        localStorage.setItem('auth_user', JSON.stringify(trainerUser));
+        localStorage.setItem('auth_session_token', trainerSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(trainerProfile));
+        return { data: { user: trainerUser }, error: null };
+      }
+
       // Working test credentials
       if (email.toLowerCase() === 'admin@test.com' && password === 'admin123') {
         const adminUser: AuthUser = {
