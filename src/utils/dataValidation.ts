@@ -1,6 +1,13 @@
 
 // Data Validation Script
-export const validateDataIntegrity = () => {
+interface ValidationResult {
+  status: 'ok' | 'missing' | 'error'
+  count: number
+  timestamp?: string
+  error?: string
+}
+
+export const validateDataIntegrity = (): Record<string, ValidationResult> => {
   const storageKeys = [
     'ipma_topics',
     'ipma_questions', 
@@ -13,7 +20,7 @@ export const validateDataIntegrity = () => {
     'ipma_subscriptions'
   ]
   
-  const results = {}
+  const results: Record<string, ValidationResult> = {}
   
   storageKeys.forEach(key => {
     try {
@@ -29,7 +36,7 @@ export const validateDataIntegrity = () => {
       } else {
         results[key] = { status: 'missing', count: 0 }
       }
-    } catch (error) {
+    } catch (error: any) {
       results[key] = { status: 'error', error: error.message }
     }
   })
@@ -38,7 +45,7 @@ export const validateDataIntegrity = () => {
 }
 
 // Force save all data
-export const forceSaveAllData = (dataContext) => {
+export const forceSaveAllData = (dataContext: any) => {
   const { topics, questions, kpis, companyCodes, subtopics, sampleAnswers, trainingExamples, users, subscriptions } = dataContext
   
   const dataToSave = {

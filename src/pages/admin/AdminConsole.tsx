@@ -1877,7 +1877,7 @@ const AdminConsole: React.FC = () => {
                         'ipma_subscriptions'
                       ]
                       
-                      const results = {}
+                      const results: Record<string, { status: string; count: number; timestamp?: string; error?: string }> = {}
                       storageKeys.forEach(key => {
                         try {
                           const data = localStorage.getItem(key)
@@ -1892,8 +1892,8 @@ const AdminConsole: React.FC = () => {
                           } else {
                             results[key] = { status: 'missing', count: 0 }
                           }
-                        } catch (error) {
-                          results[key] = { status: 'error', error: error.message }
+                        } catch (error: any) {
+                          results[key] = { status: 'error', count: 0, error: error.message }
                         }
                       })
                       
