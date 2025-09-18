@@ -80,7 +80,7 @@ export const useAuth = () => {
 
   // Get or create user profile
   const getOrCreateUserProfile = useCallback((email: string, name: string, role: UserRole, companyCode?: string): UserProfile => {
-    const users = JSON.parse(localStorage.getItem('ipma_users') || '[]')
+    const usersData = localStorage.getItem('ipma_users') || '[]'; const users = Array.isArray(JSON.parse(usersData)) ? JSON.parse(usersData) : []
     let userProfile = users.find((u: UserProfile) => u.email === email)
 
     if (!userProfile) {
@@ -116,7 +116,7 @@ export const useAuth = () => {
           updatedAt: now.toISOString()
         }
 
-        const subscriptions = JSON.parse(localStorage.getItem('ipma_subscriptions') || '[]')
+        const subscriptionsData = localStorage.getItem('ipma_subscriptions') || '[]'; const subscriptions = Array.isArray(JSON.parse(subscriptionsData)) ? JSON.parse(subscriptionsData) : []
         subscriptions.push(subscription)
         localStorage.setItem('ipma_subscriptions', JSON.stringify(subscriptions))
 
@@ -451,7 +451,7 @@ export const useAuth = () => {
         updatedAt: new Date().toISOString()
       }
 
-      const users = JSON.parse(localStorage.getItem('ipma_users') || '[]')
+      const usersData = localStorage.getItem('ipma_users') || '[]'; const users = Array.isArray(JSON.parse(usersData)) ? JSON.parse(usersData) : []
       const userIndex = users.findIndex((u: UserProfile) => u.id === userProfile.id)
       
       if (userIndex !== -1) {
@@ -470,7 +470,7 @@ export const useAuth = () => {
 
   const extendSubscription = async (userId: string, days: number) => {
     try {
-      const subscriptions = JSON.parse(localStorage.getItem('ipma_subscriptions') || '[]')
+      const subscriptionsData = localStorage.getItem('ipma_subscriptions') || '[]'; const subscriptions = Array.isArray(JSON.parse(subscriptionsData)) ? JSON.parse(subscriptionsData) : []
       const subscription = subscriptions.find((s: Subscription) => s.userId === userId)
       
       if (subscription) {
@@ -501,7 +501,7 @@ export const useAuth = () => {
   const signInWithCompanyCode = async (email: string, companyCode: string) => {
     try {
       // Validate company code
-      const companyCodes = JSON.parse(localStorage.getItem('ipma_company_codes') || '[]')
+      const companyCodesData = localStorage.getItem('ipma_company_codes') || '[]'; const companyCodes = Array.isArray(JSON.parse(companyCodesData)) ? JSON.parse(companyCodesData) : []
       const company = companyCodes.find((cc: any) => 
         cc.code.toUpperCase() === companyCode.toUpperCase() && 
         cc.isActive
