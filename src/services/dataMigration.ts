@@ -228,6 +228,20 @@ export class DataMigrationService {
     }
   }
 
+  // Generate a consistent UUID from a string ID
+  private generateUUID(inputId: string): string {
+    // Create a deterministic UUID from the input string
+    const crypto = require('crypto')
+    const hash = crypto.createHash('md5').update(inputId).digest('hex')
+    return [
+      hash.substring(0, 8),
+      hash.substring(8, 12),
+      hash.substring(12, 16),
+      hash.substring(16, 20),
+      hash.substring(20, 32)
+    ].join('-')
+  }
+
   private loadAllAttempts(): Attempt[] {
     const attempts: Attempt[] = []
     const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
@@ -285,7 +299,7 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('topics')
       .upsert(topics.map(topic => ({
-        id: topic.id,
+        id: this.generateUUID(topic.id), // Convert to proper UUID
         title: topic.title,
         description: topic.description,
         order_index: 0, // Default order since Topic doesn't have orderIndex
@@ -294,7 +308,11 @@ export class DataMigrationService {
         updated_at: topic.updatedAt
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing topics:', error)
+      throw error
+    }
+    console.log(`✅ Synced ${topics.length} topics to Supabase`)
   }
 
   private async syncQuestions(questions: Question[]): Promise<void> {
@@ -303,9 +321,9 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('questions')
       .upsert(questions.map(question => ({
-        id: question.id,
-        topic_id: question.topicId,
-        subtopic_id: question.subtopicId,
+        id: this.generateUUID(question.id), // Convert to proper UUID
+        topic_id: this.generateUUID(question.topicId), // Convert topic ID to UUID
+        subtopic_id: question.subtopicId ? this.generateUUID(question.subtopicId) : null,
         prompt: question.prompt,
         difficulty_level: 1, // Default since Question doesn't have difficultyLevel
         time_limit: 300, // Default since Question doesn't have timeLimit
@@ -314,7 +332,11 @@ export class DataMigrationService {
         updated_at: question.updatedAt
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing questions:', error)
+      throw error
+    }
+    console.log(`✅ Synced ${questions.length} questions to Supabase`)
   }
 
   private async syncKPIs(kpis: KPI[]): Promise<void> {
@@ -323,7 +345,7 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('kpis')
       .upsert(kpis.map(kpi => ({
-        id: kpi.id,
+        id: this.generateUUID(kpi.id), // Convert to proper UUID
         name: kpi.name,
         description: '', // Default since KPI doesn't have description
         weight: 1.00, // Default since KPI doesn't have weight
@@ -332,7 +354,11 @@ export class DataMigrationService {
         updated_at: kpi.updatedAt
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing KPIs:', error)
+      throw error
+    }
+    console.log(`✅ Synced ${kpis.length} KPIs to Supabase`)
   }
 
   private async syncCompanyCodes(companyCodes: CompanyCode[]): Promise<void> {
@@ -341,7 +367,7 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('company_codes')
       .upsert(companyCodes.map(code => ({
-        id: code.id,
+        id: this.generateUUID(code.id), // Convert to proper UUID
         code: code.code,
         name: code.companyName, // Use companyName instead of name
         description: '', // Default since CompanyCode doesn't have description
@@ -363,8 +389,8 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('subtopics')
       .upsert(subtopics.map(subtopic => ({
-        id: subtopic.id,
-        topic_id: subtopic.topicId,
+        id: this.generateUUID(subtopic.id), // Convert to proper UUID
+        topic_id: this.generateUUID(subtopic.topicId), // Convert topic ID to UUID
         title: subtopic.title,
         description: subtopic.description,
         order_index: 0, // Default since Subtopic doesn't have orderIndex
@@ -372,7 +398,11 @@ export class DataMigrationService {
         updated_at: subtopic.updatedAt
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing subtopics:', error)
+      throw error
+    }
+    console.log(`✅ Synced ${subtopics.length} subtopics to Supabase`)
   }
 
   private async syncSampleAnswers(sampleAnswers: SampleAnswer[]): Promise<void> {
