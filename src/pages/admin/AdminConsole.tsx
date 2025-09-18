@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
+import { useAutoBackup } from '../../hooks/useAutoBackup'
+import { dataMigration } from '../../services/dataMigration'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
@@ -17,7 +19,84 @@ const AdminConsole: React.FC = () => {
     addCompanyCode, deleteCompanyCode,
   } = useData()
 
+  // Auto backup functionality
+  const { createBackup, restoreBackup, syncToSupabase, syncFromSupabase } = useAutoBackup({
+    enabled: true,
+    interval: 30, // 30 minutes
+    beforeUnload: true,
+    beforeDeploy: true
+  })
+
   const [activeTab, setActiveTab] = useState('topics')
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'backing_up' | 'restoring' | 'syncing'>('idle')
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null)
+
+  // Initialize backup status
+  useEffect(() => {
+    const lastBackup = localStorage.getItem('last_auto_backup')
+    if (lastBackup) {
+      const backup = JSON.parse(lastBackup)
+      setLastBackupTime(backup.timestamp)
+    }
+  }, [])
+
+  // Backup functions
+  const handleCreateBackup = async () => {
+    setBackupStatus('backing_up')
+    try {
+      const backupName = await createBackup()
+      setLastBackupTime(new Date().toISOString())
+      alert(`✅ Backup created successfully: ${backupName}`)
+    } catch (error) {
+      alert(`❌ Backup failed: ${error}`)
+    } finally {
+      setBackupStatus('idle')
+    }
+  }
+
+  const handleRestoreBackup = async () => {
+    if (!confirm('⚠️ This will restore data from the last backup. Current data will be replaced. Continue?')) {
+      return
+    }
+    
+    setBackupStatus('restoring')
+    try {
+      await restoreBackup()
+      alert('✅ Data restored successfully!')
+    } catch (error) {
+      alert(`❌ Restore failed: ${error}`)
+    } finally {
+      setBackupStatus('idle')
+    }
+  }
+
+  const handleSyncToSupabase = async () => {
+    setBackupStatus('syncing')
+    try {
+      await syncToSupabase()
+      alert('✅ Data synced to Supabase successfully!')
+    } catch (error) {
+      alert(`❌ Sync failed: ${error}`)
+    } finally {
+      setBackupStatus('idle')
+    }
+  }
+
+  const handleSyncFromSupabase = async () => {
+    if (!confirm('⚠️ This will sync data from Supabase. Current data will be replaced. Continue?')) {
+      return
+    }
+    
+    setBackupStatus('syncing')
+    try {
+      await syncFromSupabase()
+      alert('✅ Data synced from Supabase successfully!')
+    } catch (error) {
+      alert(`❌ Sync failed: ${error}`)
+    } finally {
+      setBackupStatus('idle')
+    }
+  }
   
   // Topic states
   const [newTopic, setNewTopic] = useState({ title: '', description: '', isActive: true })
@@ -410,6 +489,7 @@ const AdminConsole: React.FC = () => {
               { id: 'questions', label: t('questions') },
               { id: 'training-examples', label: t('trainingExamples') },
               { id: 'company-codes', label: t('companyCodes') },
+              { id: 'backup', label: 'Backup & Sync' },
               { id: 'email-config', label: t('emailConfig') },
               { id: 'ai-evaluation', label: t('aiEvaluation') }
             ].map((tab) => (
@@ -1680,6 +1760,147 @@ const AdminConsole: React.FC = () => {
                   <p className="text-sm text-gray-600 mt-2">
                     This will send a test email to verify your EmailJS integration is working correctly.
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Backup & Sync Tab */}
+          {activeTab === 'backup' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Backup & Data Sync</h2>
+                <div className="text-sm text-gray-500">
+                  {lastBackupTime && `Last backup: ${new Date(lastBackupTime).toLocaleString()}`}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Local Backup Section */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium mb-4 flex items-center">
+                    <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Local Backup
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create and restore backups of your data. Backups are automatically created before deployments.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleCreateBackup}
+                      disabled={backupStatus !== 'idle'}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {backupStatus === 'backing_up' ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Creating Backup...
+                        </>
+                      ) : (
+                        'Create Backup Now'
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={handleRestoreBackup}
+                      disabled={backupStatus !== 'idle'}
+                      className="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {backupStatus === 'restoring' ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Restoring...
+                        </>
+                      ) : (
+                        'Restore from Backup'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Supabase Sync Section */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-medium mb-4 flex items-center">
+                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Supabase Sync
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sync your data to/from Supabase database for persistent storage across deployments.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleSyncToSupabase}
+                      disabled={backupStatus !== 'idle'}
+                      className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {backupStatus === 'syncing' ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Syncing to Supabase...
+                        </>
+                      ) : (
+                        'Sync to Supabase'
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={handleSyncFromSupabase}
+                      disabled={backupStatus !== 'idle'}
+                      className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {backupStatus === 'syncing' ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Syncing from Supabase...
+                        </>
+                      ) : (
+                        'Sync from Supabase'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Auto Backup Status */}
+              <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Automatic Backup Status</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center">
+                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Auto backup every 30 minutes</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Backup before page unload</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-700">Backup before deployments</span>
+                  </div>
                 </div>
               </div>
             </div>

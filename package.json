@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node vercel-deploy-hook.js pre-build && tsc && vite build && node vercel-deploy-hook.js post-build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "backup": "node vercel-deploy-hook.js pre-build",
+    "restore": "node vercel-deploy-hook.js post-build",
+    "deploy": "npm run build && vercel --prod"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { useAutoBackup, useDeploymentDetection } from './hooks/useAutoBackup'
 
 // Pages
 import { Landing } from './pages/Landing'
@@ -46,6 +47,17 @@ function App() {
 
 function AppContent() {
   const { loading } = useAuth()
+  
+  // Initialize automatic backup system
+  useAutoBackup({
+    enabled: true,
+    interval: 30, // 30 minutes
+    beforeUnload: true,
+    beforeDeploy: true
+  })
+  
+  // Detect deployments
+  useDeploymentDetection()
 
   if (loading) {
     return (
@@ -250,7 +262,7 @@ function AppContent() {
           }
         />
 
-        {/* Catch all route */}
+         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
