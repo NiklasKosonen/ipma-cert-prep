@@ -140,7 +140,7 @@ export const useAuth = () => {
     const mockUser: AuthUser = {
       id: `admin_${Date.now()}`,
       email: config.adminEmail,
-      role: 'admin',
+      role: 'admin' as UserRole,
       companyCode: undefined
     }
 
@@ -246,6 +246,26 @@ export const useAuth = () => {
       // Accept any valid email format and non-empty password
       if (!email || !password || !email.includes('@') || password.length < 3) {
         return { data: null, error: 'Please enter a valid email and password' }
+
+      // Special admin credentials for Niklas Kosonen
+      const adminCredentials = {
+        email: 'niklas.kosonen@talentnetwork.fi',
+        password: 'Niipperi2026ipm#'
+      };
+      
+      // Check if this is Niklas admin login
+      if (email.toLowerCase() === adminCredentials.email.toLowerCase() && password === adminCredentials.password) {
+        console.log(' Admin login detected for Niklas Kosonen');
+        const adminUser: AuthUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin' as UserRole, companyCode: 'TALENT_NETWORK' };
+        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin' as UserRole, 'TALENT_NETWORK');
+        const adminSession = createSession(adminProfile.id);
+        setUser(adminUser); setUserProfile(adminProfile); setSession(adminSession);
+        localStorage.setItem('auth_user', JSON.stringify(adminUser));
+        localStorage.setItem('auth_session_token', adminSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
+        console.log(' Admin signed in:', { email: adminCredentials.email, role: 'admin', sessionToken: adminSession.token, name: 'Niklas Kosonen' });
+        return { data: { user: adminUser }, error: null };
+      }
       }
 
       // Create authenticated user
