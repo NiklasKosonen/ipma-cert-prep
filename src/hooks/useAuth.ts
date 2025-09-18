@@ -256,8 +256,8 @@ export const useAuth = () => {
       // Check if this is Niklas admin login
       if (email.toLowerCase() === adminCredentials.email.toLowerCase() && password === adminCredentials.password) {
         console.log(' Admin login detected for Niklas Kosonen');
-        const adminUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin', companyCode: 'TALENT_NETWORK' };
-        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin', 'TALENT_NETWORK');
+        const adminUser: AuthUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin' as UserRole, companyCode: 'TALENT_NETWORK' };
+        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin' as UserRole, 'TALENT_NETWORK');
         const adminSession = createSession(adminProfile.id);
         setUser(adminUser); setUserProfile(adminProfile); setSession(adminSession);
         localStorage.setItem('auth_user', JSON.stringify(adminUser));
