@@ -134,14 +134,14 @@ export class DataMigrationService {
         attemptItems: snapshot.attemptItems.length
       })
       
-      // Sync each data type
+      // Sync each data type in correct order (respecting foreign key constraints)
       await this.syncTopics(snapshot.topics)
-      await this.syncQuestions(snapshot.questions)
       await this.syncKPIs(snapshot.kpis)
       await this.syncCompanyCodes(snapshot.companyCodes)
-      await this.syncSubtopics(snapshot.subtopics)
-      await this.syncSampleAnswers(snapshot.sampleAnswers)
-      await this.syncTrainingExamples(snapshot.trainingExamples)
+      await this.syncSubtopics(snapshot.subtopics) // Must sync before questions
+      await this.syncQuestions(snapshot.questions) // References subtopics
+      await this.syncSampleAnswers(snapshot.sampleAnswers) // References questions
+      await this.syncTrainingExamples(snapshot.trainingExamples) // References questions
       await this.syncUsers(snapshot.users)
       await this.syncSubscriptions(snapshot.subscriptions)
       await this.syncAttempts(snapshot.attempts)
