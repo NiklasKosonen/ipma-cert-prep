@@ -1862,6 +1862,48 @@ const AdminConsole: React.FC = () => {
                   >
                     Debug Data
                   </button>
+                  <button
+                    onClick={() => {
+                      // Validate data integrity
+                      const storageKeys = [
+                        'ipma_topics',
+                        'ipma_questions', 
+                        'ipma_kpis',
+                        'ipma_company_codes',
+                        'ipma_subtopics',
+                        'ipma_sample_answers',
+                        'ipma_training_examples',
+                        'ipma_users',
+                        'ipma_subscriptions'
+                      ]
+                      
+                      const results = {}
+                      storageKeys.forEach(key => {
+                        try {
+                          const data = localStorage.getItem(key)
+                          if (data) {
+                            const parsed = JSON.parse(data)
+                            const items = Array.isArray(parsed) ? parsed : (parsed.data || [])
+                            results[key] = {
+                              status: 'ok',
+                              count: items.length,
+                              timestamp: parsed.timestamp || 'unknown'
+                            }
+                          } else {
+                            results[key] = { status: 'missing', count: 0 }
+                          }
+                        } catch (error) {
+                          results[key] = { status: 'error', error: error.message }
+                        }
+                      })
+                      
+                      console.log('Data Validation Results:', results)
+                      alert(`Data Validation Complete!\n\nTopics: ${results['ipma_topics']?.count || 0}\nQuestions: ${results['ipma_questions']?.count || 0}\nKPIs: ${results['ipma_kpis']?.count || 0}\nCompany Codes: ${results['ipma_company_codes']?.count || 0}\n\nCheck console for full details.`)
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Validate Data
+                  </button>
                 </div>
               </div>
 

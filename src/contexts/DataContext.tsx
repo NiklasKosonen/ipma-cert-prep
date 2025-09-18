@@ -21,14 +21,32 @@ const STORAGE_KEYS = {
   userSessions: 'ipma_sessions'
 }
 
+
 const loadFromStorage = <T,>(key: string, fallback: T[]): T[] => {
   try {
     const stored = localStorage.getItem(key)
     if (stored) {
       const parsed = JSON.parse(stored)
+      
+      // Handle both old format (array) and new format (object with data property)
+      let data
       if (Array.isArray(parsed)) {
-        return parsed
+        data = parsed
+      } else if (parsed && Array.isArray(parsed.data)) {
+        data = parsed.data
+        console.log(`📊 Loaded ${data.length} items from ${key} (timestamp: ${parsed.timestamp})`)
       } else {
+        console.warn(`Invalid data format for ${key}, using fallback`)
+        return fallback
+      }
+      
+      return data
+    }
+  } catch (error) {
+    console.error(`Failed to load ${key} from localStorage:`, error)
+  }
+  return fallback
+} else {
         console.warn(`Invalid data format for ${key}, using fallback`)
         return fallback
       }
@@ -40,11 +58,36 @@ const loadFromStorage = <T,>(key: string, fallback: T[]): T[] => {
   return fallback
 }
 
+
 const saveToStorage = <T,>(key: string, data: T[]): void => {
   try {
     // Validate data before saving
     if (!Array.isArray(data)) {
       console.error(`Attempted to save non-array data for ${key}`)
+      return
+    }
+    
+    // Add timestamp for debugging
+    const dataWithTimestamp = {
+      data: data,
+      timestamp: new Date().toISOString(),
+      count: data.length
+    }
+    
+    localStorage.setItem(key, JSON.stringify(dataWithTimestamp))
+    console.log(`✅ Saved ${data.length} items to ${key}`)
+  } catch (error) {
+    console.error(`Failed to save ${key} to localStorage:`, error)
+    
+    // Try to save without timestamp if the above fails
+    try {
+      localStorage.setItem(key, JSON.stringify(data))
+      console.log(`✅ Fallback save successful for ${key}`)
+    } catch (fallbackError) {
+      console.error(`❌ Fallback save also failed for ${key}:`, fallbackError)
+    }
+  }
+}`)
       return
     }
     
