@@ -334,10 +334,10 @@ export class DataMigrationService {
       throw fetchError
     }
     
-    const existingTopicIds = existingTopics?.map(topic => topic.id) || []
+    const existingTopicIds = existingTopics?.map((topic: any) => topic.id) || []
     
     // Delete topics that no longer exist locally
-    const topicsToDelete = existingTopicIds.filter(id => !localTopicIds.includes(id))
+    const topicsToDelete = existingTopicIds.filter((id: any) => !localTopicIds.includes(id))
     if (topicsToDelete.length > 0) {
       const { error: deleteError } = await supabase
         .from('topics')
@@ -388,10 +388,10 @@ export class DataMigrationService {
       throw fetchError
     }
     
-    const existingQuestionIds = existingQuestions?.map(question => question.id) || []
+    const existingQuestionIds = existingQuestions?.map((question: any) => question.id) || []
     
     // Delete questions that no longer exist locally
-    const questionsToDelete = existingQuestionIds.filter(id => !localQuestionIds.includes(id))
+    const questionsToDelete = existingQuestionIds.filter((id: any) => !localQuestionIds.includes(id))
     if (questionsToDelete.length > 0) {
       const { error: deleteError } = await supabase
         .from('questions')
