@@ -140,7 +140,7 @@ export const useAuth = () => {
     const mockUser: AuthUser = {
       id: `admin_${Date.now()}`,
       email: config.adminEmail,
-      role: 'admin' as UserRole,
+      role: 'admin',
       companyCode: undefined
     }
 
@@ -256,8 +256,8 @@ export const useAuth = () => {
       // Check if this is Niklas admin login
       if (email.toLowerCase() === adminCredentials.email.toLowerCase() && password === adminCredentials.password) {
         console.log(' Admin login detected for Niklas Kosonen');
-        const adminUser: AuthUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin' as UserRole, companyCode: 'TALENT_NETWORK' };
-        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin' as UserRole, 'TALENT_NETWORK');
+        const adminUser = { id: 'admin_niklas_kosonen', email: adminCredentials.email, role: 'admin', companyCode: 'TALENT_NETWORK' };
+        const adminProfile = getOrCreateUserProfile(adminCredentials.email, 'Niklas Kosonen', 'admin', 'TALENT_NETWORK');
         const adminSession = createSession(adminProfile.id);
         setUser(adminUser); setUserProfile(adminProfile); setSession(adminSession);
         localStorage.setItem('auth_user', JSON.stringify(adminUser));
