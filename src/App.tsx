@@ -31,7 +31,7 @@ const TrainerDashboard = lazy(() => import('./pages/trainer/Dashboard').then(mod
 const TraineeDashboard = lazy(() => import('./pages/trainee/TraineeDashboard').then(module => ({ default: module.TraineeDashboard })))
 
 // Admin pages - lazy loaded (largest component)
-const AdminConsole = lazy(() => import('./pages/admin/AdminConsoleSimple'))
+const AdminConsole = lazy(() => import('./pages/admin/AdminConsole'))
 
 function App() {
   return (
