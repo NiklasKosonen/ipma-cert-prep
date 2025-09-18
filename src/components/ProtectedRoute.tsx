@@ -29,6 +29,7 @@ export const ProtectedRoute = ({
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
+    console.log('🚫 Access denied - User role:', user.role, 'Allowed roles:', allowedRoles, 'Current path:', location.pathname)
     // Redirect to appropriate dashboard based on user role
     const roleRedirects: Record<UserRole, string> = {
       admin: '/admin',

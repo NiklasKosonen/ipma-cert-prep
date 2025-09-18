@@ -54,6 +54,7 @@ export const LoginForm = ({ role }: LoginFormProps) => {
       } else if (data && data.user) {
         console.log('✅ Login successful, navigating to:', from)
         console.log('✅ User data:', data.user)
+        console.log('✅ User role:', data.user.role)
         console.log('✅ From location:', from)
         
         // Add a small delay to ensure state is set
