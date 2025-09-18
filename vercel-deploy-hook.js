@@ -5,8 +5,12 @@
  * This script runs before and after deployments to handle data persistence
  */
 
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Configuration
 const CONFIG = {
@@ -133,11 +137,11 @@ function runDeploymentHook() {
 }
 
 // Run the hook
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   runDeploymentHook()
 }
 
-module.exports = {
+export {
   createDataBackup,
   restoreDataBackup,
   findLatestBackup,
