@@ -39,7 +39,7 @@ export class DataMigrationService {
     
     try {
       // Check if we can connect to Supabase
-      const { data, error } = await supabase.from('topics').select('count').limit(1)
+      const { error } = await supabase.from('topics').select('count').limit(1)
       if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist
         throw error
       }
@@ -242,15 +242,16 @@ export class DataMigrationService {
   }
 
   private saveAllAttemptItems(attemptItems: AttemptItem[]): void {
-    const itemsByUser = attemptItems.reduce((acc, item) => {
-      const userId = item.userId || 'unknown'
-      if (!acc[userId]) acc[userId] = []
-      acc[userId].push(item)
+    // Group attempt items by attempt ID since AttemptItem doesn't have userId
+    const itemsByAttempt = attemptItems.reduce((acc, item) => {
+      const attemptId = item.attemptId
+      if (!acc[attemptId]) acc[attemptId] = []
+      acc[attemptId].push(item)
       return acc
     }, {} as Record<string, AttemptItem[]>)
 
-    Object.entries(itemsByUser).forEach(([userId, userItems]) => {
-      localStorage.setItem(`ipma_attempt_items_${userId}`, JSON.stringify(userItems))
+    Object.entries(itemsByAttempt).forEach(([attemptId, attemptItems]) => {
+      localStorage.setItem(`ipma_attempt_items_${attemptId}`, JSON.stringify(attemptItems))
     })
   }
 
@@ -263,7 +264,7 @@ export class DataMigrationService {
         id: topic.id,
         title: topic.title,
         description: topic.description,
-        order_index: topic.orderIndex || 0,
+        order_index: 0, // Default order since Topic doesn't have orderIndex
         is_active: topic.isActive !== false,
         created_at: topic.createdAt,
         updated_at: topic.updatedAt
@@ -282,8 +283,8 @@ export class DataMigrationService {
         topic_id: question.topicId,
         subtopic_id: question.subtopicId,
         prompt: question.prompt,
-        difficulty_level: question.difficultyLevel || 1,
-        time_limit: question.timeLimit || 300,
+        difficulty_level: 1, // Default since Question doesn't have difficultyLevel
+        time_limit: 300, // Default since Question doesn't have timeLimit
         is_active: question.isActive !== false,
         created_at: question.createdAt,
         updated_at: question.updatedAt
@@ -300,9 +301,9 @@ export class DataMigrationService {
       .upsert(kpis.map(kpi => ({
         id: kpi.id,
         name: kpi.name,
-        description: kpi.description,
-        weight: kpi.weight || 1.00,
-        is_active: kpi.isActive !== false,
+        description: '', // Default since KPI doesn't have description
+        weight: 1.00, // Default since KPI doesn't have weight
+        is_active: true, // Default since KPI doesn't have isActive
         created_at: kpi.createdAt,
         updated_at: kpi.updatedAt
       })), { onConflict: 'id' })
@@ -318,8 +319,8 @@ export class DataMigrationService {
       .upsert(companyCodes.map(code => ({
         id: code.id,
         code: code.code,
-        name: code.name,
-        description: code.description,
+        name: code.companyName, // Use companyName instead of name
+        description: '', // Default since CompanyCode doesn't have description
         is_active: code.isActive !== false,
         created_at: code.createdAt,
         updated_at: code.updatedAt
@@ -338,7 +339,7 @@ export class DataMigrationService {
         topic_id: subtopic.topicId,
         title: subtopic.title,
         description: subtopic.description,
-        order_index: subtopic.orderIndex || 0,
+        order_index: 0, // Default since Subtopic doesn't have orderIndex
         created_at: subtopic.createdAt,
         updated_at: subtopic.updatedAt
       })), { onConflict: 'id' })
@@ -355,8 +356,8 @@ export class DataMigrationService {
         id: answer.id,
         question_id: answer.questionId,
         answer_text: answer.answerText,
-        quality_score: answer.qualityScore || 3.00,
-        is_active: answer.isActive !== false,
+        quality_score: answer.qualityRating || 3.00, // Use qualityRating instead of qualityScore
+        is_active: true, // Default since SampleAnswer doesn't have isActive
         created_at: answer.createdAt,
         updated_at: answer.updatedAt
       })), { onConflict: 'id' })
@@ -372,9 +373,9 @@ export class DataMigrationService {
       .upsert(trainingExamples.map(example => ({
         id: example.id,
         question_id: example.questionId,
-        example_text: example.exampleText,
-        quality_score: example.qualityScore || 3.00,
-        is_active: example.isActive !== false,
+        example_text: example.answerText, // Use answerText instead of exampleText
+        quality_score: example.qualityRating || 3.00, // Use qualityRating instead of qualityScore
+        is_active: true, // Default since TrainingExample doesn't have isActive
         created_at: example.createdAt,
         updated_at: example.updatedAt
       })), { onConflict: 'id' })
@@ -435,7 +436,7 @@ export class DataMigrationService {
         selected_question_ids: attempt.selectedQuestionIds,
         start_time: attempt.startTime,
         end_time: attempt.endTime,
-        total_score: attempt.totalScore,
+        total_score: null, // Default since Attempt doesn't have totalScore
         status: attempt.status,
         created_at: attempt.createdAt,
         updated_at: attempt.updatedAt
@@ -453,10 +454,10 @@ export class DataMigrationService {
         id: item.id,
         attempt_id: item.attemptId,
         question_id: item.questionId,
-        answer_text: item.answerText,
-        kpi_scores: item.kpiScores || {},
-        total_score: item.totalScore,
-        time_spent: item.timeSpent || 0,
+        answer_text: item.answer, // Use answer instead of answerText
+        kpi_scores: {}, // Default since AttemptItem doesn't have kpiScores
+        total_score: item.score, // Use score instead of totalScore
+        time_spent: item.durationSec || 0, // Use durationSec instead of timeSpent
         created_at: item.createdAt,
         updated_at: item.updatedAt
       })), { onConflict: 'id' })

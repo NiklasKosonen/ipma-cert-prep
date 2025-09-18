@@ -89,7 +89,7 @@ export const useAutoBackup = (config: Partial<AutoBackupConfig> = {}) => {
   useEffect(() => {
     if (!finalConfig.enabled || !finalConfig.beforeUnload) return
 
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       // Create backup synchronously (limited time)
       try {
         const snapshot = dataMigration.exportAllData()

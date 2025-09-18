@@ -5,7 +5,6 @@ import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '..
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 import { useAutoBackup } from '../../hooks/useAutoBackup'
-import { dataMigration } from '../../services/dataMigration'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
