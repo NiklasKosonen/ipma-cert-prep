@@ -705,7 +705,7 @@ const AdminConsole: React.FC = () => {
                       {editingSubtopic && editingSubtopic.id === subtopic.id ? (
                         <div className="space-y-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                           <h3 className="text-lg font-medium text-blue-900">
-                            Edit Subtopic: {subtopic.title} (ID: {subtopic.id})
+                            Edit Subtopic: {subtopic.title}
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
@@ -1018,6 +1018,12 @@ const AdminConsole: React.FC = () => {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Questions Management</h2>
                 <div className="flex space-x-3">
+                  <button
+                    onClick={() => setNewQuestion({ ...newQuestion, prompt: '', connectedKPIs: [] })}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  >
+                    Add Question
+                  </button>
                   <input
                     type="file"
                     accept=".xlsx,.xls"
@@ -1111,14 +1117,16 @@ const AdminConsole: React.FC = () => {
                         .map((kpi) => (
                           <label key={kpi.id} className="flex items-center space-x-2">
                             <input
-                              type="radio"
-                              name="selectedKPI"
+                              type="checkbox"
+                              
                               checked={newQuestion.connectedKPIs.includes(kpi.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setNewQuestion({
                                     ...newQuestion,
-                                    connectedKPIs: [kpi.id] // Single selection only
+                                    connectedKPIs: e.target.checked 
+                                      ? [...newQuestion.connectedKPIs, kpi.id]
+                                      : newQuestion.connectedKPIs.filter(id => id !== kpi.id)
                                   })
                                 }
                               }}
