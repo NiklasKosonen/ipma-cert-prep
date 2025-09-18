@@ -193,7 +193,7 @@ export const useAuth = () => {
             setUserProfile(userProfile)
             // Find the complete session object
             const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
-            const completeSession = sessions.find((s) => s.token === sessionToken)
+            const completeSession = sessions.find((s: UserSession) => s.token === sessionToken)
             
             if (completeSession) {
               setSession(completeSession)
