@@ -240,6 +240,14 @@ const Exam = ({ topic, onBack, onComplete }: {
   useEffect(() => {
     const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
     const randomQuestions = selectRandomQuestions(questions, topicSubtopics)
+    
+    console.log('Exam setup:', {
+      topicId: topic.id,
+      topicSubtopics: topicSubtopics.length,
+      availableQuestions: questions.length,
+      selectedQuestions: randomQuestions.length
+    })
+    
     setSelectedQuestions(randomQuestions)
     setTimeRemaining(randomQuestions.length * 3 * 60) // 3 minutes per question
   }, [topic.id, questions, subtopics])
@@ -258,23 +266,58 @@ const Exam = ({ topic, onBack, onComplete }: {
     
     setIsSubmitted(true)
     
+    // Check if there are questions to evaluate
+    if (selectedQuestions.length === 0) {
+      const examResults = {
+        totalScore: 0,
+        maxScore: 0,
+        percentage: 0,
+        passed: false,
+        results: [],
+        timeSpent: 0
+      }
+      setExamResults(examResults)
+      onComplete(examResults)
+      return
+    }
+    
     // Evaluate all answers
     const results = await Promise.all(
       selectedQuestions.map(async (question) => {
-        const answer = answers[question.id] || ''
-        const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
-        const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
-        return {
-          question,
-          answer,
-          ...evaluation
+        try {
+          const answer = answers[question.id] || ''
+          const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
+          const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
+          
+          console.log('Question evaluation:', {
+            questionId: question.id,
+            answer: answer.substring(0, 50) + '...',
+            connectedKPIs: connectedKPIs.length,
+            evaluation
+          })
+          
+          return {
+            question,
+            answer,
+            ...evaluation
+          }
+        } catch (error) {
+          console.error('Error evaluating question:', question.id, error)
+          return {
+            question,
+            answer: answers[question.id] || '',
+            toteutuneet_kpi: [],
+            puuttuvat_kpi: [],
+            pisteet: 0,
+            sanallinen_arvio: 'Evaluation failed'
+          }
         }
       })
     )
     
-    const totalScore = results.reduce((sum, result) => sum + result.pisteet, 0)
+    const totalScore = results.reduce((sum, result) => sum + (result.pisteet || 0), 0)
     const maxScore = results.length * 3
-    const percentage = Math.round((totalScore / maxScore) * 100)
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
     const passed = percentage >= 80
     
     const examResults = {
@@ -375,7 +418,12 @@ const Exam = ({ topic, onBack, onComplete }: {
                   Back to Topics
                 </button>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    setExamResults(null)
+                    setIsSubmitted(false)
+                    setAnswers({})
+                    setTimeRemaining(selectedQuestions.length * 3 * 60)
+                  }}
                   className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   Retake Exam
@@ -498,8 +546,10 @@ export const Practice = () => {
     setCurrentView('topics')
   }
 
-  const handleExamComplete = () => {
+  const handleExamComplete = (results: any) => {
     // Results are handled in the Exam component
+    // The Exam component will show results and provide navigation options
+    console.log('Exam completed with results:', results)
   }
 
   if (currentView === 'topics') {

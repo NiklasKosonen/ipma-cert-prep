@@ -88,6 +88,7 @@ export interface CompanyCode {
   id: string
   code: string
   companyName: string
+  adminEmail: string // Email for admin access control
   isActive: boolean
   maxUsers: number
   expiresAt: string

@@ -143,6 +143,7 @@ const AdminConsole: React.FC = () => {
   const [newCompanyCode, setNewCompanyCode] = useState<Partial<CompanyCode>>({
     code: '',
     companyName: '',
+    adminEmail: '',
     maxUsers: 1,
     expiresAt: '',
     isActive: true
@@ -214,10 +215,11 @@ const AdminConsole: React.FC = () => {
 
   // Company Code handlers
   const handleAddCompanyCode = () => {
-    if (newCompanyCode.code && newCompanyCode.companyName) {
+    if (newCompanyCode.code && newCompanyCode.companyName && newCompanyCode.adminEmail) {
       addCompanyCode({
         code: newCompanyCode.code,
         companyName: newCompanyCode.companyName,
+        adminEmail: newCompanyCode.adminEmail,
         maxUsers: newCompanyCode.maxUsers || 1,
         expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
         isActive: true
@@ -225,6 +227,7 @@ const AdminConsole: React.FC = () => {
       setNewCompanyCode({
         code: '',
         companyName: '',
+        adminEmail: '',
         maxUsers: 1,
         expiresAt: '',
         isActive: true
@@ -1562,6 +1565,19 @@ const AdminConsole: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Admin sähköposti *
+                    </label>
+                    <input
+                      type="email"
+                      value={newCompanyCode.adminEmail || ''}
+                      onChange={(e) => setNewCompanyCode({ ...newCompanyCode, adminEmail: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="admin@company.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Maksimi käyttäjät *
                     </label>
                     <input
@@ -1591,6 +1607,7 @@ const AdminConsole: React.FC = () => {
                     onClick={() => setNewCompanyCode({
                       code: '',
                       companyName: '',
+                      adminEmail: '',
                       maxUsers: 1,
                       expiresAt: '',
                       isActive: true
@@ -1601,7 +1618,7 @@ const AdminConsole: React.FC = () => {
                   </button>
                   <button
                     onClick={handleAddCompanyCode}
-                    disabled={!newCompanyCode.code || !newCompanyCode.companyName}
+                    disabled={!newCompanyCode.code || !newCompanyCode.companyName || !newCompanyCode.adminEmail}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('add')}
@@ -1628,6 +1645,9 @@ const AdminConsole: React.FC = () => {
                               Yritys
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Admin Email
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Max käyttäjät
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1649,6 +1669,9 @@ const AdminConsole: React.FC = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {code.companyName}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {code.adminEmail}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {code.maxUsers}
