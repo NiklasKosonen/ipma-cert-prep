@@ -321,51 +321,113 @@ export class DataMigrationService {
   }
 
   private async syncTopics(topics: Topic[]): Promise<void> {
-    if (!topics.length) return
+    // Get all topic IDs from localStorage (including deleted ones)
+    const localTopicIds = topics.map(topic => this.generateUUID(topic.id))
     
-    const { error } = await supabase
+    // Get all topic IDs from Supabase
+    const { data: existingTopics, error: fetchError } = await supabase
       .from('topics')
-      .upsert(topics.map(topic => ({
-        id: this.generateUUID(topic.id), // Convert to proper UUID
-        title: topic.title,
-        description: topic.description,
-        order_index: 0, // Default order since Topic doesn't have orderIndex
-        is_active: topic.isActive !== false,
-        created_at: topic.createdAt || new Date().toISOString(),
-        updated_at: topic.updatedAt || new Date().toISOString()
-      })), { onConflict: 'id' })
-
-    if (error) {
-      console.error('❌ Error syncing topics:', error)
-      console.error('❌ Error details:', error.message, error.code, error.details)
-      throw error
+      .select('id')
+    
+    if (fetchError) {
+      console.error('❌ Error fetching existing topics:', fetchError)
+      throw fetchError
     }
-    console.log(`✅ Synced ${topics.length} topics to Supabase`)
+    
+    const existingTopicIds = existingTopics?.map(topic => topic.id) || []
+    
+    // Delete topics that no longer exist locally
+    const topicsToDelete = existingTopicIds.filter(id => !localTopicIds.includes(id))
+    if (topicsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('topics')
+        .delete()
+        .in('id', topicsToDelete)
+      
+      if (deleteError) {
+        console.error('❌ Error deleting topics:', deleteError)
+        throw deleteError
+      }
+      console.log(`🗑️ Deleted ${topicsToDelete.length} topics from Supabase`)
+    }
+    
+    // Upsert current topics
+    if (topics.length > 0) {
+      const { error } = await supabase
+        .from('topics')
+        .upsert(topics.map(topic => ({
+          id: this.generateUUID(topic.id), // Convert to proper UUID
+          title: topic.title,
+          description: topic.description,
+          order_index: 0, // Default order since Topic doesn't have orderIndex
+          is_active: topic.isActive !== false,
+          created_at: topic.createdAt || new Date().toISOString(),
+          updated_at: topic.updatedAt || new Date().toISOString()
+        })), { onConflict: 'id' })
+
+      if (error) {
+        console.error('❌ Error syncing topics:', error)
+        console.error('❌ Error details:', error.message, error.code, error.details)
+        throw error
+      }
+      console.log(`✅ Synced ${topics.length} topics to Supabase`)
+    }
   }
 
   private async syncQuestions(questions: Question[]): Promise<void> {
-    if (!questions.length) return
+    // Get all question IDs from localStorage
+    const localQuestionIds = questions.map(question => this.generateUUID(question.id))
     
-    const { error } = await supabase
+    // Get all question IDs from Supabase
+    const { data: existingQuestions, error: fetchError } = await supabase
       .from('questions')
-      .upsert(questions.map(question => ({
-        id: this.generateUUID(question.id), // Convert to proper UUID
-        topic_id: this.generateUUID(question.topicId), // Convert topic ID to UUID
-        subtopic_id: question.subtopicId ? this.generateUUID(question.subtopicId) : null,
-        prompt: question.prompt,
-        difficulty_level: 1, // Default since Question doesn't have difficultyLevel
-        time_limit: 300, // Default since Question doesn't have timeLimit
-        is_active: question.isActive !== false,
-        created_at: question.createdAt || new Date().toISOString(),
-        updated_at: question.updatedAt || new Date().toISOString()
-      })), { onConflict: 'id' })
-
-    if (error) {
-      console.error('❌ Error syncing questions:', error)
-      console.error('❌ Error details:', error.message, error.code, error.details)
-      throw error
+      .select('id')
+    
+    if (fetchError) {
+      console.error('❌ Error fetching existing questions:', fetchError)
+      throw fetchError
     }
-    console.log(`✅ Synced ${questions.length} questions to Supabase`)
+    
+    const existingQuestionIds = existingQuestions?.map(question => question.id) || []
+    
+    // Delete questions that no longer exist locally
+    const questionsToDelete = existingQuestionIds.filter(id => !localQuestionIds.includes(id))
+    if (questionsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('questions')
+        .delete()
+        .in('id', questionsToDelete)
+      
+      if (deleteError) {
+        console.error('❌ Error deleting questions:', deleteError)
+        throw deleteError
+      }
+      console.log(`🗑️ Deleted ${questionsToDelete.length} questions from Supabase`)
+    }
+    
+    // Upsert current questions
+    if (questions.length > 0) {
+      const { error } = await supabase
+        .from('questions')
+        .upsert(questions.map(question => ({
+          id: this.generateUUID(question.id), // Convert to proper UUID
+          topic_id: this.generateUUID(question.topicId), // Convert topic ID to UUID
+          subtopic_id: question.subtopicId ? this.generateUUID(question.subtopicId) : null,
+          prompt: question.prompt,
+          difficulty_level: 1, // Default since Question doesn't have difficultyLevel
+          time_limit: 300, // Default since Question doesn't have timeLimit
+          is_active: question.isActive !== false,
+          created_at: question.createdAt || new Date().toISOString(),
+          updated_at: question.updatedAt || new Date().toISOString()
+        })), { onConflict: 'id' })
+
+      if (error) {
+        console.error('❌ Error syncing questions:', error)
+        console.error('❌ Error details:', error.message, error.code, error.details)
+        throw error
+      }
+      console.log(`✅ Synced ${questions.length} questions to Supabase`)
+    }
   }
 
   private async syncKPIs(kpis: KPI[]): Promise<void> {
@@ -496,7 +558,7 @@ export class DataMigrationService {
         subscription_id: user.subscription?.id ? this.generateUUID(user.subscription.id) : null,
         created_at: user.createdAt || new Date().toISOString(),
         updated_at: user.updatedAt || new Date().toISOString()
-      })), { onConflict: 'id' })
+      })), { onConflict: 'email' })
 
     if (error) {
       console.error('❌ Error syncing users:', error)
