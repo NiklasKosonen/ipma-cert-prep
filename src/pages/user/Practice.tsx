@@ -546,8 +546,24 @@ const Exam = ({ topic, onBack, onComplete }: {
 
 // Main Practice Component
 export const Practice = () => {
+  const { topics } = useData()
   const [currentView, setCurrentView] = useState<'topics' | 'details' | 'exam'>('topics')
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
+  
+  // Check if we have a topicId in the URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const topicIdFromUrl = urlParams.get('topicId') || window.location.pathname.split('/').pop()
+  
+  // If we have a topicId, go directly to details view
+  useEffect(() => {
+    if (topicIdFromUrl && topicIdFromUrl !== 'practice') {
+      const topic = topics.find(t => t.id === topicIdFromUrl)
+      if (topic) {
+        setSelectedTopic(topic)
+        setCurrentView('details')
+      }
+    }
+  }, [topicIdFromUrl, topics])
 
   const handleTopicSelect = (topic: Topic) => {
     setSelectedTopic(topic)

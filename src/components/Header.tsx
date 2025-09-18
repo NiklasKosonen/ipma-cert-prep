@@ -17,8 +17,15 @@ export const Header = () => {
   ]
 
   const handleSignOut = async () => {
+    const userRole = user?.role
     await signOut()
-    navigate('/')
+    
+    // Navigate based on user role
+    if (userRole === 'admin') {
+      navigate('/admin-login')
+    } else {
+      navigate('/')
+    }
     setShowUserMenu(false)
   }
 
