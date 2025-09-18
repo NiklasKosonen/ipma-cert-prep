@@ -21,7 +21,6 @@ const STORAGE_KEYS = {
   userSessions: 'ipma_sessions'
 }
 
-
 const loadFromStorage = <T,>(key: string, fallback: T[]): T[] => {
   try {
     const stored = localStorage.getItem(key)
@@ -46,18 +45,7 @@ const loadFromStorage = <T,>(key: string, fallback: T[]): T[] => {
     console.error(`Failed to load ${key} from localStorage:`, error)
   }
   return fallback
-} else {
-        console.warn(`Invalid data format for ${key}, using fallback`)
-        return fallback
-      }
-    }
-  } catch (error) {
-    console.error(`Failed to load ${key} from localStorage:`, error)
-    // In production, you might want to report this to a monitoring service
-  }
-  return fallback
 }
-
 
 const saveToStorage = <T,>(key: string, data: T[]): void => {
   try {
@@ -86,16 +74,6 @@ const saveToStorage = <T,>(key: string, data: T[]): void => {
     } catch (fallbackError) {
       console.error(`❌ Fallback save also failed for ${key}:`, fallbackError)
     }
-  }
-}`)
-      return
-    }
-    
-    localStorage.setItem(key, JSON.stringify(data))
-  } catch (error) {
-    console.error(`Failed to save ${key} to localStorage:`, error)
-    // In production, you might want to report this to a monitoring service
-    // and potentially implement a fallback storage mechanism
   }
 }
 
@@ -177,9 +155,27 @@ interface DataContextType {
   
   // Data management
   clearAllData: () => void
-  clearUserData: (userId: string) => void
-  exportAllData: () => any
-  importAllData: (data: any) => void
+  exportAllData: () => DataSnapshot
+  importAllData: (snapshot: DataSnapshot) => void
+}
+
+interface DataSnapshot {
+  topics: Topic[]
+  questions: Question[]
+  kpis: KPI[]
+  companyCodes: CompanyCode[]
+  subtopics: Subtopic[]
+  sampleAnswers: SampleAnswer[]
+  trainingExamples: TrainingExample[]
+  users: UserProfile[]
+  subscriptions: Subscription[]
+  attempts: Attempt[]
+  attemptItems: AttemptItem[]
+  metadata: {
+    version: string
+    timestamp: string
+    recordCount: number
+  }
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -246,6 +242,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     saveToStorage(STORAGE_KEYS.subscriptions, subscriptions)
   }, [subscriptions])
 
+  // Topic management functions
   const addTopic = (topicData: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>) => {
     // Validate input
     const titleValidation = validateTopicTitle(topicData.title)
@@ -400,65 +397,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const connectKPIToQuestion = (kpiId: string, questionId: string) => {
-    // Add KPI to question's connectedKPIs
-    setQuestions(prev => prev.map(question => 
-      question.id === questionId 
-        ? { 
-            ...question, 
-            connectedKPIs: question.connectedKPIs.includes(kpiId) 
-              ? question.connectedKPIs 
-              : [...question.connectedKPIs, kpiId],
-            updatedAt: new Date().toISOString()
-          }
-        : question
-    ))
-    
-    // Add question to KPI's connectedQuestions
     setKpis(prev => prev.map(kpi => 
       kpi.id === kpiId 
-        ? { 
-            ...kpi, 
-            connectedQuestions: kpi.connectedQuestions.includes(questionId) 
-              ? kpi.connectedQuestions 
-              : [...kpi.connectedQuestions, questionId],
-            updatedAt: new Date().toISOString()
-          }
+        ? { ...kpi, connectedQuestions: [...kpi.connectedQuestions, questionId] }
         : kpi
+    ))
+    setQuestions(prev => prev.map(question => 
+      question.id === questionId 
+        ? { ...question, connectedKPIs: [...question.connectedKPIs, kpiId] }
+        : question
     ))
   }
 
   const disconnectKPIFromQuestion = (kpiId: string, questionId: string) => {
-    // Remove KPI from question's connectedKPIs
-    setQuestions(prev => prev.map(question => 
-      question.id === questionId 
-        ? { 
-            ...question, 
-            connectedKPIs: question.connectedKPIs.filter(id => id !== kpiId),
-            updatedAt: new Date().toISOString()
-          }
-        : question
-    ))
-    
-    // Remove question from KPI's connectedQuestions
     setKpis(prev => prev.map(kpi => 
       kpi.id === kpiId 
-        ? { 
-            ...kpi, 
-            connectedQuestions: kpi.connectedQuestions.filter(id => id !== questionId),
-            updatedAt: new Date().toISOString()
-          }
+        ? { ...kpi, connectedQuestions: kpi.connectedQuestions.filter(id => id !== questionId) }
         : kpi
+    ))
+    setQuestions(prev => prev.map(question => 
+      question.id === questionId 
+        ? { ...question, connectedKPIs: question.connectedKPIs.filter(id => id !== kpiId) }
+        : question
     ))
   }
 
   const addCompanyCode = (companyData: Omit<CompanyCode, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newCompany: CompanyCode = {
+    const newCompanyCode: CompanyCode = {
       ...companyData,
       id: `company_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    setCompanyCodes(prev => [...prev, newCompany])
+    setCompanyCodes(prev => [...prev, newCompanyCode])
   }
 
   const updateCompanyCode = (id: string, updates: Partial<CompanyCode>) => {
@@ -474,13 +445,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addSampleAnswer = (answerData: Omit<SampleAnswer, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newAnswer: SampleAnswer = {
+    const newSampleAnswer: SampleAnswer = {
       ...answerData,
       id: `sample_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    setSampleAnswers(prev => [...prev, newAnswer])
+    setSampleAnswers(prev => [...prev, newSampleAnswer])
   }
 
   const updateSampleAnswer = (id: string, updates: Partial<SampleAnswer>) => {
@@ -496,13 +467,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addTrainingExample = (exampleData: Omit<TrainingExample, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newExample: TrainingExample = {
+    const newTrainingExample: TrainingExample = {
       ...exampleData,
       id: `training_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    setTrainingExamples(prev => [...prev, newExample])
+    setTrainingExamples(prev => [...prev, newTrainingExample])
   }
 
   const updateTrainingExample = (id: string, updates: Partial<TrainingExample>) => {
@@ -517,115 +488,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setTrainingExamples(prev => prev.filter(example => example.id !== id))
   }
 
-  const clearUserData = (userId: string) => {
-    // Clear user-specific data
-    localStorage.removeItem(STORAGE_KEYS.attempts(userId))
-    localStorage.removeItem(STORAGE_KEYS.attemptItems(userId))
-  }
-
-  const clearAllData = () => {
-    // Clear global data
-    setTopics([])
-    setQuestions([])
-    setKpis([])
-    setCompanyCodes([])
-    setSubtopics([])
-    setSampleAnswers([])
-    setTrainingExamples([])
-    setUsers([])
-    setSubscriptions([])
-    
-    // Clear localStorage
-    const globalKeys = [
-      STORAGE_KEYS.topics,
-      STORAGE_KEYS.questions,
-      STORAGE_KEYS.kpis,
-      STORAGE_KEYS.companyCodes,
-      STORAGE_KEYS.subtopics,
-      STORAGE_KEYS.sampleAnswers,
-      STORAGE_KEYS.trainingExamples,
-      STORAGE_KEYS.users,
-      STORAGE_KEYS.subscriptions,
-      STORAGE_KEYS.userSessions
-    ]
-    
-    globalKeys.forEach(key => {
-      localStorage.removeItem(key)
-    })
-    
-    // Clear all user-specific data
-    users.forEach(user => {
-      clearUserData(user.id)
-    })
-  }
-
-  const exportAllData = () => {
-    const allData = {
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      global: {
-        topics,
-        questions,
-        kpis,
-        companyCodes,
-        subtopics,
-        sampleAnswers,
-        trainingExamples,
-        users,
-        subscriptions
-      },
-      userSpecific: {} as Record<string, any>
-    }
-    
-    // Include user-specific data
-    users.forEach(user => {
-      allData.userSpecific[user.id] = {
-        attempts: getUserAttempts(user.id),
-        attemptItems: getUserAttemptItems(user.id)
-      }
-    })
-    
-    return allData
-  }
-
-  const importAllData = (data: any) => {
-    if (!data || !data.global) {
-      throw new Error('Invalid data format')
-    }
-    
-    // Import global data
-    if (data.global.topics) setTopics(data.global.topics)
-    if (data.global.questions) setQuestions(data.global.questions)
-    if (data.global.kpis) setKpis(data.global.kpis)
-    if (data.global.companyCodes) setCompanyCodes(data.global.companyCodes)
-    if (data.global.subtopics) setSubtopics(data.global.subtopics)
-    if (data.global.sampleAnswers) setSampleAnswers(data.global.sampleAnswers)
-    if (data.global.trainingExamples) setTrainingExamples(data.global.trainingExamples)
-    if (data.global.users) setUsers(data.global.users)
-    if (data.global.subscriptions) setSubscriptions(data.global.subscriptions)
-    
-    // Import user-specific data
-    if (data.userSpecific) {
-      Object.keys(data.userSpecific).forEach(userId => {
-        const userData = data.userSpecific[userId]
-        if (userData.attempts) {
-          saveToStorage(STORAGE_KEYS.attempts(userId), userData.attempts)
-        }
-        if (userData.attemptItems) {
-          saveToStorage(STORAGE_KEYS.attemptItems(userId), userData.attemptItems)
-        }
-      })
-    }
-  }
-
-  // Attempt management functions
-  // User management functions
   const addUser = (userData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newUser: UserProfile = {
       ...userData,
       id: `user_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }
     setUsers(prev => [...prev, newUser])
   }
@@ -640,25 +508,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteUser = (id: string) => {
     setUsers(prev => prev.filter(user => user.id !== id))
-    // Also delete user-specific data
-    clearUserData(id)
   }
 
   const getUser = (id: string) => {
-    return users.find(u => u.id === id)
+    return users.find(user => user.id === id)
   }
 
   const getUserByEmail = (email: string) => {
-    return users.find(u => u.email === email)
+    return users.find(user => user.email === email)
   }
 
-  // Subscription management functions
   const addSubscription = (subscriptionData: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newSubscription: Subscription = {
       ...subscriptionData,
-      id: `sub_${Date.now()}`,
+      id: `subscription_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }
     setSubscriptions(prev => [...prev, newSubscription])
   }
@@ -676,40 +541,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const getSubscription = (userId: string) => {
-    return subscriptions.find(s => s.userId === userId)
+    return subscriptions.find(subscription => subscription.userId === userId)
   }
 
   const extendSubscription = (userId: string, days: number) => {
-    const subscription = subscriptions.find(s => s.userId === userId)
+    const subscription = getSubscription(userId)
     if (subscription) {
-      const currentEndDate = new Date(subscription.endDate)
-      const newEndDate = new Date(currentEndDate.getTime() + (days * 24 * 60 * 60 * 1000))
-      
-      updateSubscription(subscription.id, {
-        endDate: newEndDate.toISOString()
-      })
+      const newExpiryDate = new Date(subscription.endDate)
+      newExpiryDate.setDate(newExpiryDate.getDate() + days)
+      updateSubscription(subscription.id, { endDate: newExpiryDate.toISOString() })
     }
   }
 
   const checkSubscriptionExpiry = () => {
     const now = new Date()
-    const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000))
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     
     const expired: UserProfile[] = []
     const expiringSoon: UserProfile[] = []
     
     subscriptions.forEach(subscription => {
-      if (!subscription.isActive) return
+      const expiryDate = new Date(subscription.endDate)
+      const user = getUser(subscription.userId)
       
-      const endDate = new Date(subscription.endDate)
-      const user = users.find(u => u.id === subscription.userId)
-      
-      if (!user) return
-      
-      if (endDate <= now) {
-        expired.push(user)
-      } else if (endDate <= sevenDaysFromNow) {
-        expiringSoon.push(user)
+      if (user) {
+        if (expiryDate <= now) {
+          expired.push(user)
+        } else if (expiryDate <= sevenDaysFromNow) {
+          expiringSoon.push(user)
+        }
       }
     })
     
@@ -717,174 +577,221 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const updateSubscriptionReminderStatus = (subscriptionId: string, reminderType: 'sevenDays' | 'oneDay') => {
-    setSubscriptions(prev => prev.map(subscription => 
-      subscription.id === subscriptionId 
-        ? { 
-            ...subscription, 
-            reminderSent: {
-              ...subscription.reminderSent,
-              [reminderType]: true
-            },
-            updatedAt: new Date().toISOString()
-          }
-        : subscription
-    ))
+    updateSubscription(subscriptionId, { 
+      reminderSent: {
+        sevenDays: reminderType === 'sevenDays',
+        oneDay: reminderType === 'oneDay'
+      }
+    })
   }
 
-  // User-specific attempt management functions
   const getUserAttempts = (userId: string): Attempt[] => {
-    const userAttempts = loadFromStorage<Attempt>(STORAGE_KEYS.attempts(userId), [])
-    return userAttempts
+    const attempts = loadFromStorage(STORAGE_KEYS.attempts(userId), [])
+    return attempts
   }
 
   const getUserAttemptItems = (userId: string): AttemptItem[] => {
-    const userAttemptItems = loadFromStorage<AttemptItem>(STORAGE_KEYS.attemptItems(userId), [])
-    return userAttemptItems
+    const attemptItems = loadFromStorage(STORAGE_KEYS.attemptItems(userId), [])
+    return attemptItems
   }
 
   const createAttempt = (userId: string, topicId: string, selectedQuestionIds: string[]): Attempt => {
-    const topic = topics.find(t => t.id === topicId)
-    if (!topic) throw new Error('Topic not found')
-    
-    const topicSubtopics = subtopics.filter(s => s.topicId === topicId)
-    const totalTime = topicSubtopics.length * 3 // 3 minutes per subtopic
-    
     const newAttempt: Attempt = {
-      id: `attempt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `attempt_${Date.now()}`,
       userId,
       topicId,
       selectedQuestionIds,
       startTime: new Date().toISOString(),
       status: 'in_progress',
-      totalTime,
-      timeRemaining: totalTime * 60, // Convert to seconds
+      totalTime: selectedQuestionIds.length * 3, // 3 minutes per question
+      timeRemaining: selectedQuestionIds.length * 3 * 60, // in seconds
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }
     
-    // Save to user-specific storage
-    const userAttempts = getUserAttempts(userId)
-    const updatedAttempts = [...userAttempts, newAttempt]
+    const attempts = getUserAttempts(userId)
+    const updatedAttempts = [...attempts, newAttempt]
     saveToStorage(STORAGE_KEYS.attempts(userId), updatedAttempts)
     
     return newAttempt
   }
 
-  const updateAttempt = (id: string, updates: Partial<Attempt>): void => {
-    // Find the attempt first to get the userId
-    let foundAttempt: Attempt | undefined
-    let userId: string | undefined
+  const updateAttempt = (id: string, updates: Partial<Attempt>) => {
+    // Find the user who owns this attempt
+    const allUsers = users
+    let attemptOwner: string | null = null
     
-    // Search through all users' attempts
-    users.forEach(user => {
+    for (const user of allUsers) {
       const userAttempts = getUserAttempts(user.id)
-      const attempt = userAttempts.find(a => a.id === id)
-      if (attempt) {
-        foundAttempt = attempt
-        userId = user.id
+      if (userAttempts.some(attempt => attempt.id === id)) {
+        attemptOwner = user.id
+        break
       }
-    })
-    
-    if (!foundAttempt || !userId) {
-      throw new Error('Attempt not found')
     }
     
-    const userAttempts = getUserAttempts(userId)
-    const updatedAttempts = userAttempts.map(attempt => 
-      attempt.id === id 
-        ? { ...attempt, ...updates, updatedAt: new Date().toISOString() }
-        : attempt
-    )
-    saveToStorage(STORAGE_KEYS.attempts(userId), updatedAttempts)
+    if (attemptOwner) {
+      const attempts = getUserAttempts(attemptOwner)
+      const updatedAttempts = attempts.map(attempt => 
+        attempt.id === id 
+          ? { ...attempt, ...updates, updatedAt: new Date().toISOString() }
+          : attempt
+      )
+      saveToStorage(STORAGE_KEYS.attempts(attemptOwner), updatedAttempts)
+    }
   }
 
   const getAttempt = (id: string): Attempt | undefined => {
-    // Search through all users' attempts
-    for (const user of users) {
+    const allUsers = users
+    for (const user of allUsers) {
       const userAttempts = getUserAttempts(user.id)
-      const attempt = userAttempts.find(a => a.id === id)
+      const attempt = userAttempts.find(attempt => attempt.id === id)
       if (attempt) return attempt
     }
     return undefined
   }
 
   const createAttemptItem = (attemptId: string, questionId: string, answer: string): AttemptItem => {
-    // Find the attempt to get the userId
-    const attempt = getAttempt(attemptId)
-    if (!attempt) throw new Error('Attempt not found')
-    
     const newAttemptItem: AttemptItem = {
-      id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `attempt_item_${Date.now()}`,
       attemptId,
       questionId,
       answer,
       kpisDetected: [],
       kpisMissing: [],
       score: 0,
-      maxScore: 0,
+      maxScore: 3,
       feedback: '',
       isEvaluated: false,
       durationSec: 0,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }
     
-    // Save to user-specific storage
-    const userAttemptItems = getUserAttemptItems(attempt.userId)
-    const updatedItems = [...userAttemptItems, newAttemptItem]
-    saveToStorage(STORAGE_KEYS.attemptItems(attempt.userId), updatedItems)
+    // Find the user who owns this attempt
+    const allUsers = users
+    let attemptOwner: string | null = null
+    
+    for (const user of allUsers) {
+      const userAttempts = getUserAttempts(user.id)
+      if (userAttempts.some(attempt => attempt.id === attemptId)) {
+        attemptOwner = user.id
+        break
+      }
+    }
+    
+    if (attemptOwner) {
+      const attemptItems = getUserAttemptItems(attemptOwner)
+      const updatedAttemptItems = [...attemptItems, newAttemptItem]
+      saveToStorage(STORAGE_KEYS.attemptItems(attemptOwner), updatedAttemptItems)
+    }
     
     return newAttemptItem
   }
 
-  const updateAttemptItem = (id: string, updates: Partial<AttemptItem>): void => {
-    // Find the attempt item first to get the userId
-    let userId: string | undefined
+  const updateAttemptItem = (id: string, updates: Partial<AttemptItem>) => {
+    // Find the user who owns this attempt item
+    const allUsers = users
+    let attemptOwner: string | null = null
     
-    // Search through all users' attempt items
-    users.forEach(user => {
+    for (const user of allUsers) {
       const userAttemptItems = getUserAttemptItems(user.id)
-      const item = userAttemptItems.find(i => i.id === id)
-      if (item) {
-        userId = user.id
+      if (userAttemptItems.some(item => item.id === id)) {
+        attemptOwner = user.id
+        break
       }
-    })
-    
-    if (!userId) {
-      throw new Error('Attempt item not found')
     }
     
-    const userAttemptItems = getUserAttemptItems(userId)
-    const updatedItems = userAttemptItems.map(item => 
-      item.id === id 
-        ? { ...item, ...updates, updatedAt: new Date().toISOString() }
-        : item
-    )
-    saveToStorage(STORAGE_KEYS.attemptItems(userId), updatedItems)
+    if (attemptOwner) {
+      const attemptItems = getUserAttemptItems(attemptOwner)
+      const updatedAttemptItems = attemptItems.map(item => 
+        item.id === id 
+          ? { ...item, ...updates, updatedAt: new Date().toISOString() }
+          : item
+      )
+      saveToStorage(STORAGE_KEYS.attemptItems(attemptOwner), updatedAttemptItems)
+    }
   }
 
   const getAttemptItems = (attemptId: string): AttemptItem[] => {
-    // Find the attempt to get the userId
-    const attempt = getAttempt(attemptId)
-    if (!attempt) return []
-    
-    const userAttemptItems = getUserAttemptItems(attempt.userId)
-    return userAttemptItems.filter(item => item.attemptId === attemptId)
+    const allUsers = users
+    for (const user of allUsers) {
+      const userAttemptItems = getUserAttemptItems(user.id)
+      const items = userAttemptItems.filter(item => item.attemptId === attemptId)
+      if (items.length > 0) return items
+    }
+    return []
   }
 
   const selectRandomQuestions = (topicId: string): string[] => {
-    const topicSubtopics = subtopics.filter(s => s.topicId === topicId && s.isActive)
-    const selectedQuestions: string[] = []
+    const topicQuestions = questions.filter(q => q.topicId === topicId && q.isActive)
+    const shuffled = [...topicQuestions].sort(() => 0.5 - Math.random())
+    return shuffled.slice(0, Math.min(5, shuffled.length)).map(q => q.id)
+  }
+
+  const clearAllData = () => {
+    setTopics([])
+    setQuestions([])
+    setKpis([])
+    setCompanyCodes([])
+    setSubtopics([])
+    setSampleAnswers([])
+    setTrainingExamples([])
+    setUsers([])
+    setSubscriptions([])
+  }
+
+  const exportAllData = (): DataSnapshot => {
+    const allAttempts: Attempt[] = []
+    const allAttemptItems: AttemptItem[] = []
     
-    topicSubtopics.forEach(subtopic => {
-      const subtopicQuestions = questions.filter(q => q.subtopicId === subtopic.id && q.isActive)
-      if (subtopicQuestions.length > 0) {
-        const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
-        selectedQuestions.push(subtopicQuestions[randomIndex].id)
-      }
+    users.forEach(user => {
+      allAttempts.push(...getUserAttempts(user.id))
+      allAttemptItems.push(...getUserAttemptItems(user.id))
     })
     
-    return selectedQuestions
+    return {
+      topics,
+      questions,
+      kpis,
+      companyCodes,
+      subtopics,
+      sampleAnswers,
+      trainingExamples,
+      users,
+      subscriptions,
+      attempts: allAttempts,
+      attemptItems: allAttemptItems,
+      metadata: {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        recordCount: topics.length + questions.length + kpis.length + companyCodes.length + 
+                    subtopics.length + sampleAnswers.length + trainingExamples.length + 
+                    users.length + subscriptions.length + allAttempts.length + allAttemptItems.length
+      }
+    }
+  }
+
+  const importAllData = (snapshot: DataSnapshot) => {
+    setTopics(snapshot.topics)
+    setQuestions(snapshot.questions)
+    setKpis(snapshot.kpis)
+    setCompanyCodes(snapshot.companyCodes)
+    setSubtopics(snapshot.subtopics)
+    setSampleAnswers(snapshot.sampleAnswers)
+    setTrainingExamples(snapshot.trainingExamples)
+    setUsers(snapshot.users)
+    setSubscriptions(snapshot.subscriptions)
+    
+    // Import user-specific data
+    snapshot.users.forEach(user => {
+      const userAttempts = snapshot.attempts.filter(attempt => attempt.userId === user.id)
+      const userAttemptItems = snapshot.attemptItems.filter(item => 
+        userAttempts.some(attempt => attempt.id === item.attemptId)
+      )
+      
+      saveToStorage(STORAGE_KEYS.attempts(user.id), userAttempts)
+      saveToStorage(STORAGE_KEYS.attemptItems(user.id), userAttemptItems)
+    })
   }
 
   return (
@@ -966,7 +873,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       
       // Data management
       clearAllData,
-      clearUserData,
       exportAllData,
       importAllData,
     }}>
