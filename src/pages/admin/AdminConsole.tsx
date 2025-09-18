@@ -117,7 +117,8 @@ const AdminConsole: React.FC = () => {
       subtopicId: '',
       topicId: '',
       prompt: '',
-      connectedKPIs: []
+      connectedKPIs: [],
+      isActive: true
     })
     
     alert('Question added successfully!')
@@ -1104,7 +1105,8 @@ const AdminConsole: React.FC = () => {
                         setNewQuestion({ 
                           ...newQuestion, 
                           subtopicId: e.target.value,
-                          topicId: selectedSubtopic?.topicId || ''
+                          topicId: selectedSubtopic?.topicId || '',
+                          isActive: true
                         })
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1127,7 +1129,7 @@ const AdminConsole: React.FC = () => {
                     </label>
                     <textarea
                       value={newQuestion.prompt}
-                      onChange={(e) => setNewQuestion({ ...newQuestion, prompt: e.target.value })}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, prompt: e.target.value, isActive: true })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
                       placeholder="Enter the question prompt"
@@ -1152,7 +1154,8 @@ const AdminConsole: React.FC = () => {
                                     ...newQuestion,
                                     connectedKPIs: e.target.checked 
                                       ? [...newQuestion.connectedKPIs, kpi.id]
-                                      : newQuestion.connectedKPIs.filter(id => id !== kpi.id)
+                                      : newQuestion.connectedKPIs.filter(id => id !== kpi.id),
+                                    isActive: true
                                   })
                                 }
                               }}
