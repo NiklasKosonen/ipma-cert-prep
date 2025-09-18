@@ -43,7 +43,7 @@ export const useAuth = () => {
 
   // Update session activity
   const updateSessionActivity = useCallback((sessionToken: string) => {
-    const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
+    const sessionsData = localStorage.getItem('ipma_sessions') || '[]'; const sessions = Array.isArray(JSON.parse(sessionsData)) ? JSON.parse(sessionsData) : []
     const sessionIndex = sessions.findIndex((s: UserSession) => s.token === sessionToken)
     
     if (sessionIndex !== -1) {
@@ -55,7 +55,7 @@ export const useAuth = () => {
 
   // Validate session
   const validateSession = useCallback((sessionToken: string): boolean => {
-    const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
+    const sessionsData = localStorage.getItem('ipma_sessions') || '[]'; const sessions = Array.isArray(JSON.parse(sessionsData)) ? JSON.parse(sessionsData) : []
     const session = sessions.find((s: UserSession) => s.token === sessionToken)
     
     if (!session || !session.isActive) {
@@ -192,7 +192,7 @@ export const useAuth = () => {
             setUser(userData)
             setUserProfile(userProfile)
             // Find the complete session object
-            const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
+            const sessionsData = localStorage.getItem('ipma_sessions') || '[]'; const sessions = Array.isArray(JSON.parse(sessionsData)) ? JSON.parse(sessionsData) : []
             const completeSession = sessions.find((s: UserSession) => s.token === sessionToken)
             
             if (completeSession) {
@@ -396,7 +396,7 @@ export const useAuth = () => {
     try {
       // Clear session
       if (session?.token) {
-        const sessions = JSON.parse(localStorage.getItem('ipma_sessions') || '[]')
+        const sessionsData = localStorage.getItem('ipma_sessions') || '[]'; const sessions = Array.isArray(JSON.parse(sessionsData)) ? JSON.parse(sessionsData) : []
         const updatedSessions = sessions.map((s: UserSession) => 
           s.token === session.token ? { ...s, isActive: false, updatedAt: new Date().toISOString() } : s
         )
