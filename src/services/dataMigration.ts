@@ -148,7 +148,7 @@ export class DataMigrationService {
       await this.syncAttemptItems(snapshot.attemptItems)
 
       // Save backup to Supabase
-      await this.saveBackupToSupabase(snapshot, 'auto_sync')
+      await this.saveBackupToSupabase(snapshot, 'manual')
 
       console.log('✅ All data synced to Supabase successfully!')
     } catch (error) {
@@ -184,7 +184,7 @@ export class DataMigrationService {
 
       // Try to save to Supabase if available
       try {
-        await this.saveBackupToSupabase(snapshot, 'automatic', backupName)
+        await this.saveBackupToSupabase(snapshot, 'full', backupName)
       } catch (error) {
         console.warn('⚠️ Could not save backup to Supabase:', error)
       }
@@ -221,7 +221,19 @@ export class DataMigrationService {
   private loadFromStorage<T>(key: string, fallback: T[]): T[] {
     try {
       const stored = localStorage.getItem(key)
-      return stored ? JSON.parse(stored) : fallback
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // Check for the new timestamped format or old array format
+        if (parsed && typeof parsed === 'object' && parsed.data && Array.isArray(parsed.data) && parsed.timestamp) {
+          return parsed.data
+        } else if (Array.isArray(parsed)) {
+          return parsed
+        } else {
+          console.warn(`Invalid data format for ${key}, using fallback. Stored:`, parsed)
+          return fallback
+        }
+      }
+      return fallback
     } catch (error) {
       console.warn(`⚠️ Error loading ${key}:`, error)
       return fallback
