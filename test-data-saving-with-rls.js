@@ -29,7 +29,7 @@ async function testDataSaving() {
     // Test 1: Try to insert a test topic
     console.log('\n1️⃣ Testing topic insertion...')
     const testTopic = {
-      id: 'test-topic-rls-' + Date.now(),
+      id: '550e8400-e29b-41d4-a716-446655440000',
       title: 'Test Topic for RLS',
       description: 'Testing if data saving works with RLS',
       order_index: 0,
@@ -53,7 +53,7 @@ async function testDataSaving() {
     // Test 2: Try to insert a test question
     console.log('\n2️⃣ Testing question insertion...')
     const testQuestion = {
-      id: 'test-question-rls-' + Date.now(),
+      id: '550e8400-e29b-41d4-a716-446655440001',
       topic_id: testTopic.id,
       subtopic_id: null,
       prompt: 'Test question for RLS',
@@ -79,7 +79,7 @@ async function testDataSaving() {
     // Test 3: Try to insert a test KPI
     console.log('\n3️⃣ Testing KPI insertion...')
     const testKPI = {
-      id: 'test-kpi-rls-' + Date.now(),
+      id: '550e8400-e29b-41d4-a716-446655440002',
       name: 'Test KPI for RLS',
       description: 'Testing KPI insertion with RLS',
       weight: 1.0,

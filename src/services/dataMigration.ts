@@ -118,7 +118,14 @@ export class DataMigrationService {
         throw new Error('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
       }
       
+      // Check if user is authenticated
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session) {
+        throw new Error('User must be authenticated to sync data. Please log in first.')
+      }
+      
       console.log('✅ Supabase configuration found')
+      console.log('✅ User authenticated:', session.user.email)
       const snapshot = await this.exportAllData()
       console.log('📊 Data snapshot created:', {
         topics: snapshot.topics.length,

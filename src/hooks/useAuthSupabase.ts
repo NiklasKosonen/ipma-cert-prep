@@ -1,0 +1,378 @@
+import { useState, useEffect, useCallback } from 'react'
+import { AuthUser, UserRole, UserProfile, Subscription } from '../types'
+import { supabase } from '../lib/supabase'
+
+// Supabase Authentication System
+export const useAuthSupabase = () => {
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Initialize auth state
+  useEffect(() => {
+    let mounted = true
+
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          return
+        }
+
+        if (session?.user && mounted) {
+          await handleAuthChange(session.user)
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
+        
+        if (session?.user) {
+          await handleAuthChange(session.user)
+        } else {
+          if (mounted) {
+            setUser(null)
+            setUserProfile(null)
+          }
+        }
+        
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    )
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Handle authentication state change
+  const handleAuthChange = async (supabaseUser: any) => {
+    try {
+      // Get user profile from our users table
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', supabaseUser.email)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', error)
+        return
+      }
+
+      // Create auth user object
+      const authUser: AuthUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        role: profile?.role || 'user',
+        companyCode: profile?.company_code || 'DEFAULT_COMPANY',
+      }
+
+      setUser(authUser)
+      setUserProfile(profile)
+      
+      console.log('✅ User authenticated:', authUser.email, 'Role:', authUser.role)
+    } catch (error) {
+      console.error('Error in handleAuthChange:', error)
+    }
+  }
+
+  // Sign in with email and password
+  const signIn = async (email: string, password: string, role: UserRole) => {
+    try {
+      setLoading(true)
+      
+      // Special credentials for niklas.kosonen@talentnetwork.fi
+      if (email.toLowerCase() === 'niklas.kosonen@talentnetwork.fi' && password === 'Niipperi2026ipm#') {
+        console.log('🔐 Niklas login detected with role:', role)
+        
+        // Create or update user profile
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .single()
+
+        const userProfileData = {
+          id: `niklas_${role}`,
+          email: email,
+          name: 'Niklas Kosonen',
+          role: role,
+          company_code: role === 'admin' ? 'TALENT_NETWORK' : 'TEST_COMPANY',
+          company_name: role === 'admin' ? 'Talent Network' : 'Test Company',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        if (existingUser) {
+          // Update existing user
+          const { error } = await supabase
+            .from('users')
+            .update({
+              role: role,
+              company_code: userProfileData.company_code,
+              company_name: userProfileData.company_name,
+              updated_at: new Date().toISOString()
+            })
+            .eq('email', email)
+
+          if (error) {
+            console.error('Error updating user:', error)
+            return { data: null, error: 'Failed to update user profile' }
+          }
+        } else {
+          // Create new user
+          const { error } = await supabase
+            .from('users')
+            .insert([userProfileData])
+
+          if (error) {
+            console.error('Error creating user:', error)
+            return { data: null, error: 'Failed to create user profile' }
+          }
+        }
+
+        // Create auth user object
+        const authUser: AuthUser = {
+          id: userProfileData.id,
+          email: email,
+          role: role,
+          companyCode: userProfileData.company_code,
+        }
+
+        setUser(authUser)
+        setUserProfile(userProfileData)
+
+        console.log('✅ Niklas signed in:', { 
+          email: email, 
+          role: role, 
+          name: 'Niklas Kosonen'
+        })
+
+        return { data: { user: authUser }, error: null }
+      }
+
+      // Regular Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        console.error('Sign in error:', error)
+        return { data: null, error: error.message }
+      }
+
+      if (data.user) {
+        await handleAuthChange(data.user)
+        return { data: { user: user }, error: null }
+      }
+
+      return { data: null, error: 'Sign in failed' }
+    } catch (error) {
+      console.error('Sign in error:', error)
+      return { data: null, error: 'Sign in failed' }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Sign up with email and password
+  const signUp = async (email: string, password: string, name: string, role: UserRole, companyCode: string) => {
+    try {
+      setLoading(true)
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+            company_code: companyCode
+          }
+        }
+      })
+
+      if (error) {
+        console.error('Sign up error:', error)
+        return { data: null, error: error.message }
+      }
+
+      if (data.user) {
+        // Create user profile
+        const userProfileData = {
+          id: data.user.id,
+          email: email,
+          name: name,
+          role: role,
+          company_code: companyCode,
+          company_name: companyCode,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([userProfileData])
+
+        if (profileError) {
+          console.error('Error creating user profile:', profileError)
+          return { data: null, error: 'Failed to create user profile' }
+        }
+
+        return { data: { user: data.user }, error: null }
+      }
+
+      return { data: null, error: 'Sign up failed' }
+    } catch (error) {
+      console.error('Sign up error:', error)
+      return { data: null, error: 'Sign up failed' }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Sign out
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Sign out error:', error)
+        return { error: error.message }
+      }
+      
+      setUser(null)
+      setUserProfile(null)
+      return { error: null }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      return { error: 'Sign out failed' }
+    }
+  }
+
+  // Sign in with company code
+  const signInWithCompanyCode = async (companyCode: string, userEmail: string) => {
+    try {
+      setLoading(true)
+
+      // Check if company code exists and is active
+      const { data: company, error: companyError } = await supabase
+        .from('company_codes')
+        .select('*')
+        .eq('code', companyCode)
+        .eq('is_active', true)
+        .single()
+
+      if (companyError || !company) {
+        return { data: null, error: 'Invalid or inactive company code' }
+      }
+
+      // Check if company code has expired
+      if (new Date(company.expires_at) < new Date()) {
+        return { data: null, error: 'Company code has expired' }
+      }
+
+      // Check if user email matches admin email for this company
+      if (company.admin_email && company.admin_email !== userEmail) {
+        return { data: null, error: 'Email does not match company admin email' }
+      }
+
+      // Create or get user profile
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', userEmail)
+        .single()
+
+      const userProfileData = {
+        id: existingUser?.id || `user_${Date.now()}`,
+        email: userEmail,
+        name: userEmail.split('@')[0],
+        role: 'user' as UserRole,
+        company_code: companyCode,
+        company_name: company.company_name,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      if (existingUser) {
+        // Update existing user
+        const { error } = await supabase
+          .from('users')
+          .update({
+            company_code: companyCode,
+            company_name: company.company_name,
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', userEmail)
+
+        if (error) {
+          console.error('Error updating user:', error)
+          return { data: null, error: 'Failed to update user profile' }
+        }
+      } else {
+        // Create new user
+        const { error } = await supabase
+          .from('users')
+          .insert([userProfileData])
+
+        if (error) {
+          console.error('Error creating user:', error)
+          return { data: null, error: 'Failed to create user profile' }
+        }
+      }
+
+      // Create auth user object
+      const authUser: AuthUser = {
+        id: userProfileData.id,
+        email: userEmail,
+        role: 'user',
+        companyCode: companyCode,
+      }
+
+      setUser(authUser)
+      setUserProfile(userProfileData)
+
+      console.log('✅ User signed in with company code:', { 
+        email: userEmail, 
+        companyCode: companyCode,
+        companyName: company.company_name
+      })
+
+      return { data: { user: authUser }, error: null }
+    } catch (error) {
+      console.error('Company code sign in error:', error)
+      return { data: null, error: 'Sign in failed' }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return {
+    user,
+    userProfile,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    signInWithCompanyCode,
+  }
+}
