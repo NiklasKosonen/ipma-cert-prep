@@ -304,12 +304,13 @@ export class DataMigrationService {
         description: topic.description,
         order_index: 0, // Default order since Topic doesn't have orderIndex
         is_active: topic.isActive !== false,
-        created_at: topic.createdAt,
-        updated_at: topic.updatedAt
+        created_at: topic.createdAt || new Date().toISOString(),
+        updated_at: topic.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
     if (error) {
       console.error('❌ Error syncing topics:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
       throw error
     }
     console.log(`✅ Synced ${topics.length} topics to Supabase`)
@@ -328,12 +329,13 @@ export class DataMigrationService {
         difficulty_level: 1, // Default since Question doesn't have difficultyLevel
         time_limit: 300, // Default since Question doesn't have timeLimit
         is_active: question.isActive !== false,
-        created_at: question.createdAt,
-        updated_at: question.updatedAt
+        created_at: question.createdAt || new Date().toISOString(),
+        updated_at: question.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
     if (error) {
       console.error('❌ Error syncing questions:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
       throw error
     }
     console.log(`✅ Synced ${questions.length} questions to Supabase`)
@@ -350,12 +352,13 @@ export class DataMigrationService {
         description: '', // Default since KPI doesn't have description
         weight: 1.00, // Default since KPI doesn't have weight
         is_active: true, // Default since KPI doesn't have isActive
-        created_at: kpi.createdAt,
-        updated_at: kpi.updatedAt
+        created_at: kpi.createdAt || new Date().toISOString(),
+        updated_at: kpi.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
     if (error) {
       console.error('❌ Error syncing KPIs:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
       throw error
     }
     console.log(`✅ Synced ${kpis.length} KPIs to Supabase`)

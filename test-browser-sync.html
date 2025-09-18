@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Browser Sync</title>
+</head>
+<body>
+    <h1>Test Browser Sync</h1>
+    <button onclick="testSync()">Test Sync to Supabase</button>
+    <div id="output"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2'
+        
+        const supabaseUrl = 'https://ikycekpxmsvzidpculaf.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreWNla3B4bXN2emlkcGN1bGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMzAyMDksImV4cCI6MjA3MzgwNjIwOX0.8oLSq1DkvFfsLM2sFiTCVyeZsYteQzM3mQx4kwMjbHk'
+        
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        
+        // Generate UUID function
+        function generateUUID(inputId) {
+            const hash = CryptoJS.MD5(inputId).toString()
+            return [
+                hash.substring(0, 8),
+                hash.substring(8, 12),
+                hash.substring(12, 16),
+                hash.substring(16, 20),
+                hash.substring(20, 32)
+            ].join('-')
+        }
+        
+        // Load from localStorage
+        function loadFromStorage(key, fallback = []) {
+            try {
+                const stored = localStorage.getItem(key)
+                if (stored) {
+                    const parsed = JSON.parse(stored)
+                    if (parsed && typeof parsed === 'object' && parsed.data && Array.isArray(parsed.data) && parsed.timestamp) {
+                        return parsed.data
+                    } else if (Array.isArray(parsed)) {
+                        return parsed
+                    }
+                }
+            } catch (error) {
+                console.warn(`⚠️ Error loading ${key}:`, error)
+            }
+            return fallback
+        }
+        
+        // Sync topics
+        async function syncTopics(topics) {
+            if (!topics.length) return
+            
+            console.log(`📝 Syncing ${topics.length} topics...`)
+            
+            const { error } = await supabase
+                .from('topics')
+                .upsert(topics.map(topic => ({
+                    id: generateUUID(topic.id),
+                    title: topic.title,
+                    description: topic.description,
+                    order_index: 0,
+                    is_active: topic.isActive !== false,
+                    created_at: topic.createdAt,
+                    updated_at: topic.updatedAt
+                })), { onConflict: 'id' })
+
+            if (error) {
+                console.error('❌ Error syncing topics:', error)
+                throw error
+            }
+            console.log(`✅ Synced ${topics.length} topics to Supabase`)
+        }
+        
+        window.testSync = async function() {
+            const output = document.getElementById('output')
+            output.innerHTML = 'Testing sync...'
+            
+            try {
+                console.log('🔄 Starting browser sync test...')
+                
+                // Check localStorage data
+                const topics = loadFromStorage('ipma_topics')
+                console.log('📊 Topics in localStorage:', topics)
+                
+                if (topics.length === 0) {
+                    output.innerHTML = '❌ No topics found in localStorage. Add some topics in the admin panel first.'
+                    return
+                }
+                
+                // Sync topics
+                await syncTopics(topics)
+                
+                output.innerHTML = `✅ Successfully synced ${topics.length} topics to Supabase!`
+                
+            } catch (error) {
+                console.error('❌ Sync failed:', error)
+                output.innerHTML = `❌ Sync failed: ${error.message}`
+            }
+        }
+    </script>
+    
+    <!-- Include CryptoJS for MD5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</body>
+</html>
