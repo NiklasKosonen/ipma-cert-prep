@@ -108,7 +108,31 @@ export class DataMigrationService {
   // Sync data to Supabase
   async syncToSupabase(): Promise<void> {
     try {
+      console.log('🔄 Starting Supabase sync...')
+      
+      // Check if Supabase is properly configured
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
+      }
+      
+      console.log('✅ Supabase configuration found')
       const snapshot = await this.exportAllData()
+      console.log('📊 Data snapshot created:', {
+        topics: snapshot.topics.length,
+        questions: snapshot.questions.length,
+        kpis: snapshot.kpis.length,
+        companyCodes: snapshot.companyCodes.length,
+        subtopics: snapshot.subtopics.length,
+        sampleAnswers: snapshot.sampleAnswers.length,
+        trainingExamples: snapshot.trainingExamples.length,
+        users: snapshot.users.length,
+        subscriptions: snapshot.subscriptions.length,
+        attempts: snapshot.attempts.length,
+        attemptItems: snapshot.attemptItems.length
+      })
       
       // Sync each data type
       await this.syncTopics(snapshot.topics)
@@ -126,7 +150,7 @@ export class DataMigrationService {
       // Save backup to Supabase
       await this.saveBackupToSupabase(snapshot, 'auto_sync')
 
-      console.log('✅ Data synced to Supabase successfully')
+      console.log('✅ All data synced to Supabase successfully!')
     } catch (error) {
       console.error('❌ Error syncing to Supabase:', error)
       throw error
@@ -326,7 +350,11 @@ export class DataMigrationService {
         updated_at: code.updatedAt
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing company codes:', error)
+      throw error
+    }
+    console.log(`✅ Synced ${companyCodes.length} company codes to Supabase`)
   }
 
   private async syncSubtopics(subtopics: Subtopic[]): Promise<void> {
