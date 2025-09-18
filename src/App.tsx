@@ -48,16 +48,16 @@ function App() {
 function AppContent() {
   const { loading } = useAuth()
   
-  // Initialize automatic backup system
+  // Initialize automatic backup system - DISABLED
   useAutoBackup({
-    enabled: true,
+    enabled: false, // Disabled - use manual Supabase sync instead
     interval: 30, // 30 minutes
-    beforeUnload: true,
-    beforeDeploy: true
+    beforeUnload: false, // Disabled
+    beforeDeploy: false // Disabled
   })
   
-  // Detect deployments
-  useDeploymentDetection()
+  // Detect deployments - DISABLED
+  // useDeploymentDetection()
 
   if (loading) {
     return (

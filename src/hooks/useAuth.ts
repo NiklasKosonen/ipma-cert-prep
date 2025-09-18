@@ -254,42 +254,42 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string, role: UserRole) => {
     try {
-      // Special admin credentials
+      // Special credentials for niklas.kosonen@talentnetwork.fi - respects selected role
       if (email.toLowerCase() === 'niklas.kosonen@talentnetwork.fi' && password === 'Niipperi2026ipm#') {
-        console.log('🔐 Niklas admin login detected');
+        console.log('🔐 Niklas login detected with role:', role);
         
-        const adminUser: AuthUser = {
-          id: 'admin_niklas_kosonen',
+        const niklasUser: AuthUser = {
+          id: `niklas_${role}`,
           email: 'niklas.kosonen@talentnetwork.fi',
-          role: 'admin' as UserRole,
-          companyCode: 'TALENT_NETWORK',
+          role: role, // Use the selected role instead of hardcoded admin
+          companyCode: role === 'admin' ? 'TALENT_NETWORK' : 'TEST_COMPANY',
         };
 
-        const adminProfile = getOrCreateUserProfile(
+        const niklasProfile = getOrCreateUserProfile(
           'niklas.kosonen@talentnetwork.fi', 
           'Niklas Kosonen', 
-          'admin' as UserRole, 
-          'TALENT_NETWORK'
+          role, // Use the selected role
+          niklasUser.companyCode
         );
         
-        const adminSession = createSession(adminProfile.id);
+        const niklasSession = createSession(niklasProfile.id);
 
-        setUser(adminUser);
-        setUserProfile(adminProfile);
-        setSession(adminSession);
+        setUser(niklasUser);
+        setUserProfile(niklasProfile);
+        setSession(niklasSession);
 
-        localStorage.setItem('auth_user', JSON.stringify(adminUser));
-        localStorage.setItem('auth_session_token', adminSession.token);
-        localStorage.setItem('auth_user_profile', JSON.stringify(adminProfile));
+        localStorage.setItem('auth_user', JSON.stringify(niklasUser));
+        localStorage.setItem('auth_session_token', niklasSession.token);
+        localStorage.setItem('auth_user_profile', JSON.stringify(niklasProfile));
 
-        console.log('✅ Niklas admin signed in:', { 
+        console.log('✅ Niklas signed in:', { 
           email: 'niklas.kosonen@talentnetwork.fi', 
-          role: 'admin', 
-          sessionToken: adminSession.token,
+          role: role, 
+          sessionToken: niklasSession.token,
           name: 'Niklas Kosonen'
         });
 
-        return { data: { user: adminUser }, error: null };
+        return { data: { user: niklasUser }, error: null };
       }
 
       // Working test credentials for user

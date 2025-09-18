@@ -195,9 +195,9 @@ export const useDeploymentDetection = () => {
       
       // If more than 1 hour difference, likely a new deployment
       if (timeDiff > 60 * 60 * 1000) {
-        console.log('🚀 New deployment detected')
-        // Trigger backup creation
-        dataMigration.createAutomaticBackup().catch(console.error)
+        console.log('🚀 New deployment detected - automatic backup disabled')
+        // Automatic backup creation disabled - use manual sync instead
+        // dataMigration.createAutomaticBackup().catch(console.error)
       }
     }
     
