@@ -96,6 +96,32 @@ const AdminConsole: React.FC = () => {
       setBackupStatus('idle')
     }
   }
+  const handleAddQuestion = () => {
+    if (!newQuestion.subtopicId || !newQuestion.prompt.trim()) {
+      alert('Please select a subtopic and enter a question prompt')
+      return
+    }
+
+    const questionToAdd = {
+      ...newQuestion,
+      prompt: newQuestion.prompt.trim(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    addQuestion(questionToAdd)
+    
+    // Reset form
+    setNewQuestion({
+      subtopicId: '',
+      topicId: '',
+      prompt: '',
+      connectedKPIs: []
+    })
+    
+    alert('Question added successfully!')
+  }
   
   // Topic states
   const [newTopic, setNewTopic] = useState({ title: '', description: '', isActive: true })
@@ -1019,7 +1045,7 @@ const AdminConsole: React.FC = () => {
                 <h2 className="text-xl font-semibold">Questions Management</h2>
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => setNewQuestion({ ...newQuestion, prompt: '', connectedKPIs: [] })}
+                    onClick={handleAddQuestion}
                     className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                   >
                     Add Question
