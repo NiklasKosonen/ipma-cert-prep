@@ -230,15 +230,30 @@ export class DataMigrationService {
 
   // Generate a consistent UUID from a string ID
   private generateUUID(inputId: string): string {
-    // Create a deterministic UUID from the input string
-    const crypto = require('crypto')
-    const hash = crypto.createHash('md5').update(inputId).digest('hex')
+    // Create a deterministic UUID from the input string using browser-compatible method
+    const encoder = new TextEncoder()
+    const data = encoder.encode(inputId)
+    
+    // Simple hash function for browser compatibility
+    let hash = 0
+    for (let i = 0; i < data.length; i++) {
+      const char = data[i]
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    
+    // Convert to hex string
+    const hex = Math.abs(hash).toString(16).padStart(8, '0')
+    const hex2 = Math.abs(hash * 31).toString(16).padStart(8, '0')
+    const hex3 = Math.abs(hash * 17).toString(16).padStart(8, '0')
+    const hex4 = Math.abs(hash * 13).toString(16).padStart(8, '0')
+    
     return [
-      hash.substring(0, 8),
-      hash.substring(8, 12),
-      hash.substring(12, 16),
-      hash.substring(16, 20),
-      hash.substring(20, 32)
+      hex.substring(0, 8),
+      hex2.substring(0, 4),
+      hex3.substring(0, 4),
+      hex4.substring(0, 4),
+      hex.substring(0, 4) + hex2.substring(0, 8)
     ].join('-')
   }
 
@@ -414,16 +429,21 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('sample_answers')
       .upsert(sampleAnswers.map(answer => ({
-        id: answer.id,
-        question_id: answer.questionId,
+        id: this.generateUUID(answer.id), // Convert to proper UUID
+        question_id: this.generateUUID(answer.questionId), // Convert question ID to UUID
         answer_text: answer.answerText,
         quality_score: answer.qualityRating || 3.00, // Use qualityRating instead of qualityScore
         is_active: true, // Default since SampleAnswer doesn't have isActive
-        created_at: answer.createdAt,
-        updated_at: answer.updatedAt
+        created_at: answer.createdAt || new Date().toISOString(),
+        updated_at: answer.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing sample answers:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${sampleAnswers.length} sample answers to Supabase`)
   }
 
   private async syncTrainingExamples(trainingExamples: TrainingExample[]): Promise<void> {
@@ -432,16 +452,21 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('training_examples')
       .upsert(trainingExamples.map(example => ({
-        id: example.id,
-        question_id: example.questionId,
+        id: this.generateUUID(example.id), // Convert to proper UUID
+        question_id: this.generateUUID(example.questionId), // Convert question ID to UUID
         example_text: example.answerText, // Use answerText instead of exampleText
         quality_score: example.qualityRating || 3.00, // Use qualityRating instead of qualityScore
         is_active: true, // Default since TrainingExample doesn't have isActive
-        created_at: example.createdAt,
-        updated_at: example.updatedAt
+        created_at: example.createdAt || new Date().toISOString(),
+        updated_at: example.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing training examples:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${trainingExamples.length} training examples to Supabase`)
   }
 
   private async syncUsers(users: UserProfile[]): Promise<void> {
@@ -450,18 +475,23 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('users')
       .upsert(users.map(user => ({
-        id: user.id,
+        id: this.generateUUID(user.id), // Convert to proper UUID
         email: user.email,
         name: user.name,
         role: user.role,
         company_code: user.companyCode,
         company_name: user.companyName,
-        subscription_id: user.subscription?.id,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt
+        subscription_id: user.subscription?.id ? this.generateUUID(user.subscription.id) : null,
+        created_at: user.createdAt || new Date().toISOString(),
+        updated_at: user.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing users:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${users.length} users to Supabase`)
   }
 
   private async syncSubscriptions(subscriptions: Subscription[]): Promise<void> {
@@ -470,19 +500,24 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('subscriptions')
       .upsert(subscriptions.map(sub => ({
-        id: sub.id,
-        user_id: sub.userId,
+        id: this.generateUUID(sub.id), // Convert to proper UUID
+        user_id: this.generateUUID(sub.userId), // Convert user ID to UUID
         start_date: sub.startDate,
         end_date: sub.endDate,
         is_active: sub.isActive,
         plan_type: sub.planType,
         auto_renew: sub.autoRenew,
         reminder_sent: sub.reminderSent,
-        created_at: sub.createdAt,
-        updated_at: sub.updatedAt
+        created_at: sub.createdAt || new Date().toISOString(),
+        updated_at: sub.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing subscriptions:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${subscriptions.length} subscriptions to Supabase`)
   }
 
   private async syncAttempts(attempts: Attempt[]): Promise<void> {
@@ -491,19 +526,24 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('attempts')
       .upsert(attempts.map(attempt => ({
-        id: attempt.id,
-        user_id: attempt.userId,
-        topic_id: attempt.topicId,
-        selected_question_ids: attempt.selectedQuestionIds,
+        id: this.generateUUID(attempt.id), // Convert to proper UUID
+        user_id: this.generateUUID(attempt.userId), // Convert user ID to UUID
+        topic_id: this.generateUUID(attempt.topicId), // Convert topic ID to UUID
+        selected_question_ids: attempt.selectedQuestionIds.map(id => this.generateUUID(id)), // Convert question IDs to UUIDs
         start_time: attempt.startTime,
         end_time: attempt.endTime,
         total_score: null, // Default since Attempt doesn't have totalScore
         status: attempt.status,
-        created_at: attempt.createdAt,
-        updated_at: attempt.updatedAt
+        created_at: attempt.createdAt || new Date().toISOString(),
+        updated_at: attempt.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing attempts:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${attempts.length} attempts to Supabase`)
   }
 
   private async syncAttemptItems(attemptItems: AttemptItem[]): Promise<void> {
@@ -512,18 +552,23 @@ export class DataMigrationService {
     const { error } = await supabase
       .from('attempt_items')
       .upsert(attemptItems.map(item => ({
-        id: item.id,
-        attempt_id: item.attemptId,
-        question_id: item.questionId,
+        id: this.generateUUID(item.id), // Convert to proper UUID
+        attempt_id: this.generateUUID(item.attemptId), // Convert attempt ID to UUID
+        question_id: this.generateUUID(item.questionId), // Convert question ID to UUID
         answer_text: item.answer, // Use answer instead of answerText
         kpi_scores: {}, // Default since AttemptItem doesn't have kpiScores
         total_score: item.score, // Use score instead of totalScore
         time_spent: item.durationSec || 0, // Use durationSec instead of timeSpent
-        created_at: item.createdAt,
-        updated_at: item.updatedAt
+        created_at: item.createdAt || new Date().toISOString(),
+        updated_at: item.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error syncing attempt items:', error)
+      console.error('❌ Error details:', error.message, error.code, error.details)
+      throw error
+    }
+    console.log(`✅ Synced ${attemptItems.length} attempt items to Supabase`)
   }
 
   private async saveBackupToSupabase(snapshot: DataSnapshot, type: string, name?: string): Promise<void> {

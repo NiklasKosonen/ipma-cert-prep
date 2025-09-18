@@ -1054,18 +1054,6 @@ const AdminConsole: React.FC = () => {
                   >
                     Add Question
                   </button>
-                  <button
-                    onClick={() => {
-                      // Force save all data to localStorage
-                      localStorage.setItem('ipma_questions', JSON.stringify(questions))
-                      localStorage.setItem('ipma_subtopics', JSON.stringify(subtopics))
-                      localStorage.setItem('ipma_topics', JSON.stringify(topics))
-                      alert('Data manually saved to localStorage!')
-                    }}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-                  >
-                    Force Save
-                  </button>
                   <input
                     type="file"
                     accept=".xlsx,.xls"
@@ -1908,53 +1896,83 @@ const AdminConsole: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Local Backup Section */}
+                {/* Save to localStorage Section */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-medium mb-4 flex items-center">
                     <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
-                    Local Backup
+                    Save Changes
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Create and restore backups of your data. Backups are automatically created before deployments.
+                    Save all your edits to localStorage. This ensures your changes are preserved.
                   </p>
                   
                   <div className="space-y-3">
                     <button
-                      onClick={handleCreateBackup}
-                      disabled={backupStatus !== 'idle'}
-                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      onClick={() => {
+                        // Save all current data to localStorage
+                        const dataToSave = {
+                          timestamp: new Date().toISOString(),
+                          data: {
+                            topics: topics,
+                            questions: questions,
+                            kpis: kpis,
+                            companyCodes: companyCodes,
+                            subtopics: subtopics,
+                            sampleAnswers: sampleAnswers,
+                            trainingExamples: trainingExamples,
+                            users: users,
+                            subscriptions: subscriptions
+                          }
+                        }
+                        
+                        // Save each data type individually
+                        localStorage.setItem('ipma_topics', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: topics
+                        }))
+                        localStorage.setItem('ipma_questions', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: questions
+                        }))
+                        localStorage.setItem('ipma_kpis', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: kpis
+                        }))
+                        localStorage.setItem('ipma_company_codes', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: companyCodes
+                        }))
+                        localStorage.setItem('ipma_subtopics', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: subtopics
+                        }))
+                        localStorage.setItem('ipma_sample_answers', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: sampleAnswers
+                        }))
+                        localStorage.setItem('ipma_training_examples', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: trainingExamples
+                        }))
+                        localStorage.setItem('ipma_users', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: users
+                        }))
+                        localStorage.setItem('ipma_subscriptions', JSON.stringify({
+                          timestamp: new Date().toISOString(),
+                          data: subscriptions
+                        }))
+                        
+                        alert(`✅ All data saved to localStorage!\n\nTopics: ${topics.length}\nQuestions: ${questions.length}\nKPIs: ${kpis.length}\nCompany Codes: ${companyCodes.length}\nSubtopics: ${subtopics.length}\nSample Answers: ${sampleAnswers.length}\nTraining Examples: ${trainingExamples.length}\nUsers: ${users.length}\nSubscriptions: ${subscriptions.length}`)
+                      }}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center"
                     >
-                      {backupStatus === 'backing_up' ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Creating Backup...
-                        </>
-                      ) : (
-                        'Create Backup Now'
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={handleRestoreBackup}
-                      disabled={backupStatus !== 'idle'}
-                      className="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      {backupStatus === 'restoring' ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Restoring...
-                        </>
-                      ) : (
-                        'Restore from Backup'
-                      )}
+                      <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                      </svg>
+                      Save All Changes
                     </button>
                   </div>
                 </div>
