@@ -878,7 +878,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         version: '1.0',
         timestamp: new Date().toISOString(),
         recordCount: topics.length + questions.length + kpis.length + companyCodes.length + 
-                    subtopics.length + sampleAnswers.length + trainingExamples.length + 
+                    (subtopics || []).length + sampleAnswers.length + trainingExamples.length + 
                     users.length + subscriptions.length + allAttempts.length + allAttemptItems.length
       }
     }
