@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { AuthUser, UserRole, UserProfile, Subscription } from '../types'
+import { useState, useEffect } from 'react'
+import { AuthUser, UserRole, UserProfile } from '../types'
 import { supabase } from '../lib/supabase'
 
 // Supabase Authentication System
@@ -38,7 +38,7 @@ export const useAuthSupabase = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: any, session: any) => {
         console.log('Auth state changed:', event, session?.user?.email)
         
         if (session?.user) {
@@ -110,15 +110,15 @@ export const useAuthSupabase = () => {
           .eq('email', email)
           .single()
 
-        const userProfileData = {
+        const userProfileData: UserProfile = {
           id: `niklas_${role}`,
           email: email,
           name: 'Niklas Kosonen',
           role: role,
-          company_code: role === 'admin' ? 'TALENT_NETWORK' : 'TEST_COMPANY',
-          company_name: role === 'admin' ? 'Talent Network' : 'Test Company',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          companyCode: role === 'admin' ? 'TALENT_NETWORK' : 'TEST_COMPANY',
+          companyName: role === 'admin' ? 'Talent Network' : 'Test Company',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
 
         if (existingUser) {
@@ -127,8 +127,8 @@ export const useAuthSupabase = () => {
             .from('users')
             .update({
               role: role,
-              company_code: userProfileData.company_code,
-              company_name: userProfileData.company_name,
+              company_code: userProfileData.companyCode,
+              company_name: userProfileData.companyName,
               updated_at: new Date().toISOString()
             })
             .eq('email', email)
@@ -154,7 +154,7 @@ export const useAuthSupabase = () => {
           id: userProfileData.id,
           email: email,
           role: role,
-          companyCode: userProfileData.company_code,
+          companyCode: userProfileData.companyCode,
         }
 
         setUser(authUser)
@@ -218,20 +218,29 @@ export const useAuthSupabase = () => {
 
       if (data.user) {
         // Create user profile
-        const userProfileData = {
+        const userProfileData: UserProfile = {
           id: data.user.id,
           email: email,
           name: name,
           role: role,
-          company_code: companyCode,
-          company_name: companyCode,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          companyCode: companyCode,
+          companyName: companyCode,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
 
         const { error: profileError } = await supabase
           .from('users')
-          .insert([userProfileData])
+          .insert([{
+            id: userProfileData.id,
+            email: userProfileData.email,
+            name: userProfileData.name,
+            role: userProfileData.role,
+            company_code: userProfileData.companyCode,
+            company_name: userProfileData.companyName,
+            created_at: userProfileData.createdAt,
+            updated_at: userProfileData.updatedAt
+          }])
 
         if (profileError) {
           console.error('Error creating user profile:', profileError)
@@ -302,16 +311,16 @@ export const useAuthSupabase = () => {
         .eq('email', userEmail)
         .single()
 
-      const userProfileData = {
-        id: existingUser?.id || `user_${Date.now()}`,
-        email: userEmail,
-        name: userEmail.split('@')[0],
-        role: 'user' as UserRole,
-        company_code: companyCode,
-        company_name: company.company_name,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
+        const userProfileData: UserProfile = {
+          id: existingUser?.id || `user_${Date.now()}`,
+          email: userEmail,
+          name: userEmail.split('@')[0],
+          role: 'user' as UserRole,
+          companyCode: companyCode,
+          companyName: company.company_name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
 
       if (existingUser) {
         // Update existing user
@@ -332,7 +341,16 @@ export const useAuthSupabase = () => {
         // Create new user
         const { error } = await supabase
           .from('users')
-          .insert([userProfileData])
+          .insert([{
+            id: userProfileData.id,
+            email: userProfileData.email,
+            name: userProfileData.name,
+            role: userProfileData.role,
+            company_code: userProfileData.companyCode,
+            company_name: userProfileData.companyName,
+            created_at: userProfileData.createdAt,
+            updated_at: userProfileData.updatedAt
+          }])
 
         if (error) {
           console.error('Error creating user:', error)
@@ -340,13 +358,13 @@ export const useAuthSupabase = () => {
         }
       }
 
-      // Create auth user object
-      const authUser: AuthUser = {
-        id: userProfileData.id,
-        email: userEmail,
-        role: 'user',
-        companyCode: companyCode,
-      }
+        // Create auth user object
+        const authUser: AuthUser = {
+          id: userProfileData.id,
+          email: userEmail,
+          role: 'user',
+          companyCode: userProfileData.companyCode,
+        }
 
       setUser(authUser)
       setUserProfile(userProfileData)
