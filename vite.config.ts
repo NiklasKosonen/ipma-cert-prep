@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -23,8 +23,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['lucide-react'],
           'admin-chunk': [
-            './src/pages/admin/AdminConsole.tsx',
-            ''
+            './src/pages/admin/AdminConsole.tsx'
           ],
           'user-chunk': [
             './src/pages/user/Home.tsx',
