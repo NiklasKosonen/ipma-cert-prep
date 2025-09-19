@@ -120,30 +120,86 @@ export class DataMigrationService {
       
       console.log('✅ Supabase configuration found')
       
-      // Get the latest backup from Supabase
-      const { data: backups, error } = await supabase
-        .from('data_backups')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
+      // Try to get data from individual tables first
+      console.log('📊 Fetching data from individual tables...')
       
-      if (error) {
-        console.error('❌ Error fetching backups from Supabase:', error)
-        throw error
+      const [topicsResult, subtopicsResult, questionsResult, kpisResult, companyCodesResult, 
+             sampleAnswersResult, trainingExamplesResult, usersResult, subscriptionsResult] = await Promise.allSettled([
+        supabase.from('topics').select('*'),
+        supabase.from('subtopics').select('*'),
+        supabase.from('questions').select('*'),
+        supabase.from('kpis').select('*'),
+        supabase.from('company_codes').select('*'),
+        supabase.from('sample_answers').select('*'),
+        supabase.from('training_examples').select('*'),
+        supabase.from('users').select('*'),
+        supabase.from('subscriptions').select('*')
+      ])
+      
+      // Check if we have data in individual tables
+      let hasData = false
+      const dataFromTables = {
+        topics: topicsResult.status === 'fulfilled' && topicsResult.value.data ? topicsResult.value.data : [],
+        subtopics: subtopicsResult.status === 'fulfilled' && subtopicsResult.value.data ? subtopicsResult.value.data : [],
+        questions: questionsResult.status === 'fulfilled' && questionsResult.value.data ? questionsResult.value.data : [],
+        kpis: kpisResult.status === 'fulfilled' && kpisResult.value.data ? kpisResult.value.data : [],
+        companyCodes: companyCodesResult.status === 'fulfilled' && companyCodesResult.value.data ? companyCodesResult.value.data : [],
+        sampleAnswers: sampleAnswersResult.status === 'fulfilled' && sampleAnswersResult.value.data ? sampleAnswersResult.value.data : [],
+        trainingExamples: trainingExamplesResult.status === 'fulfilled' && trainingExamplesResult.value.data ? trainingExamplesResult.value.data : [],
+        users: usersResult.status === 'fulfilled' && usersResult.value.data ? usersResult.value.data : [],
+        subscriptions: subscriptionsResult.status === 'fulfilled' && subscriptionsResult.value.data ? subscriptionsResult.value.data : []
       }
       
-      if (!backups || backups.length === 0) {
-        console.log('📭 No backups found in Supabase')
-        return
+      // Check if any table has data
+      Object.values(dataFromTables).forEach(data => {
+        if (data.length > 0) hasData = true
+      })
+      
+      let backupData: any = null
+      
+      if (hasData) {
+        console.log('📦 Found data in individual tables:', {
+          topics: dataFromTables.topics.length,
+          subtopics: dataFromTables.subtopics.length,
+          questions: dataFromTables.questions.length,
+          kpis: dataFromTables.kpis.length,
+          companyCodes: dataFromTables.companyCodes.length,
+          sampleAnswers: dataFromTables.sampleAnswers.length,
+          trainingExamples: dataFromTables.trainingExamples.length,
+          users: dataFromTables.users.length,
+          subscriptions: dataFromTables.subscriptions.length
+        })
+        
+        // Use data from individual tables
+        backupData = dataFromTables
+      } else {
+        // Fallback: Try to get the latest backup from Supabase
+        console.log('📭 No data in individual tables, checking for backups...')
+        const { data: backups, error } = await supabase
+          .from('data_backups')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+        
+        if (error) {
+          console.error('❌ Error fetching backups from Supabase:', error)
+          throw error
+        }
+        
+        if (!backups || backups.length === 0) {
+          console.log('📭 No data found in Supabase (neither in tables nor backups)')
+          return
+        }
+        
+        const latestBackup = backups[0]
+        console.log('📦 Found backup in Supabase:', latestBackup.backup_name)
+        
+        // Restore data from the backup
+        backupData = latestBackup.data_snapshot
       }
       
-      const latestBackup = backups[0]
-      console.log('📦 Found backup in Supabase:', latestBackup.backup_name)
-      
-      // Restore data from the backup
-      const backupData = latestBackup.data_snapshot
-      
-      if (backupData.topics && backupData.topics.length > 0) {
+      // Restore data to localStorage
+      if (backupData && backupData.topics && backupData.topics.length > 0) {
         localStorage.setItem('ipma_topics', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.topics
@@ -151,7 +207,7 @@ export class DataMigrationService {
         console.log('✅ Restored topics from Supabase:', backupData.topics.length)
       }
       
-      if (backupData.questions && backupData.questions.length > 0) {
+      if (backupData && backupData.questions && backupData.questions.length > 0) {
         localStorage.setItem('ipma_questions', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.questions
@@ -159,7 +215,7 @@ export class DataMigrationService {
         console.log('✅ Restored questions from Supabase:', backupData.questions.length)
       }
       
-      if (backupData.kpis && backupData.kpis.length > 0) {
+      if (backupData && backupData.kpis && backupData.kpis.length > 0) {
         localStorage.setItem('ipma_kpis', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.kpis
@@ -167,7 +223,7 @@ export class DataMigrationService {
         console.log('✅ Restored KPIs from Supabase:', backupData.kpis.length)
       }
       
-      if (backupData.companyCodes && backupData.companyCodes.length > 0) {
+      if (backupData && backupData.companyCodes && backupData.companyCodes.length > 0) {
         localStorage.setItem('ipma_company_codes', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.companyCodes
@@ -175,7 +231,7 @@ export class DataMigrationService {
         console.log('✅ Restored company codes from Supabase:', backupData.companyCodes.length)
       }
       
-      if (backupData.subtopics && backupData.subtopics.length > 0) {
+      if (backupData && backupData.subtopics && backupData.subtopics.length > 0) {
         localStorage.setItem('ipma_subtopics', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.subtopics
@@ -183,7 +239,7 @@ export class DataMigrationService {
         console.log('✅ Restored subtopics from Supabase:', backupData.subtopics.length)
       }
       
-      if (backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
+      if (backupData && backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
         localStorage.setItem('ipma_sample_answers', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.sampleAnswers
@@ -191,7 +247,7 @@ export class DataMigrationService {
         console.log('✅ Restored sample answers from Supabase:', backupData.sampleAnswers.length)
       }
       
-      if (backupData.trainingExamples && backupData.trainingExamples.length > 0) {
+      if (backupData && backupData.trainingExamples && backupData.trainingExamples.length > 0) {
         localStorage.setItem('ipma_training_examples', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.trainingExamples
@@ -199,7 +255,7 @@ export class DataMigrationService {
         console.log('✅ Restored training examples from Supabase:', backupData.trainingExamples.length)
       }
       
-      if (backupData.users && backupData.users.length > 0) {
+      if (backupData && backupData.users && backupData.users.length > 0) {
         localStorage.setItem('ipma_users', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.users
@@ -207,7 +263,7 @@ export class DataMigrationService {
         console.log('✅ Restored users from Supabase:', backupData.users.length)
       }
       
-      if (backupData.subscriptions && backupData.subscriptions.length > 0) {
+      if (backupData && backupData.subscriptions && backupData.subscriptions.length > 0) {
         localStorage.setItem('ipma_subscriptions', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.subscriptions
@@ -239,14 +295,15 @@ export class DataMigrationService {
         throw new Error('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
       }
       
-      // Check if user is authenticated
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !session) {
-        throw new Error('User must be authenticated to sync data. Please log in first.')
-      }
-      
       console.log('✅ Supabase configuration found')
-      console.log('✅ User authenticated:', session.user.email)
+      
+      // Check if user is authenticated (optional for now)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session && session.user) {
+        console.log('✅ User authenticated:', session.user.email)
+      } else {
+        console.log('⚠️ No user session found, proceeding with anonymous access')
+      }
       const snapshot = await this.exportAllData()
       console.log('📊 Data snapshot created:', {
         topics: snapshot.topics.length,
