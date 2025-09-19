@@ -150,6 +150,17 @@ export class DataMigrationService {
         subscriptions: subscriptionsResult.status === 'fulfilled' && subscriptionsResult.value.data ? subscriptionsResult.value.data : []
       }
       
+      // Log any errors from the fetch operations
+      if (topicsResult.status === 'rejected') console.warn('⚠️ Error fetching topics:', topicsResult.reason)
+      if (subtopicsResult.status === 'rejected') console.warn('⚠️ Error fetching subtopics:', subtopicsResult.reason)
+      if (questionsResult.status === 'rejected') console.warn('⚠️ Error fetching questions:', questionsResult.reason)
+      if (kpisResult.status === 'rejected') console.warn('⚠️ Error fetching KPIs:', kpisResult.reason)
+      if (companyCodesResult.status === 'rejected') console.warn('⚠️ Error fetching company codes:', companyCodesResult.reason)
+      if (sampleAnswersResult.status === 'rejected') console.warn('⚠️ Error fetching sample answers:', sampleAnswersResult.reason)
+      if (trainingExamplesResult.status === 'rejected') console.warn('⚠️ Error fetching training examples:', trainingExamplesResult.reason)
+      if (usersResult.status === 'rejected') console.warn('⚠️ Error fetching users:', usersResult.reason)
+      if (subscriptionsResult.status === 'rejected') console.warn('⚠️ Error fetching subscriptions:', subscriptionsResult.reason)
+      
       // Check if any table has data
       Object.values(dataFromTables).forEach(data => {
         if (data.length > 0) hasData = true
@@ -198,77 +209,95 @@ export class DataMigrationService {
         backupData = latestBackup.data_snapshot
       }
       
-      // Restore data to localStorage
-      if (backupData && backupData.topics && backupData.topics.length > 0) {
+      // Restore data to localStorage with validation
+      if (backupData && backupData.topics && Array.isArray(backupData.topics) && backupData.topics.length > 0) {
         localStorage.setItem('ipma_topics', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.topics
         }))
         console.log('✅ Restored topics from Supabase:', backupData.topics.length)
+      } else {
+        console.log('⚠️ No valid topics data to restore')
       }
       
-      if (backupData && backupData.questions && backupData.questions.length > 0) {
+      if (backupData && backupData.questions && Array.isArray(backupData.questions) && backupData.questions.length > 0) {
         localStorage.setItem('ipma_questions', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.questions
         }))
         console.log('✅ Restored questions from Supabase:', backupData.questions.length)
+      } else {
+        console.log('⚠️ No valid questions data to restore')
       }
       
-      if (backupData && backupData.kpis && backupData.kpis.length > 0) {
+      if (backupData && backupData.kpis && Array.isArray(backupData.kpis) && backupData.kpis.length > 0) {
         localStorage.setItem('ipma_kpis', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.kpis
         }))
         console.log('✅ Restored KPIs from Supabase:', backupData.kpis.length)
+      } else {
+        console.log('⚠️ No valid KPIs data to restore')
       }
       
-      if (backupData && backupData.companyCodes && backupData.companyCodes.length > 0) {
+      if (backupData && backupData.companyCodes && Array.isArray(backupData.companyCodes) && backupData.companyCodes.length > 0) {
         localStorage.setItem('ipma_company_codes', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.companyCodes
         }))
         console.log('✅ Restored company codes from Supabase:', backupData.companyCodes.length)
+      } else {
+        console.log('⚠️ No valid company codes data to restore')
       }
       
-      if (backupData && backupData.subtopics && backupData.subtopics.length > 0) {
+      if (backupData && backupData.subtopics && Array.isArray(backupData.subtopics) && backupData.subtopics.length > 0) {
         localStorage.setItem('ipma_subtopics', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.subtopics
         }))
         console.log('✅ Restored subtopics from Supabase:', backupData.subtopics.length)
+      } else {
+        console.log('⚠️ No valid subtopics data to restore')
       }
       
-      if (backupData && backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
+      if (backupData && backupData.sampleAnswers && Array.isArray(backupData.sampleAnswers) && backupData.sampleAnswers.length > 0) {
         localStorage.setItem('ipma_sample_answers', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.sampleAnswers
         }))
         console.log('✅ Restored sample answers from Supabase:', backupData.sampleAnswers.length)
+      } else {
+        console.log('⚠️ No valid sample answers data to restore')
       }
       
-      if (backupData && backupData.trainingExamples && backupData.trainingExamples.length > 0) {
+      if (backupData && backupData.trainingExamples && Array.isArray(backupData.trainingExamples) && backupData.trainingExamples.length > 0) {
         localStorage.setItem('ipma_training_examples', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.trainingExamples
         }))
         console.log('✅ Restored training examples from Supabase:', backupData.trainingExamples.length)
+      } else {
+        console.log('⚠️ No valid training examples data to restore')
       }
       
-      if (backupData && backupData.users && backupData.users.length > 0) {
+      if (backupData && backupData.users && Array.isArray(backupData.users) && backupData.users.length > 0) {
         localStorage.setItem('ipma_users', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.users
         }))
         console.log('✅ Restored users from Supabase:', backupData.users.length)
+      } else {
+        console.log('⚠️ No valid users data to restore')
       }
       
-      if (backupData && backupData.subscriptions && backupData.subscriptions.length > 0) {
+      if (backupData && backupData.subscriptions && Array.isArray(backupData.subscriptions) && backupData.subscriptions.length > 0) {
         localStorage.setItem('ipma_subscriptions', JSON.stringify({
           timestamp: new Date().toISOString(),
           data: backupData.subscriptions
         }))
         console.log('✅ Restored subscriptions from Supabase:', backupData.subscriptions.length)
+      } else {
+        console.log('⚠️ No valid subscriptions data to restore')
       }
       
       console.log('🎉 Sync from Supabase completed successfully!')
@@ -635,11 +664,11 @@ export class DataMigrationService {
       .upsert(companyCodes.map(code => ({
         id: this.generateUUID(code.id), // Convert to proper UUID
         code: code.code,
-        name: code.companyName, // Use companyName instead of name
+        name: code.companyName || code.code || 'Unknown Company', // Ensure name is never null
         description: '', // Default since CompanyCode doesn't have description
         is_active: code.isActive !== false,
-        created_at: code.createdAt,
-        updated_at: code.updatedAt
+        created_at: code.createdAt || new Date().toISOString(),
+        updated_at: code.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
 
     if (error) {
