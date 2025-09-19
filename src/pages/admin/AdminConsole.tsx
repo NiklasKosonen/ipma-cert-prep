@@ -398,7 +398,7 @@ const AdminConsole: React.FC = () => {
       // Process each subtopic group
       for (const [subtopicName, subtopicRows] of subtopicGroups) {
         // Create subtopic
-        let subtopicId = subtopics.find(s => s.title === subtopicName && s.topicId === topicId)?.id
+        let subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id
         if (!subtopicId && topicId) {
           const newSubtopic = { 
             title: subtopicName, 
@@ -409,7 +409,7 @@ const AdminConsole: React.FC = () => {
           addSubtopic(newSubtopic)
           // Wait a bit for the subtopic to be created
           setTimeout(() => {
-            subtopicId = subtopics.find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
+            subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
           }, 100)
         }
 
@@ -695,7 +695,7 @@ const AdminConsole: React.FC = () => {
               {/* Subtopics List */}
               <div className="space-y-6">
                 {topics.map((topic) => {
-                  const topicSubtopics = subtopics.filter(s => s.topicId === topic.id)
+                  const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
                   if (topicSubtopics.length === 0) return null
                   
                   return (
@@ -884,7 +884,7 @@ const AdminConsole: React.FC = () => {
               {/* KPIs List */}
               <div className="space-y-6">
                 {topics.map((topic) => {
-                  const topicSubtopics = subtopics.filter(s => s.topicId === topic.id)
+                  const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
                   const topicKPIs = kpis.filter(k => topicSubtopics.some(st => st.id === k.subtopicId))
                   if (topicKPIs.length === 0) return null
                   
@@ -1078,7 +1078,7 @@ const AdminConsole: React.FC = () => {
                     <select
                       value={newQuestion.subtopicId}
                       onChange={(e) => {
-                        const selectedSubtopic = subtopics.find(s => s.id === e.target.value)
+                        const selectedSubtopic = (subtopics || []).find(s => s.id === e.target.value)
                         setNewQuestion({ 
                           ...newQuestion, 
                           subtopicId: e.target.value,
@@ -1149,7 +1149,7 @@ const AdminConsole: React.FC = () => {
               {/* Questions List */}
               <div className="space-y-4">
                 {questions.map((question) => {
-                  const subtopic = subtopics.find(s => s.id === question.subtopicId)
+                  const subtopic = (subtopics || []).find(s => s.id === question.subtopicId)
                   const topic = topics.find(t => t.id === subtopic?.topicId)
                   return (
                     <div key={question.id} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -1322,7 +1322,7 @@ const AdminConsole: React.FC = () => {
                     >
                       <option value="">Valitse kysymys</option>
                       {questions.map(question => {
-                        const subtopic = subtopics.find(s => s.id === question.subtopicId)
+                        const subtopic = (subtopics || []).find(s => s.id === question.subtopicId)
                         const topic = topics.find(t => t.id === subtopic?.topicId)
                         return (
                           <option key={question.id} value={question.id}>
@@ -1423,7 +1423,7 @@ const AdminConsole: React.FC = () => {
                     <div className="space-y-4">
                       {trainingExamples.map((example) => {
                         const question = questions.find(q => q.id === example.questionId)
-                        const subtopic = subtopics.find(s => s.id === question?.subtopicId)
+                        const subtopic = (subtopics || []).find(s => s.id === question?.subtopicId)
                         const topic = topics.find(t => t.id === subtopic?.topicId)
                         const selectedKPIs = kpis.filter(kpi => example.detectedKPIs.includes(kpi.id))
                         
