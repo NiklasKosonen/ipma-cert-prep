@@ -45,28 +45,81 @@ const AdminConsole: React.FC = () => {
   const handleSyncToSupabase = async () => {
     setBackupStatus('syncing')
     try {
-      // Temporarily disabled to prevent data loss
-      alert('⚠️ Supabase sync is temporarily disabled to prevent data loss.\n\nYour data is safely stored locally. We\'ll fix the sync issues soon.')
-      console.log('⚠️ Supabase sync disabled to prevent data loss')
-    } catch (error) {
-      alert(`❌ Sync failed: ${error}`)
+      console.log('🔄 Starting authenticated sync to Supabase...')
+      
+      // Authenticate as trainer/admin for content management
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+      
+      if (authError) {
+        console.warn('⚠️ Anonymous authentication failed:', authError.message)
+        // Try to continue anyway - RLS policies should allow content access
+      } else {
+        console.log('✅ Authenticated for sync:', authData.user?.id)
+      }
+      
+      const dataMigration = DataMigrationService.getInstance()
+      await dataMigration.syncToSupabase()
+      
+      alert('✅ Content data synced to Supabase successfully!\n\nAll topics, subtopics, questions, and KPIs are now safely stored in Supabase.')
+      console.log('✅ Sync to Supabase completed successfully')
+    } catch (error: any) {
+      console.error('❌ Sync to Supabase failed:', error)
+      
+      let errorMessage = 'Unknown error occurred'
+      if (error.message) {
+        errorMessage = error.message
+      }
+      
+      if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
+        alert(`❌ Security Error:\n${errorMessage}\n\nPlease ensure RLS policies are properly configured in Supabase.`)
+      } else if (errorMessage.includes('constraint') || errorMessage.includes('foreign key')) {
+        alert(`❌ Data Relationship Error:\n${errorMessage}\n\nThis might be due to missing parent records or invalid data relationships.`)
+      } else {
+        alert(`❌ Sync Error:\n${errorMessage}\n\nPlease check your Supabase configuration and try again.`)
+      }
     } finally {
       setBackupStatus('idle')
     }
   }
 
   const handleSyncFromSupabase = async () => {
-    if (!confirm('⚠️ This will sync data from Supabase. Current data will be replaced. Continue?')) {
+    if (!confirm('⚠️ This will sync content data from Supabase. Current local data will be replaced. Continue?')) {
       return
     }
     
     setBackupStatus('syncing')
     try {
+      console.log('🔄 Starting authenticated sync from Supabase...')
+      
+      // Authenticate for content access
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+      
+      if (authError) {
+        console.warn('⚠️ Anonymous authentication failed:', authError.message)
+      } else {
+        console.log('✅ Authenticated for sync:', authData.user?.id)
+      }
+      
       const dataMigration = DataMigrationService.getInstance()
       await dataMigration.syncFromSupabase()
-      alert('✅ Data synced from Supabase successfully!')
-    } catch (error) {
-      alert(`❌ Sync failed: ${error}`)
+      
+      alert('✅ Content data synced from Supabase successfully!\n\nAll topics, subtopics, questions, and KPIs have been loaded from Supabase.')
+      console.log('✅ Sync from Supabase completed successfully')
+    } catch (error: any) {
+      console.error('❌ Sync from Supabase failed:', error)
+      
+      let errorMessage = 'Unknown error occurred'
+      if (error.message) {
+        errorMessage = error.message
+      }
+      
+      if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
+        alert(`❌ Security Error:\n${errorMessage}\n\nPlease ensure RLS policies are properly configured in Supabase.`)
+      } else if (errorMessage.includes('No backups found')) {
+        alert(`❌ No Data Found:\n${errorMessage}\n\nPlease sync content data to Supabase first using the "Sync to Supabase" button.`)
+      } else {
+        alert(`❌ Sync Error:\n${errorMessage}\n\nPlease check your Supabase configuration and try again.`)
+      }
     } finally {
       setBackupStatus('idle')
     }

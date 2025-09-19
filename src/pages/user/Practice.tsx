@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { Clock, ArrowLeft, Trophy, AlertCircle, BookOpen, Play, Info } from 'lucide-react'
 import { useData } from '../../contexts/DataContext'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
-import { Question, Topic, Subtopic } from '../../types'
+import { Question, Topic, Subtopic, Attempt, AttemptItem } from '../../types'
+import { UserDataService } from '../../services/userDataService'
 
 // Utility function to randomly select questions
 const selectRandomQuestions = (questions: Question[], subtopics: Subtopic[]): Question[] => {
@@ -246,6 +247,8 @@ const Exam = ({ topic, onBack, onComplete }: {
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [examResults, setExamResults] = useState<any>(null)
+  const [attempt, setAttempt] = useState<Attempt | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
@@ -260,6 +263,24 @@ const Exam = ({ topic, onBack, onComplete }: {
     
     setSelectedQuestions(randomQuestions)
     setTimeRemaining(randomQuestions.length * 3 * 60) // 3 minutes per question
+    
+    // Create attempt record
+    const newAttempt: Attempt = {
+      id: `attempt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: 'current_user', // Will be replaced with actual user ID
+      topicId: topic.id,
+      selectedQuestionIds: [],
+      startTime: new Date().toISOString(),
+      endTime: undefined,
+      status: 'in_progress',
+      totalTime: randomQuestions.length * 3, // 3 minutes per question
+      timeRemaining: randomQuestions.length * 3 * 60, // in seconds
+      submittedAt: undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    setAttempt(newAttempt)
   }, [topic.id, questions, subtopics])
 
   useEffect(() => {
@@ -272,75 +293,138 @@ const Exam = ({ topic, onBack, onComplete }: {
   }, [timeRemaining, isSubmitted])
 
   const handleSubmit = async () => {
-    if (isSubmitted) return
+    if (isSubmitted || isSaving) return
     
     setIsSubmitted(true)
+    setIsSaving(true)
     
-    // Check if there are questions to evaluate
-    if (selectedQuestions.length === 0) {
-      const examResults = {
-        totalScore: 0,
-        maxScore: 0,
-        percentage: 0,
-        passed: false,
-        results: [],
-        timeSpent: 0
-      }
-      setExamResults(examResults)
-      onComplete(examResults)
-      return
-    }
-    
-    // Evaluate all answers
-    const results = await Promise.all(
-      selectedQuestions.map(async (question) => {
-        try {
-          const answer = answers[question.id] || ''
-          const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
-          const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
-          
-          console.log('Question evaluation:', {
-            questionId: question.id,
-            answer: answer.substring(0, 50) + '...',
-            connectedKPIs: connectedKPIs.length,
-            evaluation
-          })
-          
-          return {
-            question,
-            answer,
-            ...evaluation
-          }
-        } catch (error) {
-          console.error('Error evaluating question:', question.id, error)
-          return {
-            question,
-            answer: answers[question.id] || '',
-            toteutuneet_kpi: [],
-            puuttuvat_kpi: [],
-            pisteet: 0,
-            sanallinen_arvio: 'Evaluation failed'
-          }
+    try {
+      // Check if there are questions to evaluate
+      if (selectedQuestions.length === 0) {
+        const examResults = {
+          totalScore: 0,
+          maxScore: 0,
+          percentage: 0,
+          passed: false,
+          results: [],
+          timeSpent: 0
         }
-      })
-    )
-    
-    const totalScore = results.reduce((sum, result) => sum + (result.pisteet || 0), 0)
-    const maxScore = results.length * 3
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
-    const passed = percentage >= 80
-    
-    const examResults = {
-      totalScore,
-      maxScore,
-      percentage,
-      passed,
-      results,
-      timeSpent: (selectedQuestions.length * 3 * 60) - timeRemaining
+        setExamResults(examResults)
+        onComplete(examResults)
+        return
+      }
+      
+      // Evaluate all answers
+      const results = await Promise.all(
+        selectedQuestions.map(async (question) => {
+          try {
+            const answer = answers[question.id] || ''
+            const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
+            const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
+            
+            console.log('Question evaluation:', {
+              questionId: question.id,
+              answer: answer.substring(0, 50) + '...',
+              connectedKPIs: connectedKPIs.length,
+              evaluation
+            })
+            
+            return {
+              question,
+              answer,
+              ...evaluation
+            }
+          } catch (error) {
+            console.error('Error evaluating question:', question.id, error)
+            return {
+              question,
+              answer: answers[question.id] || '',
+              toteutuneet_kpi: [],
+              puuttuvat_kpi: [],
+              pisteet: 0,
+              sanallinen_arvio: 'Evaluation failed'
+            }
+          }
+        })
+      )
+      
+      const totalScore = results.reduce((sum, result) => sum + (result.pisteet || 0), 0)
+      const maxScore = results.length * 3
+      const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
+      const passed = percentage >= 80
+      
+      // Create attempt items
+      const newAttemptItems: AttemptItem[] = results.map(result => ({
+        id: `attempt_item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        attemptId: attempt?.id || '',
+        questionId: result.question.id,
+        answer: result.answer,
+        kpisDetected: result.toteutuneet_kpi || [],
+        kpisMissing: result.puuttuvat_kpi || [],
+        score: result.pisteet || 0,
+        maxScore: 3,
+        feedback: result.sanallinen_arvio || '',
+        isEvaluated: true,
+        durationSec: 180, // 3 minutes per question
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }))
+      
+      // Store attempt items for saving
+      
+      // Update attempt with completion
+      const completedAttempt: Attempt = {
+        ...attempt!,
+        endTime: new Date().toISOString(),
+        status: 'completed',
+        submittedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      // Generate comprehensive evaluation
+      const strengths = results.filter(r => (r.pisteet || 0) >= 2).map(r => r.question.prompt.substring(0, 50) + '...')
+      const weaknesses = results.filter(r => (r.pisteet || 0) < 2).map(r => r.question.prompt.substring(0, 50) + '...')
+      const recommendations = [
+        percentage >= 80 ? 'Excellent work! You have a strong understanding of this topic.' : 'Consider reviewing the areas where you scored lower.',
+        'Practice more questions in the weak areas to improve your performance.',
+        'Review the feedback for each question to understand the correct approach.'
+      ]
+      
+      const evaluation = {
+        overallScore: percentage,
+        strengths: strengths.slice(0, 3), // Top 3 strengths
+        weaknesses: weaknesses.slice(0, 3), // Top 3 weaknesses
+        recommendations,
+        detailedFeedback: `You scored ${percentage}% on this exam. ${passed ? 'Congratulations, you passed!' : 'You need to score at least 80% to pass.'}`
+      }
+      
+      // Save exam result to Supabase
+      const userDataService = UserDataService.getInstance()
+      const savedResult = await userDataService.saveExamResult(completedAttempt, newAttemptItems, evaluation)
+      
+      const examResults = {
+        totalScore,
+        maxScore,
+        percentage,
+        passed,
+        results,
+        timeSpent: (selectedQuestions.length * 3 * 60) - timeRemaining,
+        evaluation,
+        savedResult
+      }
+      
+      setExamResults(examResults)
+      console.log('✅ Exam results saved to Supabase:', savedResult?.id)
+      
+      // Navigate to evaluation page
+      onComplete(examResults)
+      
+    } catch (error) {
+      console.error('❌ Error saving exam results:', error)
+      alert('❌ Error saving exam results. Please try again.')
+    } finally {
+      setIsSaving(false)
     }
-    
-    setExamResults(examResults)
-    onComplete(examResults)
   }
 
   const formatTime = (seconds: number) => {
@@ -532,11 +616,170 @@ const Exam = ({ topic, onBack, onComplete }: {
           <div className="text-center mt-8">
             <button
               onClick={handleSubmit}
-              disabled={isSubmitted}
+              disabled={isSubmitted || isSaving}
               className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-colors shadow-lg hover:shadow-xl"
             >
-              {isSubmitted ? 'Submitting...' : 'Submit Exam'}
+              {isSaving ? 'Saving Results...' : isSubmitted ? 'Submitting...' : 'Submit Exam'}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Evaluation Component
+const Evaluation = ({ 
+  results, 
+  onBackToTopics 
+}: { 
+  results: any, 
+  onBackToTopics: () => void 
+}) => {
+  const { evaluation } = results
+  
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-8 py-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Exam Results</h1>
+                <p className="text-primary-100">Your performance evaluation and feedback</p>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-bold mb-1">{results.percentage}%</div>
+                <div className="text-primary-100 text-sm">
+                  {results.passed ? 'PASSED' : 'NOT PASSED'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Score Summary */}
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <div className="text-2xl font-bold text-green-600 mb-2">{results.totalScore}</div>
+                <div className="text-green-800 font-medium">Points Earned</div>
+                <div className="text-green-600 text-sm">out of {results.maxScore}</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                <div className="text-2xl font-bold text-blue-600 mb-2">{results.timeSpent}</div>
+                <div className="text-blue-800 font-medium">Minutes Spent</div>
+                <div className="text-blue-600 text-sm">exam duration</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
+                <div className="text-2xl font-bold text-purple-600 mb-2">{results.results.length}</div>
+                <div className="text-purple-800 font-medium">Questions</div>
+                <div className="text-purple-600 text-sm">total answered</div>
+              </div>
+            </div>
+
+            {/* Detailed Feedback */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Overall Feedback</h2>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  {evaluation.detailedFeedback}
+                </p>
+              </div>
+            </div>
+
+            {/* Strengths and Weaknesses */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-green-700 mb-4">Strengths</h3>
+                <div className="space-y-2">
+                  {evaluation.strengths.length > 0 ? (
+                    evaluation.strengths.map((strength: string, index: number) => (
+                      <div key={index} className="flex items-start">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <span className="text-gray-700">{strength}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 italic">No specific strengths identified</p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-bold text-red-700 mb-4">Areas for Improvement</h3>
+                <div className="space-y-2">
+                  {evaluation.weaknesses.length > 0 ? (
+                    evaluation.weaknesses.map((weakness: string, index: number) => (
+                      <div key={index} className="flex items-start">
+                        <div className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <span className="text-gray-700">{weakness}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 italic">No specific weaknesses identified</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-blue-700 mb-4">Recommendations</h3>
+              <div className="space-y-3">
+                {evaluation.recommendations.map((recommendation: string, index: number) => (
+                  <div key={index} className="flex items-start">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">{recommendation}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Question-by-Question Results */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Question Details</h3>
+              <div className="space-y-4">
+                {results.results.map((result: any, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-gray-900">
+                        Question {index + 1}: {result.question.prompt.substring(0, 100)}...
+                      </h4>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        (result.pisteet || 0) >= 2 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {result.pisteet || 0}/3 points
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      <strong>Your answer:</strong> {result.answer.substring(0, 200)}...
+                    </div>
+                    <div className="text-sm text-gray-700">
+                      <strong>Feedback:</strong> {result.sanallinen_arvio}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={onBackToTopics}
+                className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Take Another Exam
+              </button>
+              <button
+                onClick={() => window.location.href = '/dashboard'}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Go to Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -547,8 +790,9 @@ const Exam = ({ topic, onBack, onComplete }: {
 // Main Practice Component
 export const Practice = () => {
   const { topics } = useData()
-  const [currentView, setCurrentView] = useState<'topics' | 'details' | 'exam'>('topics')
+  const [currentView, setCurrentView] = useState<'topics' | 'details' | 'exam' | 'evaluation'>('topics')
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
+  const [examResults, setExamResults] = useState<any>(null)
   
   // Check if we have a topicId in the URL
   const urlParams = new URLSearchParams(window.location.search)
@@ -580,9 +824,11 @@ export const Practice = () => {
   }
 
   const handleExamComplete = (results: any) => {
-    // Results are handled in the Exam component
-    // The Exam component will show results and provide navigation options
     console.log('Exam completed with results:', results)
+    
+    // Navigate to evaluation page
+    setCurrentView('evaluation')
+    setExamResults(results)
   }
 
   if (currentView === 'topics') {
@@ -605,6 +851,15 @@ export const Practice = () => {
         topic={selectedTopic} 
         onBack={handleBackToTopics} 
         onComplete={handleExamComplete} 
+      />
+    )
+  }
+
+  if (currentView === 'evaluation' && examResults) {
+    return (
+      <Evaluation 
+        results={examResults} 
+        onBackToTopics={handleBackToTopics} 
       />
     )
   }
