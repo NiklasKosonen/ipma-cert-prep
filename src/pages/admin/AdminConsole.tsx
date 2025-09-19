@@ -704,7 +704,7 @@ const AdminConsole: React.FC = () => {
                         {topic.title}
                       </h3>
                       <div className="space-y-3 ml-4">
-                        {topic(subtopics || []).map((subtopic) => (
+                        {(subtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => (
                           <div key={subtopic.id} className="bg-white border border-gray-200 rounded-lg p-4">
                       {editingSubtopic && editingSubtopic.id === subtopic.id ? (
                         <div className="space-y-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
@@ -894,7 +894,7 @@ const AdminConsole: React.FC = () => {
                         {topic.title}
                       </h3>
                       <div className="space-y-4 ml-4">
-                        {topic(subtopics || []).map((subtopic) => {
+                        {(subtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => {
                           const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id)
                           if (subtopicKPIs.length === 0) return null
                           
