@@ -19,6 +19,13 @@ export interface ExamResult {
   }
   createdAt: string
   updatedAt: string
+  users?: {
+    id: string
+    email: string
+    name: string
+    company_code: string
+    company_name: string
+  }
 }
 
 export interface UserProfile {
@@ -258,7 +265,7 @@ export class UserDataService {
   }
 
   // Authenticate user (sign in or sign up)
-  async authenticateUser(email: string, password: string, isSignUp: boolean = false): Promise<UserProfile | null> {
+  async authenticateUser(email: string, password: string, isSignUp: boolean = false, name?: string, companyCode?: string): Promise<UserProfile | null> {
     try {
       let authResult
       
@@ -268,7 +275,7 @@ export class UserDataService {
           password,
           options: {
             data: {
-              name: email.split('@')[0] // Use email prefix as default name
+              name: name || email.split('@')[0] // Use provided name or email prefix as default
             }
           }
         })
@@ -287,7 +294,42 @@ export class UserDataService {
         throw new Error('Authentication failed')
       }
 
-      // Get or create user profile
+      // For sign up, create user profile
+      if (isSignUp && authResult.data.user) {
+        const userProfile: UserProfile = {
+          id: authResult.data.user.id,
+          email: authResult.data.user.email || email,
+          name: name || email.split('@')[0],
+          companyCode: companyCode || 'DEFAULT',
+          companyName: 'Default Company', // Will be updated based on company code
+          role: 'user',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+
+        // Create user profile in users table
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([{
+            id: userProfile.id,
+            email: userProfile.email,
+            name: userProfile.name,
+            company_code: userProfile.companyCode,
+            company_name: userProfile.companyName,
+            role: userProfile.role,
+            created_at: userProfile.createdAt,
+            updated_at: userProfile.updatedAt
+          }])
+
+        if (profileError) {
+          console.warn('Failed to create user profile:', profileError.message)
+          // Continue anyway - profile will be created on next login
+        }
+
+        return userProfile
+      }
+
+      // Get existing user profile
       const profile = await this.getCurrentUser()
       return profile
     } catch (error) {

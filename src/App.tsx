@@ -15,6 +15,9 @@ import { LoginForm } from './pages/auth/LoginForm'
 import { CompanyLogin } from './pages/auth/CompanyLogin'
 import { ResetPassword } from './pages/auth/ResetPassword'
 import { UpdatePassword } from './pages/auth/UpdatePassword'
+import LoginPage from './pages/auth/LoginPage'
+import UserDashboard from './pages/user/UserDashboard'
+import TrainerDashboardComponent from './pages/trainer/TrainerDashboard'
 
 // User pages - lazy loaded for better performance
 import { UserHome } from './pages/user/Home'
@@ -78,6 +81,7 @@ function AppContent() {
         <Route path="/auth/company" element={<CompanyLogin />} />
         <Route path="/auth/reset" element={<ResetPassword />} />
         <Route path="/auth/update-password" element={<UpdatePassword />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* Hidden Admin Routes */}
         <Route path="/admin-login" element={<RolePicker />} />
@@ -94,6 +98,14 @@ function AppContent() {
               <ProtectedLayout>
                 <UserHome />
               </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["user", "trainer", "admin"]}>
+              <UserDashboard />
             </ProtectedRoute>
           }
         />
@@ -119,6 +131,16 @@ function AppContent() {
         />
         <Route
           path="/practice/:topicId"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <ProtectedLayout>
+                <Practice />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice"
           element={
             <ProtectedRoute allowedRoles={["user"]}>
               <ProtectedLayout>
@@ -220,6 +242,14 @@ function AppContent() {
                   <TrainerDashboard />
                 </Suspense>
               </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer"
+          element={
+            <ProtectedRoute allowedRoles={["trainer", "admin"]}>
+              <TrainerDashboardComponent />
             </ProtectedRoute>
           }
         />
