@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 import { useAutoBackup } from '../../hooks/useAutoBackup'
 import { DataMigrationService } from '../../services/dataMigration'
+import { supabase } from '../../lib/supabase'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
@@ -44,9 +45,9 @@ const AdminConsole: React.FC = () => {
   const handleSyncToSupabase = async () => {
     setBackupStatus('syncing')
     try {
-      const dataMigration = DataMigrationService.getInstance()
-      await dataMigration.syncToSupabase()
-      alert('✅ Data synced to Supabase successfully!')
+      // Temporarily disabled to prevent data loss
+      alert('⚠️ Supabase sync is temporarily disabled to prevent data loss.\n\nYour data is safely stored locally. We\'ll fix the sync issues soon.')
+      console.log('⚠️ Supabase sync disabled to prevent data loss')
     } catch (error) {
       alert(`❌ Sync failed: ${error}`)
     } finally {
@@ -484,6 +485,167 @@ const AdminConsole: React.FC = () => {
     } catch (error) {
       console.error('❌ Error importing Excel file:', error)
       alert('Error importing Excel file. Please check the format.')
+    }
+  }
+
+  const handleExcelToSupabaseImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      console.log('🚀 Starting Excel to Supabase import...')
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+      // Process the Excel data
+      const processedData = jsonData as any[]
+      console.log('📊 Processed Excel data:', processedData.length, 'rows')
+      
+      // Group by subtopic to understand the structure
+      const subtopicGroups = new Map<string, any[]>()
+      
+      processedData.forEach((row: any) => {
+        const subtopic = row.subtopic?.trim()
+        if (subtopic && row.question?.trim()) {
+          if (!subtopicGroups.has(subtopic)) {
+            subtopicGroups.set(subtopic, [])
+          }
+          subtopicGroups.get(subtopic)!.push(row)
+        }
+      })
+
+      // Get the main topic (from first row)
+      const mainTopic = processedData[0]?.topic?.trim() || 'Imported Topic'
+      const topicDescription = processedData[0]?.topic_description?.trim() || ''
+      console.log('📝 Main topic:', mainTopic)
+
+      // Import directly to Supabase
+      
+      // Create topic in Supabase first
+      const topicData = {
+        id: `topic_${Date.now()}`,
+        title: mainTopic,
+        description: topicDescription,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      console.log('📝 Creating topic in Supabase:', mainTopic)
+      const { error: topicError } = await supabase
+        .from('topics')
+        .upsert([topicData], { onConflict: 'title' })
+
+      if (topicError) {
+        throw new Error(`Failed to create topic: ${topicError.message}`)
+      }
+
+      // Get the topic ID from Supabase
+      const { data: createdTopic } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('title', mainTopic)
+        .single()
+
+      if (!createdTopic) {
+        throw new Error('Failed to get created topic ID')
+      }
+
+      const topicId = createdTopic.id
+      console.log('✅ Topic created with ID:', topicId)
+
+      // Process each subtopic group
+      for (const [subtopicName, subtopicRows] of subtopicGroups) {
+        console.log('📝 Processing subtopic:', subtopicName, 'with', subtopicRows.length, 'questions')
+        
+        // Create subtopic in Supabase
+        const subtopicData = {
+          id: `subtopic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title: subtopicName,
+          description: '',
+          topic_id: topicId,
+          order_index: 0,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        console.log('➕ Creating subtopic in Supabase:', subtopicName)
+        const { error: subtopicError } = await supabase
+          .from('subtopics')
+          .upsert([subtopicData], { onConflict: 'id' })
+
+        if (subtopicError) {
+          console.error('❌ Failed to create subtopic:', subtopicError)
+          continue // Skip this subtopic and continue with others
+        }
+
+        const subtopicId = subtopicData.id
+        console.log('✅ Subtopic created with ID:', subtopicId)
+
+        // Process KPIs for this subtopic (from first row of the subtopic)
+        const firstRow = subtopicRows[0]
+        const kpiNames = firstRow.kpis?.split(';').map((k: string) => k.trim()).filter((k: string) => k) || []
+        console.log('📊 KPIs for subtopic:', kpiNames)
+        
+        // Create KPIs in Supabase
+        const kpiData = kpiNames.map((kpiName: string) => ({
+          id: `kpi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: kpiName,
+          is_essential: true,
+          topic_id: topicId,
+          subtopic_id: subtopicId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }))
+
+        if (kpiData.length > 0) {
+          console.log('➕ Creating KPIs in Supabase:', kpiNames)
+          const { error: kpiError } = await supabase
+            .from('kpis')
+            .upsert(kpiData, { onConflict: 'id' })
+
+          if (kpiError) {
+            console.error('❌ Failed to create KPIs:', kpiError)
+          } else {
+            console.log('✅ KPIs created successfully')
+          }
+        }
+
+        // Create questions in Supabase
+        const questionData = subtopicRows.map((row: any) => ({
+          id: `question_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          prompt: row.question?.trim() || '',
+          topic_id: topicId,
+          subtopic_id: subtopicId,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })).filter(q => q.prompt) // Only include questions with prompts
+
+        if (questionData.length > 0) {
+          console.log('➕ Creating questions in Supabase:', questionData.length, 'questions')
+          const { error: questionError } = await supabase
+            .from('questions')
+            .upsert(questionData, { onConflict: 'id' })
+
+          if (questionError) {
+            console.error('❌ Failed to create questions:', questionError)
+          } else {
+            console.log('✅ Questions created successfully')
+          }
+        }
+      }
+
+      console.log('✅ Excel to Supabase import completed successfully!')
+      alert('✅ Excel data imported directly to Supabase successfully!\n\nYour data is now safely stored in Supabase without any local conflicts.')
+      // Reset the file input
+      event.target.value = ''
+    } catch (error) {
+      console.error('❌ Error importing Excel to Supabase:', error)
+      alert(`❌ Error importing Excel to Supabase: ${error}`)
     }
   }
 
@@ -1063,14 +1225,35 @@ const AdminConsole: React.FC = () => {
                     htmlFor="excel-import"
                     className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
                   >
-                    Import Excel
+                    Import Excel (Local)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelToSupabaseImport}
+                    className="hidden"
+                    id="excel-supabase-import"
+                  />
+                  <label
+                    htmlFor="excel-supabase-import"
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 cursor-pointer"
+                  >
+                    Import Excel (Supabase)
                   </label>
                 </div>
               </div>
 
               {/* Excel Import Instructions */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="text-lg font-medium text-blue-900 mb-2">Excel Import Format</h3>
+                <h3 className="text-lg font-medium text-blue-900 mb-2">Excel Import Options</h3>
+                <div className="mb-4">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Import Excel (Local):</strong> Imports data to local storage only. Safe for testing.
+                  </p>
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Import Excel (Supabase):</strong> Imports data directly to Supabase database. Recommended for production.
+                  </p>
+                </div>
                 <p className="text-sm text-blue-800 mb-2">
                   Upload an Excel file with the following columns:
                 </p>
