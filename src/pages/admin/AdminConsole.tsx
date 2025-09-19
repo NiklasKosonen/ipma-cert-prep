@@ -494,14 +494,45 @@ const AdminConsole: React.FC = () => {
 
     try {
       console.log('🚀 Starting Excel to Supabase import...')
+      
+      // Validate file type
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        throw new Error('Invalid file type. Please upload an Excel file (.xlsx or .xls)')
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File too large. Please upload a file smaller than 10MB')
+      }
+
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
+      
+      // Validate workbook has sheets
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        throw new Error('Excel file has no worksheets')
+      }
+
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
       // Process the Excel data
       const processedData = jsonData as any[]
       console.log('📊 Processed Excel data:', processedData.length, 'rows')
+
+      // Validate data structure
+      if (processedData.length === 0) {
+        throw new Error('Excel file is empty or has no data rows')
+      }
+
+      // Check required columns
+      const requiredColumns = ['topic', 'subtopic', 'question']
+      const firstRow = processedData[0]
+      const missingColumns = requiredColumns.filter(col => !firstRow.hasOwnProperty(col))
+      
+      if (missingColumns.length > 0) {
+        throw new Error(`Missing required columns: ${missingColumns.join(', ')}. Please ensure your Excel file has columns: topic, subtopic, question`)
+      }
       
       // Group by subtopic to understand the structure
       const subtopicGroups = new Map<string, any[]>()
@@ -523,6 +554,17 @@ const AdminConsole: React.FC = () => {
 
       // Import directly to Supabase
       
+      // Authenticate with Supabase (anonymous for now)
+      console.log('🔐 Authenticating with Supabase...')
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+      
+      if (authError) {
+        console.warn('⚠️ Anonymous authentication failed:', authError.message)
+        console.log('🔄 Proceeding without authentication...')
+      } else {
+        console.log('✅ Authenticated successfully:', authData.user?.id)
+      }
+      
       // Create topic in Supabase first
       const topicData = {
         id: `topic_${Date.now()}`,
@@ -534,26 +576,21 @@ const AdminConsole: React.FC = () => {
       }
 
       console.log('📝 Creating topic in Supabase:', mainTopic)
-      const { error: topicError } = await supabase
+      const { data: topicResult, error: topicError } = await supabase
         .from('topics')
         .upsert([topicData], { onConflict: 'title' })
+        .select('id')
+        .single()
 
       if (topicError) {
         throw new Error(`Failed to create topic: ${topicError.message}`)
       }
 
-      // Get the topic ID from Supabase
-      const { data: createdTopic } = await supabase
-        .from('topics')
-        .select('id')
-        .eq('title', mainTopic)
-        .single()
-
-      if (!createdTopic) {
+      if (!topicResult) {
         throw new Error('Failed to get created topic ID')
       }
 
-      const topicId = createdTopic.id
+      const topicId = topicResult.id
       console.log('✅ Topic created with ID:', topicId)
 
       // Process each subtopic group
@@ -573,16 +610,23 @@ const AdminConsole: React.FC = () => {
         }
 
         console.log('➕ Creating subtopic in Supabase:', subtopicName)
-        const { error: subtopicError } = await supabase
+        const { data: subtopicResult, error: subtopicError } = await supabase
           .from('subtopics')
-          .upsert([subtopicData], { onConflict: 'id' })
+          .upsert([subtopicData], { onConflict: 'title,topic_id' })
+          .select('id')
+          .single()
 
         if (subtopicError) {
           console.error('❌ Failed to create subtopic:', subtopicError)
           continue // Skip this subtopic and continue with others
         }
 
-        const subtopicId = subtopicData.id
+        if (!subtopicResult) {
+          console.error('❌ Failed to get created subtopic ID')
+          continue
+        }
+
+        const subtopicId = subtopicResult.id
         console.log('✅ Subtopic created with ID:', subtopicId)
 
         // Process KPIs for this subtopic (from first row of the subtopic)
@@ -603,14 +647,15 @@ const AdminConsole: React.FC = () => {
 
         if (kpiData.length > 0) {
           console.log('➕ Creating KPIs in Supabase:', kpiNames)
-          const { error: kpiError } = await supabase
+          const { data: kpiResult, error: kpiError } = await supabase
             .from('kpis')
-            .upsert(kpiData, { onConflict: 'id' })
+            .upsert(kpiData, { onConflict: 'name,subtopic_id' })
+            .select('id')
 
           if (kpiError) {
             console.error('❌ Failed to create KPIs:', kpiError)
           } else {
-            console.log('✅ KPIs created successfully')
+            console.log('✅ KPIs created successfully:', kpiResult?.length || 0, 'KPIs')
           }
         }
 
@@ -627,14 +672,15 @@ const AdminConsole: React.FC = () => {
 
         if (questionData.length > 0) {
           console.log('➕ Creating questions in Supabase:', questionData.length, 'questions')
-          const { error: questionError } = await supabase
+          const { data: questionResult, error: questionError } = await supabase
             .from('questions')
-            .upsert(questionData, { onConflict: 'id' })
+            .upsert(questionData, { onConflict: 'prompt,subtopic_id' })
+            .select('id')
 
           if (questionError) {
             console.error('❌ Failed to create questions:', questionError)
           } else {
-            console.log('✅ Questions created successfully')
+            console.log('✅ Questions created successfully:', questionResult?.length || 0, 'questions')
           }
         }
       }
@@ -643,9 +689,39 @@ const AdminConsole: React.FC = () => {
       alert('✅ Excel data imported directly to Supabase successfully!\n\nYour data is now safely stored in Supabase without any local conflicts.')
       // Reset the file input
       event.target.value = ''
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error importing Excel to Supabase:', error)
-      alert(`❌ Error importing Excel to Supabase: ${error}`)
+      
+      // Detailed error handling
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else if (error.error) {
+        errorMessage = error.error.message || error.error
+      }
+
+      // Categorize errors for better user experience
+      if (errorMessage.includes('Invalid file type')) {
+        alert(`❌ File Format Error:\n${errorMessage}\n\nPlease upload an Excel file (.xlsx or .xls)`)
+      } else if (errorMessage.includes('File too large')) {
+        alert(`❌ File Size Error:\n${errorMessage}\n\nPlease compress your Excel file or split it into smaller files`)
+      } else if (errorMessage.includes('Missing required columns')) {
+        alert(`❌ Excel Format Error:\n${errorMessage}\n\nPlease ensure your Excel file has the correct column headers`)
+      } else if (errorMessage.includes('Failed to create topic')) {
+        alert(`❌ Database Error:\n${errorMessage}\n\nThis might be due to:\n- Network connection issues\n- Database permissions\n- Duplicate topic names\n\nPlease try again or contact support`)
+      } else if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
+        alert(`❌ Security Error:\n${errorMessage}\n\nThis is a database security issue. Please contact your administrator.`)
+      } else if (errorMessage.includes('constraint') || errorMessage.includes('foreign key')) {
+        alert(`❌ Data Relationship Error:\n${errorMessage}\n\nThis might be due to:\n- Missing parent records\n- Invalid data relationships\n- Duplicate entries\n\nPlease check your Excel data and try again`)
+      } else {
+        alert(`❌ Import Error:\n${errorMessage}\n\nPlease check your Excel file format and try again. If the problem persists, contact support.`)
+      }
+      
+      // Reset the file input
+      event.target.value = ''
     }
   }
 
