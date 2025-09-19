@@ -151,9 +151,9 @@ export class DataMigrationService {
       }
       
       // Ensure all arrays are properly initialized
-      Object.keys(dataFromTables).forEach(key => {
-        if (!Array.isArray(dataFromTables[key])) {
-          dataFromTables[key] = []
+      Object.keys(dataFromTables).forEach((key: string) => {
+        if (!Array.isArray((dataFromTables as any)[key])) {
+          (dataFromTables as any)[key] = []
         }
       })
       
