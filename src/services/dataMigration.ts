@@ -105,6 +105,127 @@ export class DataMigrationService {
     }
   }
 
+  // Sync data from Supabase
+  async syncFromSupabase(): Promise<void> {
+    try {
+      console.log('🔄 Starting sync from Supabase...')
+      
+      // Check if Supabase is properly configured
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
+      }
+      
+      console.log('✅ Supabase configuration found')
+      
+      // Get the latest backup from Supabase
+      const { data: backups, error } = await supabase
+        .from('data_backups')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      if (error) {
+        console.error('❌ Error fetching backups from Supabase:', error)
+        throw error
+      }
+      
+      if (!backups || backups.length === 0) {
+        console.log('📭 No backups found in Supabase')
+        return
+      }
+      
+      const latestBackup = backups[0]
+      console.log('📦 Found backup in Supabase:', latestBackup.backup_name)
+      
+      // Restore data from the backup
+      const backupData = latestBackup.data_snapshot
+      
+      if (backupData.topics && backupData.topics.length > 0) {
+        localStorage.setItem('ipma_topics', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.topics
+        }))
+        console.log('✅ Restored topics from Supabase:', backupData.topics.length)
+      }
+      
+      if (backupData.questions && backupData.questions.length > 0) {
+        localStorage.setItem('ipma_questions', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.questions
+        }))
+        console.log('✅ Restored questions from Supabase:', backupData.questions.length)
+      }
+      
+      if (backupData.kpis && backupData.kpis.length > 0) {
+        localStorage.setItem('ipma_kpis', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.kpis
+        }))
+        console.log('✅ Restored KPIs from Supabase:', backupData.kpis.length)
+      }
+      
+      if (backupData.companyCodes && backupData.companyCodes.length > 0) {
+        localStorage.setItem('ipma_company_codes', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.companyCodes
+        }))
+        console.log('✅ Restored company codes from Supabase:', backupData.companyCodes.length)
+      }
+      
+      if (backupData.subtopics && backupData.subtopics.length > 0) {
+        localStorage.setItem('ipma_subtopics', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.subtopics
+        }))
+        console.log('✅ Restored subtopics from Supabase:', backupData.subtopics.length)
+      }
+      
+      if (backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
+        localStorage.setItem('ipma_sample_answers', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.sampleAnswers
+        }))
+        console.log('✅ Restored sample answers from Supabase:', backupData.sampleAnswers.length)
+      }
+      
+      if (backupData.trainingExamples && backupData.trainingExamples.length > 0) {
+        localStorage.setItem('ipma_training_examples', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.trainingExamples
+        }))
+        console.log('✅ Restored training examples from Supabase:', backupData.trainingExamples.length)
+      }
+      
+      if (backupData.users && backupData.users.length > 0) {
+        localStorage.setItem('ipma_users', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.users
+        }))
+        console.log('✅ Restored users from Supabase:', backupData.users.length)
+      }
+      
+      if (backupData.subscriptions && backupData.subscriptions.length > 0) {
+        localStorage.setItem('ipma_subscriptions', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          data: backupData.subscriptions
+        }))
+        console.log('✅ Restored subscriptions from Supabase:', backupData.subscriptions.length)
+      }
+      
+      console.log('🎉 Sync from Supabase completed successfully!')
+      
+      // Reload the page to refresh the app with new data
+      window.location.reload()
+      
+    } catch (error) {
+      console.error('❌ Error syncing from Supabase:', error)
+      throw error
+    }
+  }
+
   // Sync data to Supabase
   async syncToSupabase(): Promise<void> {
     try {
@@ -164,17 +285,6 @@ export class DataMigrationService {
     }
   }
 
-  // Sync data from Supabase
-  async syncFromSupabase(): Promise<void> {
-    try {
-      const snapshot = await this.loadFromSupabase()
-      await this.importData(snapshot)
-      console.log('✅ Data synced from Supabase successfully')
-    } catch (error) {
-      console.error('❌ Error syncing from Supabase:', error)
-      throw error
-    }
-  }
 
   // Automatic backup before deployment
   async createAutomaticBackup(): Promise<string> {
@@ -671,18 +781,6 @@ export class DataMigrationService {
     if (error) throw error
   }
 
-  private async loadFromSupabase(): Promise<DataSnapshot> {
-    // Get the latest backup
-    const { data, error } = await supabase
-      .from('data_backups')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (error) throw error
-    return data.data_snapshot
-  }
 
   private downloadBackupFile(snapshot: DataSnapshot, filename: string): void {
     const dataStr = JSON.stringify(snapshot, null, 2)

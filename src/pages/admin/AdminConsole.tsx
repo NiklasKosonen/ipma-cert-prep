@@ -5,6 +5,7 @@ import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '..
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 import { useAutoBackup } from '../../hooks/useAutoBackup'
+import { DataMigrationService } from '../../services/dataMigration'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
@@ -19,11 +20,11 @@ const AdminConsole: React.FC = () => {
   } = useData()
 
   // Auto backup functionality
-  const { syncToSupabase, syncFromSupabase } = useAutoBackup({
-    enabled: true,
+  useAutoBackup({
+    enabled: false, // Disabled - use manual Supabase sync instead
     interval: 30, // 30 minutes
-    beforeUnload: true,
-    beforeDeploy: true
+    beforeUnload: false, // Disabled
+    beforeDeploy: false // Disabled
   })
 
   const [activeTab, setActiveTab] = useState('topics')
@@ -43,7 +44,8 @@ const AdminConsole: React.FC = () => {
   const handleSyncToSupabase = async () => {
     setBackupStatus('syncing')
     try {
-      await syncToSupabase()
+      const dataMigration = DataMigrationService.getInstance()
+      await dataMigration.syncToSupabase()
       alert('✅ Data synced to Supabase successfully!')
     } catch (error) {
       alert(`❌ Sync failed: ${error}`)
@@ -59,7 +61,8 @@ const AdminConsole: React.FC = () => {
     
     setBackupStatus('syncing')
     try {
-      await syncFromSupabase()
+      const dataMigration = DataMigrationService.getInstance()
+      await dataMigration.syncFromSupabase()
       alert('✅ Data synced from Supabase successfully!')
     } catch (error) {
       alert(`❌ Sync failed: ${error}`)
