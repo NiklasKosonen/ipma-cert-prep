@@ -1192,6 +1192,56 @@ const AdminConsole: React.FC = () => {
 
               {/* KPIs List */}
               <div className="space-y-6">
+                {/* Show all KPIs if no topics have KPIs */}
+                {kpis.length > 0 && topics.every(topic => {
+                  const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
+                  const topicKPIs = kpis.filter(k => {
+                    if (k.topicId === topic.id) return true
+                    return topicSubtopics.some(st => st.id === k.subtopicId)
+                  })
+                  return topicKPIs.length === 0
+                }) && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-300 pb-2">
+                      All KPIs ({kpis.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {kpis.map((kpi) => (
+                        <div key={kpi.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="text-md font-medium text-gray-800">{kpi.name}</h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Topic: {topics.find(t => t.id === kpi.topicId)?.title || 'Unknown'}
+                                {kpi.subtopicId && (
+                                  <> | Subtopic: {(subtopics || []).find(s => s.id === kpi.subtopicId)?.title || 'Unknown'}</>
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Essential: {kpi.isEssential ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setEditingKPI(kpi)}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteKPI(kpi.id)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {topics.map((topic) => {
                   const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
                   // Show KPIs for this topic - either directly linked to topic or through subtopics

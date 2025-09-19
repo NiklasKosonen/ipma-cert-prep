@@ -333,10 +333,21 @@ export class DataMigrationService {
       
       console.log('✅ Supabase configuration found')
       
-      // Check if user is authenticated (optional for now)
+      // Try to authenticate with Supabase
+      console.log('🔐 Attempting authentication...')
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+      
+      if (authError) {
+        console.warn('⚠️ Anonymous authentication failed:', authError.message)
+        console.log('🔄 Proceeding without authentication...')
+      } else {
+        console.log('✅ Authenticated successfully:', authData.user?.id)
+      }
+      
+      // Check if user is authenticated
       const { data: { session } } = await supabase.auth.getSession()
       if (session && session.user) {
-        console.log('✅ User authenticated:', session.user.email)
+        console.log('✅ User session active:', session.user.email)
       } else {
         console.log('⚠️ No user session found, proceeding with anonymous access')
       }
@@ -356,21 +367,110 @@ export class DataMigrationService {
       })
       
       // Sync each data type in correct order (respecting foreign key constraints)
-      await this.syncTopics(snapshot.topics)
-      // // await this.syncKPIs(snapshot.kpis) // Moved after subtopics // Moved after subtopics
-      await this.syncCompanyCodes(snapshot.companyCodes)
-      await this.syncSubtopics(snapshot.subtopics) // Must sync before questions
-      await this.syncKPIs(snapshot.kpis) // Now sync KPIs after subtopics
-      await this.syncQuestions(snapshot.questions) // References subtopics
-      await this.syncSampleAnswers(snapshot.sampleAnswers) // References questions
-      await this.syncTrainingExamples(snapshot.trainingExamples) // References questions
-      await this.syncUsers(snapshot.users)
-      await this.syncSubscriptions(snapshot.subscriptions)
-      await this.syncAttempts(snapshot.attempts)
-      await this.syncAttemptItems(snapshot.attemptItems)
+      try {
+        await this.syncTopics(snapshot.topics)
+        console.log('✅ Topics synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync topics:', error)
+        throw new Error(`Topics sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncCompanyCodes(snapshot.companyCodes)
+        console.log('✅ Company codes synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync company codes:', error)
+        throw new Error(`Company codes sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncSubtopics(snapshot.subtopics) // Must sync before questions
+        console.log('✅ Subtopics synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync subtopics:', error)
+        throw new Error(`Subtopics sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncKPIs(snapshot.kpis) // Now sync KPIs after subtopics
+        console.log('✅ KPIs synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync KPIs:', error)
+        throw new Error(`KPIs sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncQuestions(snapshot.questions) // References subtopics
+        console.log('✅ Questions synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync questions:', error)
+        throw new Error(`Questions sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncSampleAnswers(snapshot.sampleAnswers) // References questions
+        console.log('✅ Sample answers synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync sample answers:', error)
+        throw new Error(`Sample answers sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncTrainingExamples(snapshot.trainingExamples) // References questions
+        console.log('✅ Training examples synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync training examples:', error)
+        throw new Error(`Training examples sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncUsers(snapshot.users)
+        console.log('✅ Users synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync users:', error)
+        throw new Error(`Users sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncSubscriptions(snapshot.subscriptions)
+        console.log('✅ Subscriptions synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync subscriptions:', error)
+        throw new Error(`Subscriptions sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncAttempts(snapshot.attempts)
+        console.log('✅ Attempts synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync attempts:', error)
+        throw new Error(`Attempts sync failed: ${error}`)
+      }
+      
+      try {
+        await this.syncAttemptItems(snapshot.attemptItems)
+        console.log('✅ Attempt items synced successfully')
+      } catch (error) {
+        console.error('❌ Failed to sync attempt items:', error)
+        throw new Error(`Attempt items sync failed: ${error}`)
+      }
 
       // Save backup to Supabase
       await this.saveBackupToSupabase(snapshot, 'manual')
+
+      // Verify data was actually saved by checking counts
+      console.log('🔍 Verifying data was saved...')
+      const { data: topicsCount } = await supabase.from('topics').select('id', { count: 'exact', head: true })
+      const { data: subtopicsCount } = await supabase.from('subtopics').select('id', { count: 'exact', head: true })
+      const { data: kpisCount } = await supabase.from('kpis').select('id', { count: 'exact', head: true })
+      const { data: questionsCount } = await supabase.from('questions').select('id', { count: 'exact', head: true })
+      
+      console.log('📊 Supabase data counts:', {
+        topics: topicsCount?.length || 0,
+        subtopics: subtopicsCount?.length || 0,
+        kpis: kpisCount?.length || 0,
+        questions: questionsCount?.length || 0
+      })
 
       console.log('✅ All data synced to Supabase successfully!')
     } catch (error) {
@@ -644,14 +744,61 @@ export class DataMigrationService {
   private async syncKPIs(kpis: KPI[]): Promise<void> {
     if (!kpis.length) return
     
+    // First, get all existing topics and subtopics from Supabase to validate IDs
+    const { data: existingTopics, error: topicsError } = await supabase
+      .from('topics')
+      .select('id')
+    
+    const { data: existingSubtopics, error: subtopicsError } = await supabase
+      .from('subtopics')
+      .select('id')
+    
+    if (topicsError) {
+      console.error('❌ Error fetching existing topics:', topicsError)
+      throw topicsError
+    }
+    
+    if (subtopicsError) {
+      console.error('❌ Error fetching existing subtopics:', subtopicsError)
+      throw subtopicsError
+    }
+    
+    const existingTopicIds = new Set(existingTopics?.map((t: any) => t.id) || [])
+    const existingSubtopicIds = new Set(existingSubtopics?.map((s: any) => s.id) || [])
+    
+    // Filter out KPIs that reference non-existent topics or subtopics
+    const validKPIs = kpis.filter(kpi => {
+      const topicUUID = kpi.topicId ? this.generateUUID(kpi.topicId) : null
+      const subtopicUUID = kpi.subtopicId ? this.generateUUID(kpi.subtopicId) : null
+      
+      const topicValid = !topicUUID || existingTopicIds.has(topicUUID)
+      const subtopicValid = !subtopicUUID || existingSubtopicIds.has(subtopicUUID)
+      
+      if (!topicValid) {
+        console.warn(`⚠️ Skipping KPI "${kpi.name}" - topic ID ${kpi.topicId} (${topicUUID}) not found in Supabase`)
+      }
+      if (!subtopicValid) {
+        console.warn(`⚠️ Skipping KPI "${kpi.name}" - subtopic ID ${kpi.subtopicId} (${subtopicUUID}) not found in Supabase`)
+      }
+      
+      return topicValid && subtopicValid
+    })
+    
+    if (!validKPIs.length) {
+      console.warn('⚠️ No valid KPIs to sync - all KPIs reference non-existent topics or subtopics')
+      return
+    }
+    
     const { error } = await supabase
       .from('kpis')
-      .upsert(kpis.map(kpi => ({
+      .upsert(validKPIs.map(kpi => ({
         id: this.generateUUID(kpi.id), // Convert to proper UUID
         name: kpi.name,
         description: '', // Default since KPI doesn't have description
         weight: 1.00, // Default since KPI doesn't have weight
         is_active: true, // Default since KPI doesn't have isActive
+        topic_id: kpi.topicId ? this.generateUUID(kpi.topicId) : null,
+        subtopic_id: kpi.subtopicId ? this.generateUUID(kpi.subtopicId) : null,
         created_at: kpi.createdAt || new Date().toISOString(),
         updated_at: kpi.updatedAt || new Date().toISOString()
       })), { onConflict: 'id' })
@@ -661,7 +808,7 @@ export class DataMigrationService {
       console.error('❌ Error details:', error.message, error.code, error.details)
       throw error
     }
-    console.log(`✅ Synced ${kpis.length} KPIs to Supabase`)
+    console.log(`✅ Synced ${validKPIs.length} KPIs to Supabase (${kpis.length - validKPIs.length} skipped due to missing topics/subtopics)`)
   }
 
   private async syncCompanyCodes(companyCodes: CompanyCode[]): Promise<void> {
@@ -689,9 +836,36 @@ export class DataMigrationService {
   private async syncSubtopics(subtopics: Subtopic[]): Promise<void> {
     if (!subtopics.length) return
     
+    // First, get all existing topics from Supabase to validate topic IDs
+    const { data: existingTopics, error: topicsError } = await supabase
+      .from('topics')
+      .select('id')
+    
+    if (topicsError) {
+      console.error('❌ Error fetching existing topics:', topicsError)
+      throw topicsError
+    }
+    
+    const existingTopicIds = new Set(existingTopics?.map((t: any) => t.id) || [])
+    
+    // Filter out subtopics that reference non-existent topics
+    const validSubtopics = subtopics.filter(subtopic => {
+      const topicUUID = this.generateUUID(subtopic.topicId)
+      const isValid = existingTopicIds.has(topicUUID)
+      if (!isValid) {
+        console.warn(`⚠️ Skipping subtopic "${subtopic.title}" - topic ID ${subtopic.topicId} (${topicUUID}) not found in Supabase`)
+      }
+      return isValid
+    })
+    
+    if (!validSubtopics.length) {
+      console.warn('⚠️ No valid subtopics to sync - all subtopics reference non-existent topics')
+      return
+    }
+    
     const { error } = await supabase
       .from('subtopics')
-      .upsert(subtopics.map(subtopic => ({
+      .upsert(validSubtopics.map(subtopic => ({
         id: this.generateUUID(subtopic.id), // Convert to proper UUID
         topic_id: this.generateUUID(subtopic.topicId), // Convert topic ID to UUID
         title: subtopic.title,
@@ -705,7 +879,7 @@ export class DataMigrationService {
       console.error('❌ Error syncing subtopics:', error)
       throw error
     }
-    console.log(`✅ Synced ${subtopics.length} subtopics to Supabase`)
+    console.log(`✅ Synced ${validSubtopics.length} subtopics to Supabase (${subtopics.length - validSubtopics.length} skipped due to missing topics)`)
   }
 
   private async syncSampleAnswers(sampleAnswers: SampleAnswer[]): Promise<void> {
