@@ -453,7 +453,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Validate topic exists
-    const topic = topics.find(t => t.id === questionData.topicId)
+    const topic = (topics || []).find(t => t.id === questionData.topicId)
     if (!topic) {
       throw new Error('Invalid topic ID')
     }
@@ -889,7 +889,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setQuestions(snapshot.questions)
     setKpis(snapshot.kpis)
     setCompanyCodes(snapshot.companyCodes)
-    setSubtopics(snapshot.subtopics)
+    setSubtopics(Array.isArray(snapshot.subtopics) ? snapshot.subtopics : [])
     setSampleAnswers(snapshot.sampleAnswers)
     setTrainingExamples(snapshot.trainingExamples)
     setUsers(snapshot.users)
