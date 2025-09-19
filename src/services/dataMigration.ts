@@ -150,6 +150,13 @@ export class DataMigrationService {
         subscriptions: subscriptionsResult.status === 'fulfilled' && subscriptionsResult.value.data ? subscriptionsResult.value.data : []
       }
       
+      // Ensure all arrays are properly initialized
+      Object.keys(dataFromTables).forEach(key => {
+        if (!Array.isArray(dataFromTables[key])) {
+          dataFromTables[key] = []
+        }
+      })
+      
       // Log any errors from the fetch operations
       if (topicsResult.status === 'rejected') console.warn('⚠️ Error fetching topics:', topicsResult.reason)
       if (subtopicsResult.status === 'rejected') console.warn('⚠️ Error fetching subtopics:', subtopicsResult.reason)
@@ -669,7 +676,7 @@ export class DataMigrationService {
         is_active: code.isActive !== false,
         created_at: code.createdAt || new Date().toISOString(),
         updated_at: code.updatedAt || new Date().toISOString()
-      })), { onConflict: 'id' })
+      })), { onConflict: 'code' })
 
     if (error) {
       console.error('❌ Error syncing company codes:', error)
