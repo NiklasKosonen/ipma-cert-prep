@@ -24,7 +24,7 @@ export default defineConfig({
           'ui-vendor': ['lucide-react'],
           'admin-chunk': [
             './src/pages/admin/AdminConsole.tsx',
-            './src/pages/admin/CustomerDashboard.tsx'
+            ''
           ],
           'user-chunk': [
             './src/pages/user/Home.tsx',
