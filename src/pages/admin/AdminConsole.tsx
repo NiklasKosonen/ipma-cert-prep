@@ -316,12 +316,18 @@ const AdminConsole: React.FC = () => {
   }
 
   const handleAddKPI = () => {
+    console.log('🔍 Adding KPI:', newKPI)
     if (newKPI.name.trim() && newKPI.subtopicId) {
-      addKPI({
+      const kpiData = {
         ...newKPI,
         connectedQuestions: []
-      })
+      }
+      console.log('✅ KPI data:', kpiData)
+      addKPI(kpiData)
       setNewKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+      console.log('✅ KPI added successfully')
+    } else {
+      console.log('❌ KPI validation failed:', { name: newKPI.name.trim(), subtopicId: newKPI.subtopicId })
     }
   }
 
@@ -831,7 +837,15 @@ const AdminConsole: React.FC = () => {
                     </label>
                     <select
                       value={newKPI.subtopicId}
-                      onChange={(e) => setNewKPI({ ...newKPI, subtopicId: e.target.value })}
+                      onChange={(e) => {
+                        const selectedSubtopicId = e.target.value
+                        const selectedSubtopic = (subtopics || []).find(s => s.id === selectedSubtopicId)
+                        setNewKPI({ 
+                          ...newKPI, 
+                          subtopicId: selectedSubtopicId,
+                          topicId: selectedSubtopic?.topicId || ''
+                        })
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select a subtopic</option>
@@ -885,7 +899,13 @@ const AdminConsole: React.FC = () => {
               <div className="space-y-6">
                 {topics.map((topic) => {
                   const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
-                  const topicKPIs = kpis.filter(k => topicSubtopics.length > 0 ? topicSubtopics.some(st => st.id === k.subtopicId) : k.topicId === topic.id)
+                  // Show KPIs for this topic - either directly linked to topic or through subtopics
+                  const topicKPIs = kpis.filter(k => {
+                    // KPI directly linked to topic
+                    if (k.topicId === topic.id) return true
+                    // KPI linked to subtopic of this topic
+                    return topicSubtopics.some(st => st.id === k.subtopicId)
+                  })
                   if (topicKPIs.length === 0) return null
                   
                   return (
@@ -895,7 +915,7 @@ const AdminConsole: React.FC = () => {
                       </h3>
                       <div className="space-y-4 ml-4">
                         {(subtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => {
-                          const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id || (subtopic.id === null && k.topicId === topic.id))
+                          const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id)
                           if (subtopicKPIs.length === 0) return null
                           
                           return (
