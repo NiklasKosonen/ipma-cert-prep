@@ -357,9 +357,10 @@ export class DataMigrationService {
       
       // Sync each data type in correct order (respecting foreign key constraints)
       await this.syncTopics(snapshot.topics)
-      // await this.syncKPIs(snapshot.kpis) // Moved after subtopics
+      // // await this.syncKPIs(snapshot.kpis) // Moved after subtopics // Moved after subtopics
       await this.syncCompanyCodes(snapshot.companyCodes)
       await this.syncSubtopics(snapshot.subtopics) // Must sync before questions
+      await this.syncKPIs(snapshot.kpis) // Now sync KPIs after subtopics
       await this.syncQuestions(snapshot.questions) // References subtopics
       await this.syncSampleAnswers(snapshot.sampleAnswers) // References questions
       await this.syncTrainingExamples(snapshot.trainingExamples) // References questions
