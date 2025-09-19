@@ -885,7 +885,7 @@ const AdminConsole: React.FC = () => {
               <div className="space-y-6">
                 {topics.map((topic) => {
                   const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
-                  const topicKPIs = kpis.filter(k => topicSubtopics.some(st => st.id === k.subtopicId))
+                  const topicKPIs = kpis.filter(k => topicSubtopics.length > 0 ? topicSubtopics.some(st => st.id === k.subtopicId) : k.topicId === topic.id)
                   if (topicKPIs.length === 0) return null
                   
                   return (
@@ -895,7 +895,7 @@ const AdminConsole: React.FC = () => {
                       </h3>
                       <div className="space-y-4 ml-4">
                         {(subtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => {
-                          const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id)
+                          const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id || (subtopic.id === null && k.topicId === topic.id))
                           if (subtopicKPIs.length === 0) return null
                           
                           return (
