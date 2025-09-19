@@ -455,7 +455,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Validate topic exists
     const topic = (topics || []).find(t => t.id === questionData.topicId)
     if (!topic) {
-      throw new Error(" Invalid topic ID: \ + questionData.topicId + \. Available topics: \ + topics.map(t => t.id).join(" \))
+      throw new Error('Invalid topic ID')
     }
 
     const newQuestion: Question = {

@@ -690,7 +690,7 @@ export class DataMigrationService {
     
     const { error } = await supabase
       .from('subtopics')
-      .upsert(validSubtopics.map(subtopic => ({
+      .upsert(subtopics.map(subtopic => ({
         id: this.generateUUID(subtopic.id), // Convert to proper UUID
         topic_id: this.generateUUID(subtopic.topicId), // Convert topic ID to UUID
         title: subtopic.title,
