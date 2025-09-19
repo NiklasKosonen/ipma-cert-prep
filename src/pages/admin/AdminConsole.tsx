@@ -365,6 +365,7 @@ const AdminConsole: React.FC = () => {
     if (!file) return
 
     try {
+      console.log('🔄 Starting Excel import...')
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -372,6 +373,7 @@ const AdminConsole: React.FC = () => {
 
       // Process the Excel data
       const processedData = jsonData as any[]
+      console.log('📊 Processed Excel data:', processedData.length, 'rows')
       
       // Group by subtopic to understand the structure
       const subtopicGroups = new Map<string, any[]>()
@@ -389,23 +391,26 @@ const AdminConsole: React.FC = () => {
       // Get the main topic (from first row)
       const mainTopic = processedData[0]?.topic?.trim() || 'Imported Topic'
       const topicDescription = processedData[0]?.topic_description?.trim() || ''
+      console.log('📝 Main topic:', mainTopic)
 
       // Create or find the main topic
       let topicId = topics.find(t => t.title === mainTopic)?.id
       if (!topicId) {
+        console.log('➕ Creating new topic:', mainTopic)
         const newTopic = { title: mainTopic, description: topicDescription, isActive: true }
         addTopic(newTopic)
-        // Wait a bit for the topic to be created
-        setTimeout(() => {
-          topicId = topics.find(t => t.title === mainTopic)?.id || ''
-        }, 100)
+        // Get the topic ID from the updated topics array
+        topicId = topics.find(t => t.title === mainTopic)?.id || ''
       }
 
       // Process each subtopic group
       for (const [subtopicName, subtopicRows] of subtopicGroups) {
+        console.log('📝 Processing subtopic:', subtopicName, 'with', subtopicRows.length, 'questions')
+        
         // Create subtopic
         let subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id
         if (!subtopicId && topicId) {
+          console.log('➕ Creating new subtopic:', subtopicName)
           const newSubtopic = { 
             title: subtopicName, 
             description: '', 
@@ -413,15 +418,14 @@ const AdminConsole: React.FC = () => {
             isActive: true 
           }
           addSubtopic(newSubtopic)
-          // Wait a bit for the subtopic to be created
-          setTimeout(() => {
-            subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
-          }, 100)
+          // Get the subtopic ID from the updated subtopics array
+          subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
         }
 
         // Process KPIs for this subtopic (from first row of the subtopic)
         const firstRow = subtopicRows[0]
         const kpiNames = firstRow.kpis?.split(';').map((k: string) => k.trim()).filter((k: string) => k) || []
+        console.log('📊 KPIs for subtopic:', kpiNames)
         
         // Create KPIs for this subtopic
         const createdKPIs: string[] = []
@@ -430,6 +434,7 @@ const AdminConsole: React.FC = () => {
             // Check if KPI already exists
             const existingKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
             if (!existingKPI) {
+              console.log('➕ Creating new KPI:', kpiName)
               const newKPI = {
                 name: kpiName,
                 isEssential: true,
@@ -438,13 +443,11 @@ const AdminConsole: React.FC = () => {
                 connectedQuestions: []
               }
               addKPI(newKPI)
-              // Wait a bit for the KPI to be created
-              setTimeout(() => {
-                const createdKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
-                if (createdKPI) {
-                  createdKPIs.push(createdKPI.id)
-                }
-              }, 100)
+              // Get the KPI ID from the updated kpis array
+              const createdKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
+              if (createdKPI) {
+                createdKPIs.push(createdKPI.id)
+              }
             } else {
               createdKPIs.push(existingKPI.id)
             }
@@ -452,33 +455,34 @@ const AdminConsole: React.FC = () => {
         }
 
         // Create questions for this subtopic
-        setTimeout(() => {
-          subtopicRows.forEach((row: any) => {
-            if (row.question?.trim() && subtopicId) {
-              const questionPrompt = row.question.trim()
-              
-              // Check if question already exists
-              const existingQuestion = questions.find(q => q.prompt === questionPrompt && q.subtopicId === subtopicId)
-              if (!existingQuestion) {
-                const newQuestion = {
-                  prompt: questionPrompt,
-                  topicId: topicId || '',
-                  subtopicId: subtopicId,
-                  connectedKPIs: createdKPIs,
-                  isActive: true
-                }
-                addQuestion(newQuestion)
+        console.log('❓ Creating questions for subtopic:', subtopicName)
+        subtopicRows.forEach((row: any) => {
+          if (row.question?.trim() && subtopicId) {
+            const questionPrompt = row.question.trim()
+            
+            // Check if question already exists
+            const existingQuestion = questions.find(q => q.prompt === questionPrompt && q.subtopicId === subtopicId)
+            if (!existingQuestion) {
+              console.log('➕ Creating new question:', questionPrompt.substring(0, 50) + '...')
+              const newQuestion = {
+                prompt: questionPrompt,
+                topicId: topicId || '',
+                subtopicId: subtopicId,
+                connectedKPIs: createdKPIs,
+                isActive: true
               }
+              addQuestion(newQuestion)
             }
-          })
-        }, 200) // Wait for KPIs to be created
+          }
+        })
       }
 
+      console.log('✅ Excel import completed successfully!')
       alert('Excel import completed successfully!')
       // Reset the file input
       event.target.value = ''
     } catch (error) {
-      console.error('Error importing Excel file:', error)
+      console.error('❌ Error importing Excel file:', error)
       alert('Error importing Excel file. Please check the format.')
     }
   }

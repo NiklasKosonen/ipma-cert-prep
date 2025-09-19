@@ -195,15 +195,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Load global data from localStorage on mount
   useEffect(() => {
-    setTopics(loadFromStorage(STORAGE_KEYS.topics, mockTopics))
-    setQuestions(loadFromStorage(STORAGE_KEYS.questions, mockQuestions))
-    setKpis(loadFromStorage(STORAGE_KEYS.kpis, mockKPIs))
-    setCompanyCodes(loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes))
-    setSubtopics(loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics))
-    setSampleAnswers(loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers))
-    setTrainingExamples(loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples))
-    setUsers(loadFromStorage(STORAGE_KEYS.users, []))
-    setSubscriptions(loadFromStorage(STORAGE_KEYS.subscriptions, []))
+    try {
+      const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
+      const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
+      const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
+      const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
+      const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
+      const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
+      const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
+      const loadedUsers = loadFromStorage(STORAGE_KEYS.users, [])
+      const loadedSubscriptions = loadFromStorage(STORAGE_KEYS.subscriptions, [])
+
+      // Ensure all arrays are valid
+      setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
+      setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
+      setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
+      setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
+      setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
+      setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
+      setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
+      setUsers(Array.isArray(loadedUsers) ? loadedUsers : [])
+      setSubscriptions(Array.isArray(loadedSubscriptions) ? loadedSubscriptions : [])
+
+      console.log('✅ Data loaded from localStorage:', {
+        topics: Array.isArray(loadedTopics) ? loadedTopics.length : 0,
+        subtopics: Array.isArray(loadedSubtopics) ? loadedSubtopics.length : 0,
+        questions: Array.isArray(loadedQuestions) ? loadedQuestions.length : 0,
+        kpis: Array.isArray(loadedKpis) ? loadedKpis.length : 0
+      })
+    } catch (error) {
+      console.error('❌ Error loading data from localStorage:', error)
+      // Fallback to mock data
+      setTopics(mockTopics)
+      setQuestions(mockQuestions)
+      setKpis(mockKPIs)
+      setCompanyCodes(mockCompanyCodes)
+      setSubtopics(mockSubtopics)
+      setSampleAnswers(mockSampleAnswers)
+      setTrainingExamples(mockTrainingExamples)
+      setUsers([])
+      setSubscriptions([])
+    }
   }, [])
 
   // Auto-restore from Supabase if localStorage is empty (after deployments)
