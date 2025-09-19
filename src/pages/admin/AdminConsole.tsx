@@ -704,7 +704,7 @@ const AdminConsole: React.FC = () => {
                         {topic.title}
                       </h3>
                       <div className="space-y-3 ml-4">
-                        {topicSubtopics.map((subtopic) => (
+                        {topic(subtopics || []).map((subtopic) => (
                           <div key={subtopic.id} className="bg-white border border-gray-200 rounded-lg p-4">
                       {editingSubtopic && editingSubtopic.id === subtopic.id ? (
                         <div className="space-y-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
@@ -835,7 +835,7 @@ const AdminConsole: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select a subtopic</option>
-                      {subtopics.map((subtopic) => {
+                      {(subtopics || []).map((subtopic) => {
                         const topic = topics.find(t => t.id === subtopic.topicId)
                         return (
                           <option key={subtopic.id} value={subtopic.id}>
@@ -894,7 +894,7 @@ const AdminConsole: React.FC = () => {
                         {topic.title}
                       </h3>
                       <div className="space-y-4 ml-4">
-                        {topicSubtopics.map((subtopic) => {
+                        {topic(subtopics || []).map((subtopic) => {
                           const subtopicKPIs = kpis.filter(k => k.subtopicId === subtopic.id)
                           if (subtopicKPIs.length === 0) return null
                           
@@ -920,7 +920,7 @@ const AdminConsole: React.FC = () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="">Select a subtopic</option>
-                                {subtopics.map((subtopic) => {
+                                {(subtopics || []).map((subtopic) => {
                                   const topic = topics.find(t => t.id === subtopic.topicId)
                                   return (
                                     <option key={subtopic.id} value={subtopic.id}>
@@ -1090,7 +1090,7 @@ const AdminConsole: React.FC = () => {
                       required
                     >
                       <option value="">Select a subtopic</option>
-                      {subtopics.map((subtopic) => {
+                      {(subtopics || []).map((subtopic) => {
                         const topic = topics.find(t => t.id === subtopic.topicId)
                         return (
                           <option key={subtopic.id} value={subtopic.id}>
@@ -1167,7 +1167,7 @@ const AdminConsole: React.FC = () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="">Select a subtopic</option>
-                                {subtopics.map((subtopic) => {
+                                {(subtopics || []).map((subtopic) => {
                                   const topic = topics.find(t => t.id === subtopic.topicId)
                                   return (
                                     <option key={subtopic.id} value={subtopic.id}>
