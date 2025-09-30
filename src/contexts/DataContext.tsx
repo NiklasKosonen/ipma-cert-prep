@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Topic, Question, KPI, CompanyCode, Subtopic, SampleAnswer, TrainingExample, Attempt, AttemptItem, UserProfile, Subscription } from '../types'
 import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, mockSampleAnswers, mockTrainingExamples } from '../lib/mockData'
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
-import { supabase } from '../lib/supabase'
 import { SupabaseDataService } from '../services/supabaseDataService'
 
 // Data persistence utilities with user-specific storage
@@ -197,214 +196,85 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // Initialize Supabase data service
   const supabaseDataService = SupabaseDataService.getInstance()
 
-  // Load global data from Supabase first, then localStorage on mount
+  // Load data from Supabase ONLY (Supabase is PRIMARY source)
   useEffect(() => {
     const loadData = async () => {
+      console.log('🔄 Loading data from Supabase (PRIMARY source)...')
+      
       try {
-        console.log('🔄 Loading data from Supabase...')
+        // Load ALL data from Supabase
+        const [
+          supabaseTopics,
+          supabaseSubtopics,
+          supabaseQuestions,
+          supabaseKpis,
+          supabaseCompanyCodes,
+          supabaseSampleAnswers,
+          supabaseTrainingExamples
+        ] = await Promise.all([
+          supabaseDataService.getAllTopics(),
+          supabaseDataService.getAllSubtopics(),
+          supabaseDataService.getAllQuestions(),
+          supabaseDataService.getAllKPIs(),
+          supabaseDataService.getAllCompanyCodes(),
+          supabaseDataService.getAllSampleAnswers(),
+          supabaseDataService.getAllTrainingExamples()
+        ])
+
+        console.log('✅ Data loaded from Supabase:', {
+          topics: supabaseTopics.length,
+          subtopics: supabaseSubtopics.length,
+          questions: supabaseQuestions.length,
+          kpis: supabaseKpis.length,
+          companyCodes: supabaseCompanyCodes.length
+        })
+
+        // Set state from Supabase (use mock data only if Supabase is empty)
+        setTopics(supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
+        setSubtopics(supabaseSubtopics)
+        setQuestions(supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
+        setKpis(supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
+        setCompanyCodes(supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
+        setSampleAnswers(supabaseSampleAnswers)
+        setTrainingExamples(supabaseTrainingExamples)
+
+        // Cache to localStorage for faster subsequent loads
+        saveToStorage(STORAGE_KEYS.topics, supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
+        saveToStorage(STORAGE_KEYS.subtopics, supabaseSubtopics)
+        saveToStorage(STORAGE_KEYS.questions, supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
+        saveToStorage(STORAGE_KEYS.kpis, supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
+        saveToStorage(STORAGE_KEYS.companyCodes, supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
+        saveToStorage(STORAGE_KEYS.sampleAnswers, supabaseSampleAnswers)
+        saveToStorage(STORAGE_KEYS.trainingExamples, supabaseTrainingExamples)
         
-        // Try to load from Supabase first
-        try {
-          const [
-            supabaseTopics,
-            supabaseSubtopics,
-            supabaseQuestions,
-            supabaseKpis,
-            supabaseCompanyCodes,
-            supabaseSampleAnswers,
-            supabaseTrainingExamples
-          ] = await Promise.all([
-            supabaseDataService.getAllTopics(),
-            supabaseDataService.getAllSubtopics(),
-            supabaseDataService.getAllQuestions(),
-            supabaseDataService.getAllKPIs(),
-            supabaseDataService.getAllCompanyCodes(),
-            supabaseDataService.getAllSampleAnswers(),
-            supabaseDataService.getAllTrainingExamples()
-          ])
-
-          // If Supabase has data, use it
-          if (supabaseTopics.length > 0 || supabaseQuestions.length > 0) {
-            console.log('✅ Data loaded from Supabase')
-            setTopics(supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
-            setSubtopics(supabaseSubtopics)
-            setQuestions(supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
-            setKpis(supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
-            setCompanyCodes(supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
-            setSampleAnswers(supabaseSampleAnswers)
-            setTrainingExamples(supabaseTrainingExamples)
-
-            // Save to localStorage for offline access
-            saveToStorage(STORAGE_KEYS.topics, supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
-            saveToStorage(STORAGE_KEYS.subtopics, supabaseSubtopics)
-            saveToStorage(STORAGE_KEYS.questions, supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
-            saveToStorage(STORAGE_KEYS.kpis, supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
-            saveToStorage(STORAGE_KEYS.companyCodes, supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
-            saveToStorage(STORAGE_KEYS.sampleAnswers, supabaseSampleAnswers)
-            saveToStorage(STORAGE_KEYS.trainingExamples, supabaseTrainingExamples)
-            return
-          }
-        } catch (supabaseError) {
-          console.warn('⚠️ Could not load from Supabase, falling back to localStorage:', supabaseError)
-        }
-
-        // Fallback to localStorage
+      } catch (error) {
+        console.error('❌ CRITICAL: Failed to load from Supabase:', error)
+        console.error('⚠️ Check your .env.local file and Supabase credentials!')
+        
+        // Emergency fallback to localStorage
+        console.log('📦 Attempting emergency fallback to localStorage...')
         const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
+        const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
         const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
         const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
         const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
-        const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
         const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
         const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
-        const loadedUsers = loadFromStorage(STORAGE_KEYS.users, [])
-        const loadedSubscriptions = loadFromStorage(STORAGE_KEYS.subscriptions, [])
-
-        // Ensure all arrays are valid
+        
         setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
+        setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
         setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
         setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
         setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
-        setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
         setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
         setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
-        setUsers(Array.isArray(loadedUsers) ? loadedUsers : [])
-        setSubscriptions(Array.isArray(loadedSubscriptions) ? loadedSubscriptions : [])
-
-        console.log('✅ Data loaded from localStorage:', {
-          topics: Array.isArray(loadedTopics) ? loadedTopics.length : 0,
-          subtopics: Array.isArray(loadedSubtopics) ? loadedSubtopics.length : 0,
-          questions: Array.isArray(loadedQuestions) ? loadedQuestions.length : 0,
-          kpis: Array.isArray(loadedKpis) ? loadedKpis.length : 0
-        })
-      } catch (error) {
-        console.error('❌ Error loading data:', error)
-        // Fallback to mock data
-        setTopics(mockTopics)
-        setQuestions(mockQuestions)
-        setKpis(mockKPIs)
-        setCompanyCodes(mockCompanyCodes)
-        setSubtopics(mockSubtopics)
-        setSampleAnswers(mockSampleAnswers)
-        setTrainingExamples(mockTrainingExamples)
-        setUsers([])
-        setSubscriptions([])
       }
     }
 
     loadData()
   }, [])
 
-  // Auto-restore from Supabase if localStorage is empty (after deployments)
-  useEffect(() => {
-    const autoRestoreFromSupabase = async () => {
-      try {
-        // Check if we have any data in localStorage
-        const hasTopics = localStorage.getItem(STORAGE_KEYS.topics)
-        const hasQuestions = localStorage.getItem(STORAGE_KEYS.questions)
-        const hasKPIs = localStorage.getItem(STORAGE_KEYS.kpis)
-        
-        // If localStorage is empty or only has mock data, try to restore from Supabase
-        if (!hasTopics || !hasQuestions || !hasKPIs) {
-          console.log('🔄 localStorage appears empty, attempting auto-restore from Supabase...')
-          
-          // Check if Supabase is configured
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-          
-          if (!supabaseUrl || !supabaseKey) {
-            console.log('⚠️ Supabase not configured, skipping auto-restore')
-            return
-          }
-          
-          // Try to get the latest backup from Supabase
-          const { data: backups, error } = await supabase
-            .from('data_backups')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-          
-          if (error) {
-            console.warn('⚠️ Could not fetch backups from Supabase:', error)
-            return
-          }
-          
-          if (backups && backups.length > 0) {
-            const latestBackup = backups[0]
-            console.log('📦 Found backup in Supabase:', latestBackup.backup_name)
-            
-            // Restore data from the backup
-            const backupData = latestBackup.data_snapshot
-            
-            if (backupData.topics && backupData.topics.length > 0) {
-              setTopics(backupData.topics)
-              saveToStorage(STORAGE_KEYS.topics, backupData.topics)
-              console.log('✅ Restored topics from Supabase:', backupData.topics.length)
-            }
-            
-            if (backupData.questions && backupData.questions.length > 0) {
-              setQuestions(backupData.questions)
-              saveToStorage(STORAGE_KEYS.questions, backupData.questions)
-              console.log('✅ Restored questions from Supabase:', backupData.questions.length)
-            }
-            
-            if (backupData.kpis && backupData.kpis.length > 0) {
-              setKpis(backupData.kpis)
-              saveToStorage(STORAGE_KEYS.kpis, backupData.kpis)
-              console.log('✅ Restored KPIs from Supabase:', backupData.kpis.length)
-            }
-            
-            if (backupData.companyCodes && backupData.companyCodes.length > 0) {
-              setCompanyCodes(backupData.companyCodes)
-              saveToStorage(STORAGE_KEYS.companyCodes, backupData.companyCodes)
-              console.log('✅ Restored company codes from Supabase:', backupData.companyCodes.length)
-            }
-            
-            if (backupData.subtopics && backupData.subtopics.length > 0) {
-              setSubtopics(backupData.subtopics)
-              saveToStorage(STORAGE_KEYS.subtopics, backupData.subtopics)
-              console.log('✅ Restored subtopics from Supabase:', backupData.subtopics.length)
-            }
-            
-            if (backupData.sampleAnswers && backupData.sampleAnswers.length > 0) {
-              setSampleAnswers(backupData.sampleAnswers)
-              saveToStorage(STORAGE_KEYS.sampleAnswers, backupData.sampleAnswers)
-              console.log('✅ Restored sample answers from Supabase:', backupData.sampleAnswers.length)
-            }
-            
-            if (backupData.trainingExamples && backupData.trainingExamples.length > 0) {
-              setTrainingExamples(backupData.trainingExamples)
-              saveToStorage(STORAGE_KEYS.trainingExamples, backupData.trainingExamples)
-              console.log('✅ Restored training examples from Supabase:', backupData.trainingExamples.length)
-            }
-            
-            if (backupData.users && backupData.users.length > 0) {
-              setUsers(backupData.users)
-              saveToStorage(STORAGE_KEYS.users, backupData.users)
-              console.log('✅ Restored users from Supabase:', backupData.users.length)
-            }
-            
-            if (backupData.subscriptions && backupData.subscriptions.length > 0) {
-              setSubscriptions(backupData.subscriptions)
-              saveToStorage(STORAGE_KEYS.subscriptions, backupData.subscriptions)
-              console.log('✅ Restored subscriptions from Supabase:', backupData.subscriptions.length)
-            }
-            
-            console.log('🎉 Auto-restore from Supabase completed successfully!')
-          } else {
-            console.log('📭 No backups found in Supabase')
-          }
-        } else {
-          console.log('✅ localStorage has data, skipping auto-restore')
-        }
-      } catch (error) {
-        console.warn('⚠️ Auto-restore failed:', error)
-      }
-    }
-    
-    // Run auto-restore after a short delay to ensure initial data loading is complete
-    const timer = setTimeout(autoRestoreFromSupabase, 1000)
-    return () => clearTimeout(timer)
-  }, [])
+  // Removed redundant auto-restore - we now load directly from Supabase tables
 
   // Save global data to localStorage whenever it changes
   useEffect(() => {
