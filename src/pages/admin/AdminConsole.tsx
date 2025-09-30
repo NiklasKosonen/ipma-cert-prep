@@ -327,43 +327,6 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  
-
-        // Create questions for this subtopic
-        console.log('❓ Creating questions for subtopic:', subtopicName)
-        subtopicRows.forEach((row: any) => {
-          if (row.question?.trim() && subtopicId) {
-            const questionPrompt = row.question.trim()
-            
-            // Check if question already exists
-            const existingQuestion = questions.find(q => q.prompt === questionPrompt && q.subtopicId === subtopicId)
-            if (!existingQuestion) {
-              console.log('➕ Creating new question:', questionPrompt.substring(0, 50) + '...')
-              const newQuestion = {
-                prompt: questionPrompt,
-                topicId: topicId || '',
-                subtopicId: subtopicId,
-                connectedKPIs: createdKPIs,
-                isActive: true
-              }
-              addQuestion(newQuestion)
-            }
-          }
-        })
-      }
-
-      console.log('✅ Excel import completed successfully!')
-      alert('Excel import completed successfully!')
-      // Reset the file input
-      event.target.value = ''
-    } catch (error) {
-      console.error('❌ Error importing Excel file:', error)
-      alert('Error importing Excel file. Please check the format.')
-    }
-  }
-
-  
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
