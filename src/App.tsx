@@ -6,7 +6,6 @@ import { useAuthSupabase as useAuth } from './hooks/useAuthSupabase'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { useAutoBackup } from './hooks/useAutoBackup'
 
 // Pages
 import { Landing } from './pages/Landing'
@@ -51,16 +50,7 @@ function App() {
 function AppContent() {
   const { loading } = useAuth()
   
-  // Initialize automatic backup system - DISABLED
-  useAutoBackup({
-    enabled: false, // Disabled - use manual Supabase sync instead
-    interval: 30, // 30 minutes
-    beforeUnload: false, // Disabled
-    beforeDeploy: false // Disabled
-  })
-  
-  // Detect deployments - DISABLED
-  // useDeploymentDetection()
+  // Auto backup removed - data now syncs to Supabase in real-time
 
   if (loading) {
     return (
