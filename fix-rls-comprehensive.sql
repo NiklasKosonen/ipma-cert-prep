@@ -157,7 +157,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -168,7 +168,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -179,7 +179,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -196,7 +196,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -207,7 +207,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -218,7 +218,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -235,7 +235,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -246,7 +246,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -257,7 +257,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -274,7 +274,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -285,7 +285,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -296,7 +296,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -313,7 +313,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -330,7 +330,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -347,7 +347,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -364,7 +364,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
+    WHERE users.id = auth.uid()::text
     AND users.role = 'admin'
   )
 );
@@ -378,17 +378,17 @@ USING (
 CREATE POLICY "Users can read own profile"
 ON public.users FOR SELECT
 TO authenticated
-USING (auth.uid() = id);
+USING (auth.uid()::text = id);
 
 CREATE POLICY "Users can insert own profile"
 ON public.users FOR INSERT
 TO authenticated
-WITH CHECK (auth.uid() = id);
+WITH CHECK (auth.uid()::text = id);
 
 CREATE POLICY "Users can update own profile"
 ON public.users FOR UPDATE
 TO authenticated
-USING (auth.uid() = id);
+USING (auth.uid()::text = id);
 
 CREATE POLICY "Trainers can read company users"
 ON public.users FOR SELECT
@@ -396,7 +396,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users trainer
-    WHERE trainer.id = auth.uid()
+    WHERE trainer.id = auth.uid()::text
     AND trainer.role IN ('trainer', 'admin')
     AND trainer.company_code = users.company_code
   )
@@ -408,7 +408,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
+    WHERE id = auth.uid()::text
     AND role = 'admin'
   )
 );
@@ -419,7 +419,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
+    WHERE id = auth.uid()::text
     AND role = 'admin'
   )
 );
@@ -431,10 +431,10 @@ CREATE POLICY "Users can read own attempts"
 ON public.attempts FOR SELECT
 TO authenticated
 USING (
-  user_id = auth.uid()::text OR
+  user_id = auth.uid()::text::text OR
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
+    WHERE id = auth.uid()::text
     AND role IN ('trainer', 'admin')
   )
 );
@@ -442,12 +442,12 @@ USING (
 CREATE POLICY "Users can create own attempts"
 ON public.attempts FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid()::text);
+WITH CHECK (user_id = auth.uid()::text::text);
 
 CREATE POLICY "Users can update own attempts"
 ON public.attempts FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid()::text);
+USING (user_id = auth.uid()::text::text);
 
 CREATE POLICY "Trainers can read company attempts"
 ON public.attempts FOR SELECT
@@ -456,7 +456,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.users u1
     INNER JOIN public.users u2 ON u1.company_code = u2.company_code
-    WHERE u1.id = auth.uid()
+    WHERE u1.id = auth.uid()::text
     AND u1.role = 'trainer'
     AND u2.id = attempts.user_id
   )
@@ -470,11 +470,11 @@ USING (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()::text
+    AND attempts.user_id = auth.uid()::text::text
   ) OR
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
+    WHERE id = auth.uid()::text
     AND role IN ('trainer', 'admin')
   )
 );
@@ -486,7 +486,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()::text
+    AND attempts.user_id = auth.uid()::text::text
   )
 );
 
@@ -497,7 +497,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()::text
+    AND attempts.user_id = auth.uid()::text::text
   )
 );
 
@@ -507,17 +507,17 @@ USING (
 CREATE POLICY "Users can read own exam_results"
 ON public.exam_results FOR SELECT
 TO authenticated
-USING (user_id = auth.uid()::text);
+USING (user_id = auth.uid()::text::text);
 
 CREATE POLICY "Users can create own exam_results"
 ON public.exam_results FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid()::text);
+WITH CHECK (user_id = auth.uid()::text::text);
 
 CREATE POLICY "Users can update own exam_results"
 ON public.exam_results FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid()::text);
+USING (user_id = auth.uid()::text::text);
 
 CREATE POLICY "Trainers can read all exam_results"
 ON public.exam_results FOR SELECT
@@ -525,7 +525,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
+    WHERE id = auth.uid()::text
     AND role IN ('trainer', 'admin')
   )
 );
@@ -537,7 +537,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.users u1
     INNER JOIN public.users u2 ON u1.company_code = u2.company_code
-    WHERE u1.id = auth.uid()
+    WHERE u1.id = auth.uid()::text
     AND u1.role = 'trainer'
     AND u2.id = exam_results.user_id
   )
