@@ -4,9 +4,6 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
-import { useAutoBackup } from '../../hooks/useAutoBackup'
-import { DataMigrationService } from '../../services/dataMigration'
-import { supabase } from '../../lib/supabase'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
@@ -20,13 +17,7 @@ const AdminConsole: React.FC = () => {
     addCompanyCode, deleteCompanyCode,
   } = useData()
 
-  // Auto backup functionality
-  useAutoBackup({
-    enabled: false, // Disabled - use manual Supabase sync instead
-    interval: 30, // 30 minutes
-    beforeUnload: false, // Disabled
-    beforeDeploy: false // Disabled
-  })
+  // Auto backup removed - data now syncs to Supabase in real-time
 
   const [activeTab, setActiveTab] = useState('topics')
   const [backupStatus, setBackupStatus] = useState<'idle' | 'backing_up' | 'restoring' | 'syncing'>('idle')
@@ -176,8 +167,17 @@ const AdminConsole: React.FC = () => {
     expiresAt: '',
     isActive: true
   })
-  // const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
-  // const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({})
+  const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
+  const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({
+    code: '',
+    companyName: '',
+    adminEmail: '',
+    maxUsers: 10,
+    expiresAt: '',
+    isActive: true
+  })
+  const [companyEmails, setCompanyEmails] = useState<Record<string, string[]>>({})
+  const [newEmail, setNewEmail] = useState<string>('')
   
   // AI Evaluation Rules state
   const [evaluationRules, setEvaluationRules] = useState<EvaluationRule[]>([
