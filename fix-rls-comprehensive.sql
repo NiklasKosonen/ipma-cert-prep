@@ -539,7 +539,7 @@ USING (
     INNER JOIN public.users u2 ON u1.company_code = u2.company_code
     WHERE u1.id = auth.uid()
     AND u1.role = 'trainer'
-    AND u2.id = exam_results.user_id
+    AND u2.id::text = exam_results.user_id
   )
 );
 
