@@ -431,7 +431,7 @@ CREATE POLICY "Users can read own attempts"
 ON public.attempts FOR SELECT
 TO authenticated
 USING (
-  user_id = auth.uid() OR
+  user_id = auth.uid()::text OR
   EXISTS (
     SELECT 1 FROM public.users
     WHERE id = auth.uid()
@@ -442,12 +442,12 @@ USING (
 CREATE POLICY "Users can create own attempts"
 ON public.attempts FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (user_id = auth.uid()::text);
 
 CREATE POLICY "Users can update own attempts"
 ON public.attempts FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid());
+USING (user_id = auth.uid()::text);
 
 CREATE POLICY "Trainers can read company attempts"
 ON public.attempts FOR SELECT
@@ -470,7 +470,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()
+    AND attempts.user_id = auth.uid()::text
   ) OR
   EXISTS (
     SELECT 1 FROM public.users
@@ -486,7 +486,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()
+    AND attempts.user_id = auth.uid()::text
   )
 );
 
@@ -497,7 +497,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.attempts
     WHERE attempts.id = attempt_items.attempt_id
-    AND attempts.user_id = auth.uid()
+    AND attempts.user_id = auth.uid()::text
   )
 );
 
@@ -507,17 +507,17 @@ USING (
 CREATE POLICY "Users can read own exam_results"
 ON public.exam_results FOR SELECT
 TO authenticated
-USING (user_id = auth.uid());
+USING (user_id = auth.uid()::text);
 
 CREATE POLICY "Users can create own exam_results"
 ON public.exam_results FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (user_id = auth.uid()::text);
 
 CREATE POLICY "Users can update own exam_results"
 ON public.exam_results FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid());
+USING (user_id = auth.uid()::text);
 
 CREATE POLICY "Trainers can read all exam_results"
 ON public.exam_results FOR SELECT
