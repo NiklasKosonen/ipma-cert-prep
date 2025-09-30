@@ -13,7 +13,7 @@ const AdminConsole: React.FC = () => {
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
-    addCompanyCode, updateCompanyCode, deleteCompanyCode,
+    addCompanyCode, deleteCompanyCode,
   } = useData()
 
   // Auto backup removed - data now syncs to Supabase in real-time
@@ -70,15 +70,10 @@ const AdminConsole: React.FC = () => {
     expiresAt: '',
     isActive: true
   })
-  const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
-  const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({
-    code: '',
-    companyName: '',
-    adminEmail: '',
-    maxUsers: 10,
-    expiresAt: '',
-    isActive: true
-  })
+  // Company code editing removed for now - will be reimplemented with new design
+  // const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
+  // const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({...})
+  
   // Company emails management (to be implemented later)
   // const [companyEmails, setCompanyEmails] = useState<Record<string, string[]>>({})
   // const [newEmail, setNewEmail] = useState<string>('')
@@ -167,15 +162,9 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleEditCompanyCode = (id: string) => {
-    const companyCode = companyCodes.find(cc => cc.id === id)
-    if (companyCode) {
-      setEditingCompanyCode(id)
-      setEditCompanyCode(companyCode)
-    }
-  }
-
-  // handleUpdateCompanyCode removed - edit functionality will be implemented later
+  // Edit/Update company code removed - will be reimplemented with new design
+  // const handleEditCompanyCode = (id: string) => {...}
+  // const handleUpdateCompanyCode = () => {...}
 
   const handleDeleteCompanyCode = (id: string) => {
     if (confirm('Haluatko varmasti poistaa tämän yrityskoodin?')) {
@@ -1509,12 +1498,6 @@ const AdminConsole: React.FC = () => {
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button
-                                  onClick={() => handleEditCompanyCode(code.id)}
-                                  className="text-blue-600 hover:text-blue-900"
-                                >
-                                  {t('edit')}
-                                </button>
                                 <button
                                   onClick={() => handleDeleteCompanyCode(code.id)}
                                   className="text-red-600 hover:text-red-900"

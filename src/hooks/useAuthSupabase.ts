@@ -106,7 +106,7 @@ export const useAuthSupabase = () => {
     
     if (!attemptsData) return { allowed: true }
     
-    const { attempts, lockedUntil } = JSON.parse(attemptsData)
+    const { lockedUntil } = JSON.parse(attemptsData)
     
     if (lockedUntil && Date.now() < lockedUntil) {
       const remainingTime = Math.ceil((lockedUntil - Date.now()) / 1000 / 60)
@@ -143,7 +143,7 @@ export const useAuthSupabase = () => {
   }
 
   // Sign in with email and password
-  const signIn = async (email: string, password: string, role: UserRole) => {
+  const signIn = async (email: string, password: string, _role: UserRole) => {
     try {
       setLoading(true)
       
