@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Eye, EyeOff } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 export const UpdatePassword = () => {

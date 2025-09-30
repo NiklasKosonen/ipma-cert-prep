@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../hooks/useAuthSupabase'
 import { UserRole } from '../types'
 
 interface ProtectedRouteProps {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Building2, Mail, Key } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 
 export const CompanyLogin = () => {
   const [email, setEmail] = useState('')

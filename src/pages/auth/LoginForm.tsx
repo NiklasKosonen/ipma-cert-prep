@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { UserRole } from '../../types'
 

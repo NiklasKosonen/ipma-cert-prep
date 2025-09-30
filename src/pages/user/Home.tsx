@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useData } from '../../contexts/DataContext'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 
 export const UserHome = () => {
   const { t } = useLanguage()

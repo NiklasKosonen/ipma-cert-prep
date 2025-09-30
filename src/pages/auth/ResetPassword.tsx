@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Mail } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 export const ResetPassword = () => {
