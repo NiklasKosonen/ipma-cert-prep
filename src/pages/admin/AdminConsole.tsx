@@ -243,32 +243,40 @@ const AdminConsole: React.FC = () => {
 
   // Company Code handlers
   const handleAddCompanyCode = () => {
-    if (newCompanyCode.code && newCompanyCode.companyName && newCompanyCode.adminEmail) {
+    if (newCompanyCode.code && newCompanyCode.companyName) {
       addCompanyCode({
         code: newCompanyCode.code,
         companyName: newCompanyCode.companyName,
-        adminEmail: newCompanyCode.adminEmail,
-        maxUsers: newCompanyCode.maxUsers || 1,
-        expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
+        adminEmail: '', // Not required anymore
+        maxUsers: newCompanyCode.maxUsers || 10,
+        expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
         isActive: true
       })
       setNewCompanyCode({
         code: '',
         companyName: '',
         adminEmail: '',
-        maxUsers: 1,
+        maxUsers: 10,
         expiresAt: '',
         isActive: true
       })
     }
   }
 
-  const handleEditCompanyCode = (_id: string) => {
-    // const companyCode = companyCodes.find(cc => cc.id === id)
-    // if (companyCode) {
-    //   setEditingCompanyCode(id)
-    //   setEditCompanyCode(companyCode)
-    // }
+  const handleEditCompanyCode = (id: string) => {
+    const companyCode = companyCodes.find(cc => cc.id === id)
+    if (companyCode) {
+      setEditingCompanyCode(id)
+      setEditCompanyCode(companyCode)
+    }
+  }
+
+  const handleUpdateCompanyCode = () => {
+    if (editingCompanyCode && editCompanyCode) {
+      updateCompanyCode(editingCompanyCode, editCompanyCode)
+      setEditingCompanyCode(null)
+      setEditCompanyCode({ code: '', companyName: '', adminEmail: '', maxUsers: 10, expiresAt: '', isActive: true })
+    }
   }
 
   // const handleUpdateCompanyCode = () => {
@@ -1869,18 +1877,6 @@ const AdminConsole: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Admin sähköposti *
-                    </label>
-                    <input
-                      type="email"
-                      value={newCompanyCode.adminEmail || ''}
-                      onChange={(e) => setNewCompanyCode({ ...newCompanyCode, adminEmail: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="admin@company.com"
-                    />
-                  </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1924,10 +1920,10 @@ const AdminConsole: React.FC = () => {
                   </button>
                   <button
                     onClick={handleAddCompanyCode}
-                    disabled={!newCompanyCode.code || !newCompanyCode.companyName || !newCompanyCode.adminEmail}
+                    disabled={!newCompanyCode.code || !newCompanyCode.companyName}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    {t('add')}
+                    Add Company
                   </button>
                 </div>
               </div>
@@ -1951,9 +1947,6 @@ const AdminConsole: React.FC = () => {
                               Yritys
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Admin Email
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Max käyttäjät
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1975,9 +1968,6 @@ const AdminConsole: React.FC = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {code.companyName}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {code.adminEmail}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {code.maxUsers}
@@ -2135,74 +2125,10 @@ const AdminConsole: React.FC = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Backup & Data Sync</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-gray-500">
-                    {lastBackupTime && `Last backup: ${new Date(lastBackupTime).toLocaleString()}`}
-                  </div>
-                  <button
-                    onClick={() => {
-                      console.log('Current data state:', {
-                        topics: topics.length,
-                        questions: questions.length,
-                        subtopics: subtopics.length,
-                        kpis: kpis.length,
-                        companyCodes: companyCodes.length
-                      })
-                      console.log('Questions:', questions)
-                      console.log('Subtopics:', subtopics)
-                      alert('Debug info logged to console. Check browser console for details.')
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Debug Data
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Validate data integrity
-                      const storageKeys = [
-                        'ipma_topics',
-                        'ipma_questions', 
-                        'ipma_kpis',
-                        'ipma_company_codes',
-                        'ipma_subtopics',
-                        'ipma_sample_answers',
-                        'ipma_training_examples',
-                        'ipma_users',
-                        'ipma_subscriptions'
-                      ]
-                      
-                      const results: Record<string, { status: string; count: number; timestamp?: string; error?: string }> = {}
-                      storageKeys.forEach(key => {
-                        try {
-                          const data = localStorage.getItem(key)
-                          if (data) {
-                            const parsed = JSON.parse(data)
-                            const items = Array.isArray(parsed) ? parsed : (parsed.data || [])
-                            results[key] = {
-                              status: 'ok',
-                              count: items.length,
-                              timestamp: parsed.timestamp || 'unknown'
-                            }
-                          } else {
-                            results[key] = { status: 'missing', count: 0 }
-                          }
-                        } catch (error: any) {
-                          results[key] = { status: 'error', count: 0, error: error.message }
-                        }
-                      })
-                      
-                      console.log('Data Validation Results:', results)
-                      alert(`Data Validation Complete!\n\nTopics: ${results['ipma_topics']?.count || 0}\nQuestions: ${results['ipma_questions']?.count || 0}\nKPIs: ${results['ipma_kpis']?.count || 0}\nCompany Codes: ${results['ipma_company_codes']?.count || 0}\n\nCheck console for full details.`)
-                    }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Validate Data
-                  </button>
-                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Save to localStorage Section */}
+              <div className="grid grid-cols-1 gap-6">
+                {/* Supabase Sync Section - localStorage section removed (auto-sync active) */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-medium mb-4 flex items-center">
                     <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2319,27 +2245,17 @@ const AdminConsole: React.FC = () => {
                 </div>
               </div>
 
-              {/* Auto Backup Status */}
-              <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                <h4 className="text-md font-medium text-gray-900 mb-3">Automatic Backup Status</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Auto backup every 30 minutes</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Backup before page unload</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Backup before deployments</span>
+              {/* Info: Data is auto-synced to Supabase */}
+              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-medium text-green-800">Automatic Sync Active</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      All data changes are automatically saved to Supabase in real-time. Manual sync is available above if needed.
+                    </p>
                   </div>
                 </div>
               </div>
