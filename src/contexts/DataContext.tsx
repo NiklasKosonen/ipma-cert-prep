@@ -3,6 +3,7 @@ import { Topic, Question, KPI, CompanyCode, Subtopic, SampleAnswer, TrainingExam
 import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, mockSampleAnswers, mockTrainingExamples } from '../lib/mockData'
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
 import { supabase } from '../lib/supabase'
+import { SupabaseDataService } from '../services/supabaseDataService'
 
 // Data persistence utilities with user-specific storage
 const STORAGE_KEYS = {
@@ -192,50 +193,105 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [trainingExamples, setTrainingExamples] = useState<TrainingExample[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  
+  // Initialize Supabase data service
+  const supabaseDataService = SupabaseDataService.getInstance()
 
-  // Load global data from localStorage on mount
+  // Load global data from Supabase first, then localStorage on mount
   useEffect(() => {
-    try {
-      const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
-      const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
-      const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
-      const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
-      const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
-      const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
-      const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
-      const loadedUsers = loadFromStorage(STORAGE_KEYS.users, [])
-      const loadedSubscriptions = loadFromStorage(STORAGE_KEYS.subscriptions, [])
+    const loadData = async () => {
+      try {
+        console.log('🔄 Loading data from Supabase...')
+        
+        // Try to load from Supabase first
+        try {
+          const [
+            supabaseTopics,
+            supabaseSubtopics,
+            supabaseQuestions,
+            supabaseKpis,
+            supabaseCompanyCodes,
+            supabaseSampleAnswers,
+            supabaseTrainingExamples
+          ] = await Promise.all([
+            supabaseDataService.getAllTopics(),
+            supabaseDataService.getAllSubtopics(),
+            supabaseDataService.getAllQuestions(),
+            supabaseDataService.getAllKPIs(),
+            supabaseDataService.getAllCompanyCodes(),
+            supabaseDataService.getAllSampleAnswers(),
+            supabaseDataService.getAllTrainingExamples()
+          ])
 
-      // Ensure all arrays are valid
-      setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
-      setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
-      setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
-      setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
-      setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
-      setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
-      setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
-      setUsers(Array.isArray(loadedUsers) ? loadedUsers : [])
-      setSubscriptions(Array.isArray(loadedSubscriptions) ? loadedSubscriptions : [])
+          // If Supabase has data, use it
+          if (supabaseTopics.length > 0 || supabaseQuestions.length > 0) {
+            console.log('✅ Data loaded from Supabase')
+            setTopics(supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
+            setSubtopics(supabaseSubtopics)
+            setQuestions(supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
+            setKpis(supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
+            setCompanyCodes(supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
+            setSampleAnswers(supabaseSampleAnswers)
+            setTrainingExamples(supabaseTrainingExamples)
 
-      console.log('✅ Data loaded from localStorage:', {
-        topics: Array.isArray(loadedTopics) ? loadedTopics.length : 0,
-        subtopics: Array.isArray(loadedSubtopics) ? loadedSubtopics.length : 0,
-        questions: Array.isArray(loadedQuestions) ? loadedQuestions.length : 0,
-        kpis: Array.isArray(loadedKpis) ? loadedKpis.length : 0
-      })
-    } catch (error) {
-      console.error('❌ Error loading data from localStorage:', error)
-      // Fallback to mock data
-      setTopics(mockTopics)
-      setQuestions(mockQuestions)
-      setKpis(mockKPIs)
-      setCompanyCodes(mockCompanyCodes)
-      setSubtopics(mockSubtopics)
-      setSampleAnswers(mockSampleAnswers)
-      setTrainingExamples(mockTrainingExamples)
-      setUsers([])
-      setSubscriptions([])
+            // Save to localStorage for offline access
+            saveToStorage(STORAGE_KEYS.topics, supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
+            saveToStorage(STORAGE_KEYS.subtopics, supabaseSubtopics)
+            saveToStorage(STORAGE_KEYS.questions, supabaseQuestions.length > 0 ? supabaseQuestions : mockQuestions)
+            saveToStorage(STORAGE_KEYS.kpis, supabaseKpis.length > 0 ? supabaseKpis : mockKPIs)
+            saveToStorage(STORAGE_KEYS.companyCodes, supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
+            saveToStorage(STORAGE_KEYS.sampleAnswers, supabaseSampleAnswers)
+            saveToStorage(STORAGE_KEYS.trainingExamples, supabaseTrainingExamples)
+            return
+          }
+        } catch (supabaseError) {
+          console.warn('⚠️ Could not load from Supabase, falling back to localStorage:', supabaseError)
+        }
+
+        // Fallback to localStorage
+        const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
+        const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
+        const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
+        const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
+        const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
+        const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
+        const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
+        const loadedUsers = loadFromStorage(STORAGE_KEYS.users, [])
+        const loadedSubscriptions = loadFromStorage(STORAGE_KEYS.subscriptions, [])
+
+        // Ensure all arrays are valid
+        setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
+        setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
+        setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
+        setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
+        setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
+        setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
+        setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
+        setUsers(Array.isArray(loadedUsers) ? loadedUsers : [])
+        setSubscriptions(Array.isArray(loadedSubscriptions) ? loadedSubscriptions : [])
+
+        console.log('✅ Data loaded from localStorage:', {
+          topics: Array.isArray(loadedTopics) ? loadedTopics.length : 0,
+          subtopics: Array.isArray(loadedSubtopics) ? loadedSubtopics.length : 0,
+          questions: Array.isArray(loadedQuestions) ? loadedQuestions.length : 0,
+          kpis: Array.isArray(loadedKpis) ? loadedKpis.length : 0
+        })
+      } catch (error) {
+        console.error('❌ Error loading data:', error)
+        // Fallback to mock data
+        setTopics(mockTopics)
+        setQuestions(mockQuestions)
+        setKpis(mockKPIs)
+        setCompanyCodes(mockCompanyCodes)
+        setSubtopics(mockSubtopics)
+        setSampleAnswers(mockSampleAnswers)
+        setTrainingExamples(mockTrainingExamples)
+        setUsers([])
+        setSubscriptions([])
+      }
     }
+
+    loadData()
   }, [])
 
   // Auto-restore from Supabase if localStorage is empty (after deployments)
@@ -388,7 +444,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [subscriptions])
 
   // Topic management functions
-  const addTopic = (topicData: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>) => {
+  const addTopic = async (topicData: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>) => {
     // Validate input
     const titleValidation = validateTopicTitle(topicData.title)
     if (!titleValidation.isValid) {
@@ -410,26 +466,58 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
+    
+    // Update local state
     setTopics(prev => [...prev, newTopic])
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertTopic(newTopic)
+      console.log('✅ Topic synced to Supabase:', newTopic.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync topic to Supabase:', error)
+    }
   }
 
-  const updateTopic = (id: string, updates: Partial<Topic>) => {
-    setTopics(prev => prev.map(topic => 
-      topic.id === id 
-        ? { ...topic, ...updates, updatedAt: new Date().toISOString() }
-        : topic
-    ))
+  const updateTopic = async (id: string, updates: Partial<Topic>) => {
+    let updatedTopic: Topic | null = null
+    
+    setTopics(prev => prev.map(topic => {
+      if (topic.id === id) {
+        updatedTopic = { ...topic, ...updates, updatedAt: new Date().toISOString() }
+        return updatedTopic
+      }
+      return topic
+    }))
+    
+    // Sync to Supabase
+    if (updatedTopic) {
+      try {
+        await supabaseDataService.upsertTopic(updatedTopic)
+        console.log('✅ Topic update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync topic update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteTopic = (id: string) => {
+  const deleteTopic = async (id: string) => {
     setTopics(prev => prev.filter(topic => topic.id !== id))
     // Also delete related questions, KPIs, and subtopics
     setQuestions(prev => prev.filter(question => question.topicId !== id))
     setKpis(prev => prev.filter(kpi => kpi.topicId !== id))
     setSubtopics(prev => prev.filter(subtopic => subtopic.topicId !== id))
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteTopic(id)
+      console.log('✅ Topic deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync topic deletion to Supabase:', error)
+    }
   }
 
-  const addSubtopic = (subtopicData: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addSubtopic = async (subtopicData: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newSubtopic: Subtopic = {
       ...subtopicData,
       id: `subtopic_${Date.now()}`,
@@ -443,17 +531,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         ? { ...topic, subtopics: [...topic.subtopics, newSubtopic] }
         : topic
     ))
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertSubtopic(newSubtopic)
+      console.log('✅ Subtopic synced to Supabase:', newSubtopic.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync subtopic to Supabase:', error)
+    }
   }
 
-  const updateSubtopic = (id: string, updates: Partial<Subtopic>) => {
-    setSubtopics(prev => prev.map(subtopic => 
-      subtopic.id === id 
-        ? { ...subtopic, ...updates, updatedAt: new Date().toISOString() }
-        : subtopic
-    ))
+  const updateSubtopic = async (id: string, updates: Partial<Subtopic>) => {
+    let updatedSubtopic: Subtopic | null = null
+    
+    setSubtopics(prev => prev.map(subtopic => {
+      if (subtopic.id === id) {
+        updatedSubtopic = { ...subtopic, ...updates, updatedAt: new Date().toISOString() }
+        return updatedSubtopic
+      }
+      return subtopic
+    }))
+    
+    // Sync to Supabase
+    if (updatedSubtopic) {
+      try {
+        await supabaseDataService.upsertSubtopic(updatedSubtopic)
+        console.log('✅ Subtopic update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync subtopic update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteSubtopic = (id: string) => {
+  const deleteSubtopic = async (id: string) => {
     console.log('DataContext deleteSubtopic called with ID:', id)
     console.log('Current subtopics before deletion:', subtopics.map(s => ({ id: s.id, title: s.title })))
     
@@ -472,12 +582,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           ? { ...topic, subtopics: topic.subtopics.filter(s => s.id !== id) }
           : topic
       ))
+      
+      // Sync to Supabase
+      try {
+        await supabaseDataService.deleteSubtopic(id)
+        console.log('✅ Subtopic deletion synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync subtopic deletion to Supabase:', error)
+      }
     } else {
       console.error('Subtopic not found with ID:', id)
     }
   }
 
-  const addQuestion = (questionData: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addQuestion = async (questionData: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Validate input
     const promptValidation = validateQuestionPrompt(questionData.prompt)
     if (!promptValidation.isValid) {
@@ -499,21 +617,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     setQuestions(prev => [...prev, newQuestion])
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertQuestion(newQuestion)
+      console.log('✅ Question synced to Supabase:', newQuestion.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync question to Supabase:', error)
+    }
   }
 
-  const updateQuestion = (id: string, updates: Partial<Question>) => {
-    setQuestions(prev => prev.map(question => 
-      question.id === id 
-        ? { ...question, ...updates, updatedAt: new Date().toISOString() }
-        : question
-    ))
+  const updateQuestion = async (id: string, updates: Partial<Question>) => {
+    let updatedQuestion: Question | null = null
+    
+    setQuestions(prev => prev.map(question => {
+      if (question.id === id) {
+        updatedQuestion = { ...question, ...updates, updatedAt: new Date().toISOString() }
+        return updatedQuestion
+      }
+      return question
+    }))
+    
+    // Sync to Supabase
+    if (updatedQuestion) {
+      try {
+        await supabaseDataService.upsertQuestion(updatedQuestion)
+        console.log('✅ Question update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync question update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteQuestion = (id: string) => {
+  const deleteQuestion = async (id: string) => {
     setQuestions(prev => prev.filter(question => question.id !== id))
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteQuestion(id)
+      console.log('✅ Question deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync question deletion to Supabase:', error)
+    }
   }
 
-  const addKPI = (kpiData: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addKPI = async (kpiData: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Ensure KPIs always have a subtopicId
     if (!kpiData.subtopicId) {
       throw new Error('KPIs must belong to a specific subtopic')
@@ -527,18 +675,48 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     setKpis(prev => [...prev, newKPI])
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertKPI(newKPI)
+      console.log('✅ KPI synced to Supabase:', newKPI.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync KPI to Supabase:', error)
+    }
   }
 
-  const updateKPI = (id: string, updates: Partial<KPI>) => {
-    setKpis(prev => prev.map(kpi => 
-      kpi.id === id 
-        ? { ...kpi, ...updates, updatedAt: new Date().toISOString() }
-        : kpi
-    ))
+  const updateKPI = async (id: string, updates: Partial<KPI>) => {
+    let updatedKPI: KPI | null = null
+    
+    setKpis(prev => prev.map(kpi => {
+      if (kpi.id === id) {
+        updatedKPI = { ...kpi, ...updates, updatedAt: new Date().toISOString() }
+        return updatedKPI
+      }
+      return kpi
+    }))
+    
+    // Sync to Supabase
+    if (updatedKPI) {
+      try {
+        await supabaseDataService.upsertKPI(updatedKPI)
+        console.log('✅ KPI update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync KPI update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteKPI = (id: string) => {
+  const deleteKPI = async (id: string) => {
     setKpis(prev => prev.filter(kpi => kpi.id !== id))
+    
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteKPI(id)
+      console.log('✅ KPI deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync KPI deletion to Supabase:', error)
+    }
   }
 
   const connectKPIToQuestion = (kpiId: string, questionId: string) => {

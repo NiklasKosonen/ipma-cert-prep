@@ -162,3 +162,6 @@ FROM pg_indexes
 WHERE schemaname = 'public' 
 AND tablename = 'exam_results'
 ORDER BY indexname;
+
+
+
