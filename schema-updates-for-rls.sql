@@ -74,6 +74,7 @@ ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 year
 -- =====================================================
 
 ALTER TABLE public.attempts 
+ADD COLUMN IF NOT EXISTS user_id TEXT,
 ADD COLUMN IF NOT EXISTS total_time INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS time_remaining INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
@@ -111,7 +112,14 @@ BEGIN
 END $$;
 
 -- =====================================================
--- 7. ADD MISSING COLUMNS TO SUBTOPICS TABLE
+-- 7. ADD MISSING COLUMNS TO EXAM_RESULTS TABLE
+-- =====================================================
+
+ALTER TABLE public.exam_results
+ADD COLUMN IF NOT EXISTS user_id TEXT;
+
+-- =====================================================
+-- 8. ADD MISSING COLUMNS TO SUBTOPICS TABLE
 -- =====================================================
 
 ALTER TABLE public.subtopics 
