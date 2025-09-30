@@ -18,7 +18,7 @@ ALTER TABLE public.company_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.question_kpis ENABLE ROW LEVEL SECURITY;
 -- data_backups table removed - not needed
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+-- subscriptions table removed - not needed
 ALTER TABLE public.attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attempt_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
@@ -110,12 +110,7 @@ DROP POLICY IF EXISTS "Allow read access to users" ON public.users;
 DROP POLICY IF EXISTS "Allow insert access to users" ON public.users;
 DROP POLICY IF EXISTS "Allow update access to users" ON public.users;
 
--- Subscriptions
-DROP POLICY IF EXISTS "Users can read own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Admins can manage subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Allow read access to subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Allow insert access to subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Allow update access to subscriptions" ON public.subscriptions;
+-- Subscriptions policies removed - table doesn't exist
 
 -- Attempts
 DROP POLICY IF EXISTS "Users can view own attempts" ON public.attempts;
@@ -434,34 +429,7 @@ USING (
   )
 );
 
--- SUBSCRIPTIONS
-CREATE POLICY "Users can read own subscriptions"
-ON public.subscriptions FOR SELECT
-TO authenticated
-USING (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid()
-    AND role = 'admin'
-  )
-);
-
-CREATE POLICY "Users can create own subscriptions"
-ON public.subscriptions FOR INSERT
-TO authenticated
-WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Admins can manage subscriptions"
-ON public.subscriptions FOR ALL
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid()
-    AND role = 'admin'
-  )
-);
+-- SUBSCRIPTIONS policies removed - table doesn't exist
 
 -- ATTEMPTS
 CREATE POLICY "Users can read own attempts"
