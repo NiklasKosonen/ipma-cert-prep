@@ -157,7 +157,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -168,7 +168,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -179,7 +179,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -196,7 +196,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -207,7 +207,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -218,7 +218,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -235,7 +235,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -246,7 +246,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -257,7 +257,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -274,7 +274,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -285,7 +285,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -296,7 +296,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -313,7 +313,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -330,7 +330,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -347,7 +347,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -364,7 +364,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()::text
+    WHERE users.id = auth.uid()
     AND users.role = 'admin'
   )
 );
@@ -378,17 +378,17 @@ USING (
 CREATE POLICY "Users can read own profile"
 ON public.users FOR SELECT
 TO authenticated
-USING (auth.uid()::text = id);
+USING (auth.uid() = id);
 
 CREATE POLICY "Users can insert own profile"
 ON public.users FOR INSERT
 TO authenticated
-WITH CHECK (auth.uid()::text = id);
+WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile"
 ON public.users FOR UPDATE
 TO authenticated
-USING (auth.uid()::text = id);
+USING (auth.uid() = id);
 
 CREATE POLICY "Trainers can read company users"
 ON public.users FOR SELECT
@@ -396,7 +396,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users trainer
-    WHERE trainer.id = auth.uid()::text
+    WHERE trainer.id = auth.uid()
     AND trainer.role IN ('trainer', 'admin')
     AND trainer.company_code = users.company_code
   )
@@ -408,7 +408,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()::text
+    WHERE id = auth.uid()
     AND role = 'admin'
   )
 );
@@ -419,7 +419,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()::text
+    WHERE id = auth.uid()
     AND role = 'admin'
   )
 );
@@ -434,7 +434,7 @@ USING (
   user_id = auth.uid()::text::text OR
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()::text
+    WHERE id = auth.uid()
     AND role IN ('trainer', 'admin')
   )
 );
@@ -456,7 +456,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.users u1
     INNER JOIN public.users u2 ON u1.company_code = u2.company_code
-    WHERE u1.id = auth.uid()::text
+    WHERE u1.id = auth.uid()
     AND u1.role = 'trainer'
     AND u2.id = attempts.user_id
   )
@@ -474,7 +474,7 @@ USING (
   ) OR
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()::text
+    WHERE id = auth.uid()
     AND role IN ('trainer', 'admin')
   )
 );
@@ -525,7 +525,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()::text
+    WHERE id = auth.uid()
     AND role IN ('trainer', 'admin')
   )
 );
@@ -537,7 +537,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.users u1
     INNER JOIN public.users u2 ON u1.company_code = u2.company_code
-    WHERE u1.id = auth.uid()::text
+    WHERE u1.id = auth.uid()
     AND u1.role = 'trainer'
     AND u2.id = exam_results.user_id
   )
