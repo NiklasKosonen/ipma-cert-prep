@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { AuthUser, UserRole, UserProfile } from '../types'
 import { supabase } from '../lib/supabase'
 
+// Rate limiting configuration
+const MAX_LOGIN_ATTEMPTS = 5
+const LOCKOUT_DURATION = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_KEY_PREFIX = 'login_attempts_'
+
 // Supabase Authentication System
 export const useAuthSupabase = () => {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -94,10 +99,62 @@ export const useAuthSupabase = () => {
     }
   }
 
+  // Check rate limiting
+  const checkRateLimit = (email: string): { allowed: boolean; remainingTime?: number } => {
+    const key = RATE_LIMIT_KEY_PREFIX + email
+    const attemptsData = localStorage.getItem(key)
+    
+    if (!attemptsData) return { allowed: true }
+    
+    const { attempts, lockedUntil } = JSON.parse(attemptsData)
+    
+    if (lockedUntil && Date.now() < lockedUntil) {
+      const remainingTime = Math.ceil((lockedUntil - Date.now()) / 1000 / 60)
+      return { allowed: false, remainingTime }
+    }
+    
+    return { allowed: true }
+  }
+
+  // Record failed attempt
+  const recordFailedAttempt = (email: string) => {
+    const key = RATE_LIMIT_KEY_PREFIX + email
+    const attemptsData = localStorage.getItem(key)
+    
+    let attempts = 1
+    if (attemptsData) {
+      const parsed = JSON.parse(attemptsData)
+      attempts = parsed.attempts + 1
+    }
+    
+    const data: any = { attempts }
+    
+    if (attempts >= MAX_LOGIN_ATTEMPTS) {
+      data.lockedUntil = Date.now() + LOCKOUT_DURATION
+    }
+    
+    localStorage.setItem(key, JSON.stringify(data))
+  }
+
+  // Clear rate limit on successful login
+  const clearRateLimit = (email: string) => {
+    const key = RATE_LIMIT_KEY_PREFIX + email
+    localStorage.removeItem(key)
+  }
+
   // Sign in with email and password
   const signIn = async (email: string, password: string, role: UserRole) => {
     try {
       setLoading(true)
+      
+      // Check rate limiting
+      const rateLimitCheck = checkRateLimit(email)
+      if (!rateLimitCheck.allowed) {
+        return { 
+          data: null, 
+          error: `Too many failed attempts. Please try again in ${rateLimitCheck.remainingTime} minutes.` 
+        }
+      }
       
       // Use Supabase authentication only (no hardcoded credentials)
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -107,10 +164,12 @@ export const useAuthSupabase = () => {
 
       if (error) {
         console.error('Sign in error:', error)
+        recordFailedAttempt(email) // Record failed attempt
         return { data: null, error: error.message }
       }
 
       if (data.user) {
+        clearRateLimit(email) // Clear rate limit on success
         await handleAuthChange(data.user)
         return { data: { user: user }, error: null }
       }
@@ -118,6 +177,7 @@ export const useAuthSupabase = () => {
       return { data: null, error: 'Sign in failed' }
     } catch (error) {
       console.error('Sign in error:', error)
+      recordFailedAttempt(email) // Record failed attempt
       return { data: null, error: 'Sign in failed' }
     } finally {
       setLoading(false)

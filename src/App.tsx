@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { DataProvider } from './contexts/DataContext'
 import { useAuthSupabase as useAuth } from './hooks/useAuthSupabase'
@@ -48,9 +48,36 @@ function App() {
 }
 
 function AppContent() {
-  const { loading } = useAuth()
+  const { loading, user, signOut } = useAuth()
   
   // Auto backup removed - data now syncs to Supabase in real-time
+
+  // Session timeout: 30 minutes of inactivity
+  useEffect(() => {
+    if (!user) return
+
+    const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes
+    let timeoutId: NodeJS.Timeout
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        console.log('🔒 Session timeout - logging out due to inactivity')
+        signOut()
+      }, SESSION_TIMEOUT)
+    }
+
+    // Reset timeout on user activity
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
+    events.forEach(event => window.addEventListener(event, resetTimeout))
+
+    resetTimeout() // Initialize timeout
+
+    return () => {
+      clearTimeout(timeoutId)
+      events.forEach(event => window.removeEventListener(event, resetTimeout))
+    }
+  }, [user, signOut])
 
   if (loading) {
     return (
