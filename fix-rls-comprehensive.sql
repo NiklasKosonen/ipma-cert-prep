@@ -507,39 +507,26 @@ USING (
 CREATE POLICY "Users can read own exam_results"
 ON public.exam_results FOR SELECT
 TO authenticated
-USING (user_id = auth.uid()::text::text);
+USING (user_id = (auth.uid())::text);
 
 CREATE POLICY "Users can create own exam_results"
 ON public.exam_results FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid()::text::text);
+WITH CHECK (user_id = (auth.uid())::text);
 
 CREATE POLICY "Users can update own exam_results"
 ON public.exam_results FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid()::text::text);
+USING (user_id = (auth.uid())::text);
 
-CREATE POLICY "Trainers can read all exam_results"
+CREATE POLICY "Admins and trainers can read all exam_results"
 ON public.exam_results FOR SELECT
 TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE id = auth.uid()
-    AND role IN ('trainer', 'admin')
-  )
-);
-
-CREATE POLICY "Trainers can read company exam_results"
-ON public.exam_results FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users u1
-    INNER JOIN public.users u2 ON u1.company_code = u2.company_code
-    WHERE u1.id = auth.uid()
-    AND u1.role = 'trainer'
-    AND u2.id::text = exam_results.user_id
+    WHERE users.id = auth.uid()
+    AND users.role IN ('trainer', 'admin')
   )
 );
 
