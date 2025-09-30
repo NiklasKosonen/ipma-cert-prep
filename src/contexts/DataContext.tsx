@@ -92,41 +92,41 @@ interface DataContextType {
   subscriptions: Subscription[]
   
   // Topic management
-  addTopic: (topic: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>) => void
-  updateTopic: (id: string, updates: Partial<Topic>) => void
-  deleteTopic: (id: string) => void
+  addTopic: (topic: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>) => Promise<void>
+  updateTopic: (id: string, updates: Partial<Topic>) => Promise<void>
+  deleteTopic: (id: string) => Promise<void>
   
   // Subtopic management
-  addSubtopic: (subtopic: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateSubtopic: (id: string, updates: Partial<Subtopic>) => void
-  deleteSubtopic: (id: string) => void
+  addSubtopic: (subtopic: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateSubtopic: (id: string, updates: Partial<Subtopic>) => Promise<void>
+  deleteSubtopic: (id: string) => Promise<void>
   
   // Question management
-  addQuestion: (question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateQuestion: (id: string, updates: Partial<Question>) => void
-  deleteQuestion: (id: string) => void
+  addQuestion: (question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateQuestion: (id: string, updates: Partial<Question>) => Promise<void>
+  deleteQuestion: (id: string) => Promise<void>
   
   // KPI management
-  addKPI: (kpi: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateKPI: (id: string, updates: Partial<KPI>) => void
-  deleteKPI: (id: string) => void
-  connectKPIToQuestion: (kpiId: string, questionId: string) => void
-  disconnectKPIFromQuestion: (kpiId: string, questionId: string) => void
+  addKPI: (kpi: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateKPI: (id: string, updates: Partial<KPI>) => Promise<void>
+  deleteKPI: (id: string) => Promise<void>
+  connectKPIToQuestion: (kpiId: string, questionId: string) => Promise<void>
+  disconnectKPIFromQuestion: (kpiId: string, questionId: string) => Promise<void>
   
   // Company code management
-  addCompanyCode: (company: Omit<CompanyCode, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateCompanyCode: (id: string, updates: Partial<CompanyCode>) => void
-  deleteCompanyCode: (id: string) => void
+  addCompanyCode: (company: Omit<CompanyCode, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateCompanyCode: (id: string, updates: Partial<CompanyCode>) => Promise<void>
+  deleteCompanyCode: (id: string) => Promise<void>
   
   // Sample answer management
-  addSampleAnswer: (answer: Omit<SampleAnswer, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateSampleAnswer: (id: string, updates: Partial<SampleAnswer>) => void
-  deleteSampleAnswer: (id: string) => void
+  addSampleAnswer: (answer: Omit<SampleAnswer, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateSampleAnswer: (id: string, updates: Partial<SampleAnswer>) => Promise<void>
+  deleteSampleAnswer: (id: string) => Promise<void>
   
   // Training example management
-  addTrainingExample: (example: Omit<TrainingExample, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateTrainingExample: (id: string, updates: Partial<TrainingExample>) => void
-  deleteTrainingExample: (id: string) => void
+  addTrainingExample: (example: Omit<TrainingExample, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateTrainingExample: (id: string, updates: Partial<TrainingExample>) => Promise<void>
+  deleteTrainingExample: (id: string) => Promise<void>
   
   // User management
   addUser: (user: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => void
@@ -719,33 +719,67 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const connectKPIToQuestion = (kpiId: string, questionId: string) => {
-    setKpis(prev => prev.map(kpi => 
-      kpi.id === kpiId 
-        ? { ...kpi, connectedQuestions: [...kpi.connectedQuestions, questionId] }
-        : kpi
-    ))
-    setQuestions(prev => prev.map(question => 
-      question.id === questionId 
-        ? { ...question, connectedKPIs: [...question.connectedKPIs, kpiId] }
-        : question
-    ))
+  const connectKPIToQuestion = async (kpiId: string, questionId: string) => {
+    let updatedKPI: KPI | null = null
+    let updatedQuestion: Question | null = null
+
+    setKpis(prev => prev.map(kpi => {
+      if (kpi.id === kpiId) {
+        updatedKPI = { ...kpi, connectedQuestions: [...kpi.connectedQuestions, questionId] }
+        return updatedKPI
+      }
+      return kpi
+    }))
+
+    setQuestions(prev => prev.map(question => {
+      if (question.id === questionId) {
+        updatedQuestion = { ...question, connectedKPIs: [...question.connectedKPIs, kpiId] }
+        return updatedQuestion
+      }
+      return question
+    }))
+
+    // Sync to Supabase
+    try {
+      if (updatedKPI) await supabaseDataService.upsertKPI(updatedKPI)
+      if (updatedQuestion) await supabaseDataService.upsertQuestion(updatedQuestion)
+      console.log('✅ KPI-Question connection synced to Supabase')
+    } catch (error) {
+      console.warn('⚠️ Failed to sync KPI-Question connection to Supabase:', error)
+    }
   }
 
-  const disconnectKPIFromQuestion = (kpiId: string, questionId: string) => {
-    setKpis(prev => prev.map(kpi => 
-      kpi.id === kpiId 
-        ? { ...kpi, connectedQuestions: kpi.connectedQuestions.filter(id => id !== questionId) }
-        : kpi
-    ))
-    setQuestions(prev => prev.map(question => 
-      question.id === questionId 
-        ? { ...question, connectedKPIs: question.connectedKPIs.filter(id => id !== kpiId) }
-        : question
-    ))
+  const disconnectKPIFromQuestion = async (kpiId: string, questionId: string) => {
+    let updatedKPI: KPI | null = null
+    let updatedQuestion: Question | null = null
+
+    setKpis(prev => prev.map(kpi => {
+      if (kpi.id === kpiId) {
+        updatedKPI = { ...kpi, connectedQuestions: kpi.connectedQuestions.filter(id => id !== questionId) }
+        return updatedKPI
+      }
+      return kpi
+    }))
+
+    setQuestions(prev => prev.map(question => {
+      if (question.id === questionId) {
+        updatedQuestion = { ...question, connectedKPIs: question.connectedKPIs.filter(id => id !== kpiId) }
+        return updatedQuestion
+      }
+      return question
+    }))
+
+    // Sync to Supabase
+    try {
+      if (updatedKPI) await supabaseDataService.upsertKPI(updatedKPI)
+      if (updatedQuestion) await supabaseDataService.upsertQuestion(updatedQuestion)
+      console.log('✅ KPI-Question disconnection synced to Supabase')
+    } catch (error) {
+      console.warn('⚠️ Failed to sync KPI-Question disconnection to Supabase:', error)
+    }
   }
 
-  const addCompanyCode = (companyData: Omit<CompanyCode, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addCompanyCode = async (companyData: Omit<CompanyCode, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newCompanyCode: CompanyCode = {
       ...companyData,
       id: `company_${Date.now()}`,
@@ -753,21 +787,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     setCompanyCodes(prev => [...prev, newCompanyCode])
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertCompanyCode(newCompanyCode)
+      console.log('✅ Company code synced to Supabase:', newCompanyCode.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync company code to Supabase:', error)
+    }
   }
 
-  const updateCompanyCode = (id: string, updates: Partial<CompanyCode>) => {
-    setCompanyCodes(prev => prev.map(company => 
-      company.id === id 
-        ? { ...company, ...updates, updatedAt: new Date().toISOString() }
-        : company
-    ))
+  const updateCompanyCode = async (id: string, updates: Partial<CompanyCode>) => {
+    let updatedCompany: CompanyCode | null = null
+
+    setCompanyCodes(prev => prev.map(company => {
+      if (company.id === id) {
+        updatedCompany = { ...company, ...updates, updatedAt: new Date().toISOString() }
+        return updatedCompany
+      }
+      return company
+    }))
+
+    // Sync to Supabase
+    if (updatedCompany) {
+      try {
+        await supabaseDataService.upsertCompanyCode(updatedCompany)
+        console.log('✅ Company code update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync company code update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteCompanyCode = (id: string) => {
+  const deleteCompanyCode = async (id: string) => {
     setCompanyCodes(prev => prev.filter(company => company.id !== id))
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteCompanyCode(id)
+      console.log('✅ Company code deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync company code deletion to Supabase:', error)
+    }
   }
 
-  const addSampleAnswer = (answerData: Omit<SampleAnswer, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addSampleAnswer = async (answerData: Omit<SampleAnswer, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newSampleAnswer: SampleAnswer = {
       ...answerData,
       id: `sample_${Date.now()}`,
@@ -775,21 +839,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     setSampleAnswers(prev => [...prev, newSampleAnswer])
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertSampleAnswer(newSampleAnswer)
+      console.log('✅ Sample answer synced to Supabase:', newSampleAnswer.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync sample answer to Supabase:', error)
+    }
   }
 
-  const updateSampleAnswer = (id: string, updates: Partial<SampleAnswer>) => {
-    setSampleAnswers(prev => prev.map(answer => 
-      answer.id === id 
-        ? { ...answer, ...updates, updatedAt: new Date().toISOString() }
-        : answer
-    ))
+  const updateSampleAnswer = async (id: string, updates: Partial<SampleAnswer>) => {
+    let updatedAnswer: SampleAnswer | null = null
+
+    setSampleAnswers(prev => prev.map(answer => {
+      if (answer.id === id) {
+        updatedAnswer = { ...answer, ...updates, updatedAt: new Date().toISOString() }
+        return updatedAnswer
+      }
+      return answer
+    }))
+
+    // Sync to Supabase
+    if (updatedAnswer) {
+      try {
+        await supabaseDataService.upsertSampleAnswer(updatedAnswer)
+        console.log('✅ Sample answer update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync sample answer update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteSampleAnswer = (id: string) => {
+  const deleteSampleAnswer = async (id: string) => {
     setSampleAnswers(prev => prev.filter(answer => answer.id !== id))
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteSampleAnswer(id)
+      console.log('✅ Sample answer deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync sample answer deletion to Supabase:', error)
+    }
   }
 
-  const addTrainingExample = (exampleData: Omit<TrainingExample, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTrainingExample = async (exampleData: Omit<TrainingExample, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTrainingExample: TrainingExample = {
       ...exampleData,
       id: `training_${Date.now()}`,
@@ -797,18 +891,48 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     setTrainingExamples(prev => [...prev, newTrainingExample])
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.upsertTrainingExample(newTrainingExample)
+      console.log('✅ Training example synced to Supabase:', newTrainingExample.id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync training example to Supabase:', error)
+    }
   }
 
-  const updateTrainingExample = (id: string, updates: Partial<TrainingExample>) => {
-    setTrainingExamples(prev => prev.map(example => 
-      example.id === id 
-        ? { ...example, ...updates, updatedAt: new Date().toISOString() }
-        : example
-    ))
+  const updateTrainingExample = async (id: string, updates: Partial<TrainingExample>) => {
+    let updatedExample: TrainingExample | null = null
+
+    setTrainingExamples(prev => prev.map(example => {
+      if (example.id === id) {
+        updatedExample = { ...example, ...updates, updatedAt: new Date().toISOString() }
+        return updatedExample
+      }
+      return example
+    }))
+
+    // Sync to Supabase
+    if (updatedExample) {
+      try {
+        await supabaseDataService.upsertTrainingExample(updatedExample)
+        console.log('✅ Training example update synced to Supabase:', id)
+      } catch (error) {
+        console.warn('⚠️ Failed to sync training example update to Supabase:', error)
+      }
+    }
   }
 
-  const deleteTrainingExample = (id: string) => {
+  const deleteTrainingExample = async (id: string) => {
     setTrainingExamples(prev => prev.filter(example => example.id !== id))
+
+    // Sync to Supabase
+    try {
+      await supabaseDataService.deleteTrainingExample(id)
+      console.log('✅ Training example deletion synced to Supabase:', id)
+    } catch (error) {
+      console.warn('⚠️ Failed to sync training example deletion to Supabase:', error)
+    }
   }
 
   const addUser = (userData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>) => {
