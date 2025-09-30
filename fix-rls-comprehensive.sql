@@ -21,7 +21,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 -- subscriptions table removed - not needed
 ALTER TABLE public.attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attempt_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
+-- user_sessions table removed - not needed
 ALTER TABLE public.exam_results ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
@@ -129,12 +129,7 @@ DROP POLICY IF EXISTS "Allow read access to attempt_items" ON public.attempt_ite
 DROP POLICY IF EXISTS "Allow insert access to attempt_items" ON public.attempt_items;
 DROP POLICY IF EXISTS "Allow update access to attempt_items" ON public.attempt_items;
 
--- User Sessions
-DROP POLICY IF EXISTS "Users can read own sessions" ON public.user_sessions;
-DROP POLICY IF EXISTS "Users can manage own sessions" ON public.user_sessions;
-DROP POLICY IF EXISTS "Allow read access to user_sessions" ON public.user_sessions;
-DROP POLICY IF EXISTS "Allow insert access to user_sessions" ON public.user_sessions;
-DROP POLICY IF EXISTS "Allow update access to user_sessions" ON public.user_sessions;
+-- User Sessions policies removed - table doesn't exist
 
 -- Exam Results
 DROP POLICY IF EXISTS "Users can view own exam results" ON public.exam_results;
@@ -506,26 +501,7 @@ USING (
   )
 );
 
--- USER SESSIONS
-CREATE POLICY "Users can read own sessions"
-ON public.user_sessions FOR SELECT
-TO authenticated
-USING (user_id = auth.uid());
-
-CREATE POLICY "Users can create own sessions"
-ON public.user_sessions FOR INSERT
-TO authenticated
-WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Users can update own sessions"
-ON public.user_sessions FOR UPDATE
-TO authenticated
-USING (user_id = auth.uid());
-
-CREATE POLICY "Users can delete own sessions"
-ON public.user_sessions FOR DELETE
-TO authenticated
-USING (user_id = auth.uid());
+-- USER SESSIONS policies removed - table doesn't exist
 
 -- EXAM RESULTS
 CREATE POLICY "Users can read own exam_results"
