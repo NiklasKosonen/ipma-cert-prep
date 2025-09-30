@@ -56,7 +56,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch topics: ${error.message}`)
     
-    return (data || []).map(t => ({
+    return (data || []).map((t: any) => ({
       id: t.id,
       title: t.title,
       description: t.description,
@@ -104,7 +104,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch subtopics: ${error.message}`)
     
-    return (data || []).map(s => ({
+    return (data || []).map((s: any) => ({
       id: s.id,
       topicId: s.topic_id,
       title: s.title,
@@ -152,7 +152,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch questions: ${error.message}`)
     
-    return (data || []).map(q => ({
+    return (data || []).map((q: any) => ({
       id: q.id,
       topicId: q.topic_id,
       subtopicId: q.subtopic_id,
@@ -201,7 +201,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch KPIs: ${error.message}`)
     
-    return (data || []).map(k => ({
+    return (data || []).map((k: any) => ({
       id: k.id,
       topicId: k.topic_id,
       subtopicId: k.subtopic_id,
@@ -252,7 +252,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch company codes: ${error.message}`)
     
-    return (data || []).map(c => ({
+    return (data || []).map((c: any) => ({
       id: c.id,
       code: c.code,
       companyName: c.company_name,
@@ -303,7 +303,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch sample answers: ${error.message}`)
     
-    return (data || []).map(a => ({
+    return (data || []).map((a: any) => ({
       id: a.id,
       questionId: a.question_id,
       answerText: a.answer_text,
@@ -354,7 +354,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch training examples: ${error.message}`)
     
-    return (data || []).map(e => ({
+    return (data || []).map((e: any) => ({
       id: e.id,
       questionId: e.question_id,
       answerText: e.answer_text,
@@ -405,7 +405,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch users: ${error.message}`)
     
-    return (data || []).map(u => ({
+    return (data || []).map((u: any) => ({
       id: u.id,
       email: u.email,
       name: u.name,
@@ -457,7 +457,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch subscriptions: ${error.message}`)
     
-    return (data || []).map(s => ({
+    return (data || []).map((s: any) => ({
       id: s.id,
       userId: s.user_id,
       startDate: s.start_date,
@@ -505,7 +505,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch attempts: ${error.message}`)
     
-    return (data || []).map(a => ({
+    return (data || []).map((a: any) => ({
       id: a.id,
       userId: a.user_id,
       topicId: a.topic_id,
@@ -558,7 +558,7 @@ export class SupabaseDataService {
 
     if (error) throw new Error(`Failed to fetch attempt items: ${error.message}`)
     
-    return (data || []).map(i => ({
+    return (data || []).map((i: any) => ({
       id: i.id,
       attemptId: i.attempt_id,
       questionId: i.question_id,
