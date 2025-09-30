@@ -14,107 +14,11 @@ const AdminConsole: React.FC = () => {
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
-    addCompanyCode, deleteCompanyCode,
+    addCompanyCode, updateCompanyCode, deleteCompanyCode,
   } = useData()
 
   // Auto backup removed - data now syncs to Supabase in real-time
-
   const [activeTab, setActiveTab] = useState('topics')
-  const [backupStatus, setBackupStatus] = useState<'idle' | 'backing_up' | 'restoring' | 'syncing'>('idle')
-  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null)
-
-  // Initialize backup status
-  useEffect(() => {
-    const lastBackup = localStorage.getItem('last_auto_backup')
-    if (lastBackup) {
-      const backup = JSON.parse(lastBackup)
-      setLastBackupTime(backup.timestamp)
-    }
-  }, [])
-
-
-  const handleSyncToSupabase = async () => {
-    setBackupStatus('syncing')
-    try {
-      console.log('🔄 Starting authenticated sync to Supabase...')
-      
-      // Authenticate as trainer/admin for content management
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-      
-      if (authError) {
-        console.warn('⚠️ Anonymous authentication failed:', authError.message)
-        // Try to continue anyway - RLS policies should allow content access
-      } else {
-        console.log('✅ Authenticated for sync:', authData.user?.id)
-      }
-      
-      const dataMigration = DataMigrationService.getInstance()
-      await dataMigration.syncToSupabase()
-      
-      alert('✅ Content data synced to Supabase successfully!\n\nAll topics, subtopics, questions, and KPIs are now safely stored in Supabase.')
-      console.log('✅ Sync to Supabase completed successfully')
-    } catch (error: any) {
-      console.error('❌ Sync to Supabase failed:', error)
-      
-      let errorMessage = 'Unknown error occurred'
-      if (error.message) {
-        errorMessage = error.message
-      }
-      
-      if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
-        alert(`❌ Security Error:\n${errorMessage}\n\nPlease ensure RLS policies are properly configured in Supabase.`)
-      } else if (errorMessage.includes('constraint') || errorMessage.includes('foreign key')) {
-        alert(`❌ Data Relationship Error:\n${errorMessage}\n\nThis might be due to missing parent records or invalid data relationships.`)
-      } else {
-        alert(`❌ Sync Error:\n${errorMessage}\n\nPlease check your Supabase configuration and try again.`)
-      }
-    } finally {
-      setBackupStatus('idle')
-    }
-  }
-
-  const handleSyncFromSupabase = async () => {
-    if (!confirm('⚠️ This will sync content data from Supabase. Current local data will be replaced. Continue?')) {
-      return
-    }
-    
-    setBackupStatus('syncing')
-    try {
-      console.log('🔄 Starting authenticated sync from Supabase...')
-      
-      // Authenticate for content access
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-      
-      if (authError) {
-        console.warn('⚠️ Anonymous authentication failed:', authError.message)
-      } else {
-        console.log('✅ Authenticated for sync:', authData.user?.id)
-      }
-      
-      const dataMigration = DataMigrationService.getInstance()
-      await dataMigration.syncFromSupabase()
-      
-      alert('✅ Content data synced from Supabase successfully!\n\nAll topics, subtopics, questions, and KPIs have been loaded from Supabase.')
-      console.log('✅ Sync from Supabase completed successfully')
-    } catch (error: any) {
-      console.error('❌ Sync from Supabase failed:', error)
-      
-      let errorMessage = 'Unknown error occurred'
-      if (error.message) {
-        errorMessage = error.message
-      }
-      
-      if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
-        alert(`❌ Security Error:\n${errorMessage}\n\nPlease ensure RLS policies are properly configured in Supabase.`)
-      } else if (errorMessage.includes('No backups found')) {
-        alert(`❌ No Data Found:\n${errorMessage}\n\nPlease sync content data to Supabase first using the "Sync to Supabase" button.`)
-      } else {
-        alert(`❌ Sync Error:\n${errorMessage}\n\nPlease check your Supabase configuration and try again.`)
-      }
-    } finally {
-      setBackupStatus('idle')
-    }
-  }
   const handleAddQuestion = () => {
     if (!newQuestion.subtopicId || !newQuestion.prompt.trim()) {
       alert('Please select a subtopic and enter a question prompt')
@@ -176,8 +80,9 @@ const AdminConsole: React.FC = () => {
     expiresAt: '',
     isActive: true
   })
-  const [companyEmails, setCompanyEmails] = useState<Record<string, string[]>>({})
-  const [newEmail, setNewEmail] = useState<string>('')
+  // Company emails management (to be implemented later)
+  // const [companyEmails, setCompanyEmails] = useState<Record<string, string[]>>({})
+  // const [newEmail, setNewEmail] = useState<string>('')
   
   // AI Evaluation Rules state
   const [evaluationRules, setEvaluationRules] = useState<EvaluationRule[]>([
@@ -210,8 +115,8 @@ const AdminConsole: React.FC = () => {
       })
       setNewTrainingExample({
         questionId: '',
-        answerText: '',
-        qualityRating: 0,
+       // answerText: '',
+        //qualityRating: 0,
         detectedKPIs: [],
         feedback: '',
         exampleType: 'training'
@@ -422,99 +327,7 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    try {
-      console.log('🔄 Starting Excel import...')
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data)
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-      // Process the Excel data
-      const processedData = jsonData as any[]
-      console.log('📊 Processed Excel data:', processedData.length, 'rows')
-      
-      // Group by subtopic to understand the structure
-      const subtopicGroups = new Map<string, any[]>()
-      
-      processedData.forEach((row: any) => {
-        const subtopic = row.subtopic?.trim()
-        if (subtopic && row.question?.trim()) {
-          if (!subtopicGroups.has(subtopic)) {
-            subtopicGroups.set(subtopic, [])
-          }
-          subtopicGroups.get(subtopic)!.push(row)
-        }
-      })
-
-      // Get the main topic (from first row)
-      const mainTopic = processedData[0]?.topic?.trim() || 'Imported Topic'
-      const topicDescription = processedData[0]?.topic_description?.trim() || ''
-      console.log('📝 Main topic:', mainTopic)
-
-      // Create or find the main topic
-      let topicId = topics.find(t => t.title === mainTopic)?.id
-      if (!topicId) {
-        console.log('➕ Creating new topic:', mainTopic)
-        const newTopic = { title: mainTopic, description: topicDescription, isActive: true }
-        addTopic(newTopic)
-        // Get the topic ID from the updated topics array
-        topicId = topics.find(t => t.title === mainTopic)?.id || ''
-      }
-
-      // Process each subtopic group
-      for (const [subtopicName, subtopicRows] of subtopicGroups) {
-        console.log('📝 Processing subtopic:', subtopicName, 'with', subtopicRows.length, 'questions')
-        
-        // Create subtopic
-        let subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id
-        if (!subtopicId && topicId) {
-          console.log('➕ Creating new subtopic:', subtopicName)
-          const newSubtopic = { 
-            title: subtopicName, 
-            description: '', 
-            topicId: topicId, 
-            isActive: true 
-          }
-          addSubtopic(newSubtopic)
-          // Get the subtopic ID from the updated subtopics array
-          subtopicId = (subtopics || []).find(s => s.title === subtopicName && s.topicId === topicId)?.id || ''
-        }
-
-        // Process KPIs for this subtopic (from first row of the subtopic)
-        const firstRow = subtopicRows[0]
-        const kpiNames = firstRow.kpis?.split(';').map((k: string) => k.trim()).filter((k: string) => k) || []
-        console.log('📊 KPIs for subtopic:', kpiNames)
-        
-        // Create KPIs for this subtopic
-        const createdKPIs: string[] = []
-        for (const kpiName of kpiNames) {
-          if (kpiName && subtopicId) {
-            // Check if KPI already exists
-            const existingKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
-            if (!existingKPI) {
-              console.log('➕ Creating new KPI:', kpiName)
-              const newKPI = {
-                name: kpiName,
-                isEssential: true,
-                topicId: topicId || '',
-                subtopicId: subtopicId,
-                connectedQuestions: []
-              }
-              addKPI(newKPI)
-              // Get the KPI ID from the updated kpis array
-              const createdKPI = kpis.find(k => k.name === kpiName && k.subtopicId === subtopicId)
-              if (createdKPI) {
-                createdKPIs.push(createdKPI.id)
-              }
-            } else {
-              createdKPIs.push(existingKPI.id)
-            }
-          }
-        }
+  
 
         // Create questions for this subtopic
         console.log('❓ Creating questions for subtopic:', subtopicName)
@@ -549,242 +362,7 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleExcelToSupabaseImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    try {
-      console.log('🚀 Starting Excel to Supabase import...')
-      
-      // Validate file type
-      if (!file.name.match(/\.(xlsx|xls)$/i)) {
-        throw new Error('Invalid file type. Please upload an Excel file (.xlsx or .xls)')
-      }
-
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('File too large. Please upload a file smaller than 10MB')
-      }
-
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data)
-      
-      // Validate workbook has sheets
-      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-        throw new Error('Excel file has no worksheets')
-      }
-
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-      // Process the Excel data
-      const processedData = jsonData as any[]
-      console.log('📊 Processed Excel data:', processedData.length, 'rows')
-
-      // Validate data structure
-      if (processedData.length === 0) {
-        throw new Error('Excel file is empty or has no data rows')
-      }
-
-      // Check required columns
-      const requiredColumns = ['topic', 'subtopic', 'question']
-      const firstRow = processedData[0]
-      const missingColumns = requiredColumns.filter(col => !firstRow.hasOwnProperty(col))
-      
-      if (missingColumns.length > 0) {
-        throw new Error(`Missing required columns: ${missingColumns.join(', ')}. Please ensure your Excel file has columns: topic, subtopic, question`)
-      }
-      
-      // Group by subtopic to understand the structure
-      const subtopicGroups = new Map<string, any[]>()
-      
-      processedData.forEach((row: any) => {
-        const subtopic = row.subtopic?.trim()
-        if (subtopic && row.question?.trim()) {
-          if (!subtopicGroups.has(subtopic)) {
-            subtopicGroups.set(subtopic, [])
-          }
-          subtopicGroups.get(subtopic)!.push(row)
-        }
-      })
-
-      // Get the main topic (from first row)
-      const mainTopic = processedData[0]?.topic?.trim() || 'Imported Topic'
-      const topicDescription = processedData[0]?.topic_description?.trim() || ''
-      console.log('📝 Main topic:', mainTopic)
-
-      // Import directly to Supabase
-      
-      // Authenticate with Supabase (anonymous for now)
-      console.log('🔐 Authenticating with Supabase...')
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-      
-      if (authError) {
-        console.warn('⚠️ Anonymous authentication failed:', authError.message)
-        console.log('🔄 Proceeding without authentication...')
-      } else {
-        console.log('✅ Authenticated successfully:', authData.user?.id)
-      }
-      
-      // Create topic in Supabase first
-      const topicData = {
-        id: `topic_${Date.now()}`,
-        title: mainTopic,
-        description: topicDescription,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      console.log('📝 Creating topic in Supabase:', mainTopic)
-      const { data: topicResult, error: topicError } = await supabase
-        .from('topics')
-        .upsert([topicData], { onConflict: 'title' })
-        .select('id')
-        .single()
-
-      if (topicError) {
-        throw new Error(`Failed to create topic: ${topicError.message}`)
-      }
-
-      if (!topicResult) {
-        throw new Error('Failed to get created topic ID')
-      }
-
-      const topicId = topicResult.id
-      console.log('✅ Topic created with ID:', topicId)
-
-      // Process each subtopic group
-      for (const [subtopicName, subtopicRows] of subtopicGroups) {
-        console.log('📝 Processing subtopic:', subtopicName, 'with', subtopicRows.length, 'questions')
-        
-        // Create subtopic in Supabase
-        const subtopicData = {
-          id: `subtopic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          title: subtopicName,
-          description: '',
-          topic_id: topicId,
-          order_index: 0,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-
-        console.log('➕ Creating subtopic in Supabase:', subtopicName)
-        const { data: subtopicResult, error: subtopicError } = await supabase
-          .from('subtopics')
-          .upsert([subtopicData], { onConflict: 'title,topic_id' })
-          .select('id')
-          .single()
-
-        if (subtopicError) {
-          console.error('❌ Failed to create subtopic:', subtopicError)
-          continue // Skip this subtopic and continue with others
-        }
-
-        if (!subtopicResult) {
-          console.error('❌ Failed to get created subtopic ID')
-          continue
-        }
-
-        const subtopicId = subtopicResult.id
-        console.log('✅ Subtopic created with ID:', subtopicId)
-
-        // Process KPIs for this subtopic (from first row of the subtopic)
-        const firstRow = subtopicRows[0]
-        const kpiNames = firstRow.kpis?.split(';').map((k: string) => k.trim()).filter((k: string) => k) || []
-        console.log('📊 KPIs for subtopic:', kpiNames)
-        
-        // Create KPIs in Supabase
-        const kpiData = kpiNames.map((kpiName: string) => ({
-          id: `kpi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: kpiName,
-          is_essential: true,
-          topic_id: topicId,
-          subtopic_id: subtopicId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }))
-
-        if (kpiData.length > 0) {
-          console.log('➕ Creating KPIs in Supabase:', kpiNames)
-          const { data: kpiResult, error: kpiError } = await supabase
-            .from('kpis')
-            .upsert(kpiData, { onConflict: 'name,subtopic_id' })
-            .select('id')
-
-          if (kpiError) {
-            console.error('❌ Failed to create KPIs:', kpiError)
-          } else {
-            console.log('✅ KPIs created successfully:', kpiResult?.length || 0, 'KPIs')
-          }
-        }
-
-        // Create questions in Supabase
-        const questionData = subtopicRows.map((row: any) => ({
-          id: `question_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          prompt: row.question?.trim() || '',
-          topic_id: topicId,
-          subtopic_id: subtopicId,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })).filter(q => q.prompt) // Only include questions with prompts
-
-        if (questionData.length > 0) {
-          console.log('➕ Creating questions in Supabase:', questionData.length, 'questions')
-          const { data: questionResult, error: questionError } = await supabase
-            .from('questions')
-            .upsert(questionData, { onConflict: 'prompt,subtopic_id' })
-            .select('id')
-
-          if (questionError) {
-            console.error('❌ Failed to create questions:', questionError)
-          } else {
-            console.log('✅ Questions created successfully:', questionResult?.length || 0, 'questions')
-          }
-        }
-      }
-
-      console.log('✅ Excel to Supabase import completed successfully!')
-      alert('✅ Excel data imported directly to Supabase successfully!\n\nYour data is now safely stored in Supabase without any local conflicts.')
-      // Reset the file input
-      event.target.value = ''
-    } catch (error: any) {
-      console.error('❌ Error importing Excel to Supabase:', error)
-      
-      // Detailed error handling
-      let errorMessage = 'Unknown error occurred'
-      
-      if (error.message) {
-        errorMessage = error.message
-      } else if (typeof error === 'string') {
-        errorMessage = error
-      } else if (error.error) {
-        errorMessage = error.error.message || error.error
-      }
-
-      // Categorize errors for better user experience
-      if (errorMessage.includes('Invalid file type')) {
-        alert(`❌ File Format Error:\n${errorMessage}\n\nPlease upload an Excel file (.xlsx or .xls)`)
-      } else if (errorMessage.includes('File too large')) {
-        alert(`❌ File Size Error:\n${errorMessage}\n\nPlease compress your Excel file or split it into smaller files`)
-      } else if (errorMessage.includes('Missing required columns')) {
-        alert(`❌ Excel Format Error:\n${errorMessage}\n\nPlease ensure your Excel file has the correct column headers`)
-      } else if (errorMessage.includes('Failed to create topic')) {
-        alert(`❌ Database Error:\n${errorMessage}\n\nThis might be due to:\n- Network connection issues\n- Database permissions\n- Duplicate topic names\n\nPlease try again or contact support`)
-      } else if (errorMessage.includes('RLS') || errorMessage.includes('Row Level Security')) {
-        alert(`❌ Security Error:\n${errorMessage}\n\nThis is a database security issue. Please contact your administrator.`)
-      } else if (errorMessage.includes('constraint') || errorMessage.includes('foreign key')) {
-        alert(`❌ Data Relationship Error:\n${errorMessage}\n\nThis might be due to:\n- Missing parent records\n- Invalid data relationships\n- Duplicate entries\n\nPlease check your Excel data and try again`)
-      } else {
-        alert(`❌ Import Error:\n${errorMessage}\n\nPlease check your Excel file format and try again. If the problem persists, contact support.`)
-      }
-      
-      // Reset the file input
-      event.target.value = ''
-    }
-  }
+  
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -2205,43 +1783,9 @@ const AdminConsole: React.FC = () => {
                     Sync your data to/from Supabase database for persistent storage across deployments.
                   </p>
                   
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleSyncToSupabase}
-                      disabled={backupStatus !== 'idle'}
-                      className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      {backupStatus === 'syncing' ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Syncing to Supabase...
-                        </>
-                      ) : (
-                        'Sync to Supabase'
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={handleSyncFromSupabase}
-                      disabled={backupStatus !== 'idle'}
-                      className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      {backupStatus === 'syncing' ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Syncing from Supabase...
-                        </>
-                      ) : (
-                        'Sync from Supabase'
-                      )}
-                    </button>
-                  </div>
+                  <p className="text-sm text-gray-500 italic">
+                    Manual sync buttons removed - all changes are automatically synced to Supabase in real-time.
+                  </p>
                 </div>
               </div>
 
