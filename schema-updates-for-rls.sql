@@ -67,10 +67,7 @@ ADD COLUMN IF NOT EXISTS admin_email TEXT,
 ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 10,
 ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 year';
 
--- Update existing rows with default values if company_name is NULL
-UPDATE public.company_codes 
-SET company_name = name 
-WHERE company_name IS NULL AND name IS NOT NULL;
+-- Note: company_name migration removed - column 'name' doesn't exist in table
 
 -- =====================================================
 -- 5. ADD MISSING COLUMNS TO ATTEMPTS TABLE

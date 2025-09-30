@@ -16,7 +16,7 @@ ALTER TABLE public.sample_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.training_examples ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.question_kpis ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.data_backups ENABLE ROW LEVEL SECURITY;
+-- data_backups table removed - not needed
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attempts ENABLE ROW LEVEL SECURITY;
@@ -97,12 +97,7 @@ DROP POLICY IF EXISTS "Allow insert access to question_kpis" ON public.question_
 DROP POLICY IF EXISTS "Allow update access to question_kpis" ON public.question_kpis;
 DROP POLICY IF EXISTS "Allow delete access to question_kpis" ON public.question_kpis;
 
--- Data Backups
-DROP POLICY IF EXISTS "Allow read access to data_backups" ON public.data_backups;
-DROP POLICY IF EXISTS "Allow insert access to data_backups" ON public.data_backups;
-DROP POLICY IF EXISTS "Allow update access to data_backups" ON public.data_backups;
-DROP POLICY IF EXISTS "Allow delete access to data_backups" ON public.data_backups;
-DROP POLICY IF EXISTS "Admins can manage data_backups" ON public.data_backups;
+-- Data Backups policies removed - table doesn't exist and isn't needed
 
 -- Users
 DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
@@ -384,17 +379,7 @@ USING (
   )
 );
 
--- DATA BACKUPS
-CREATE POLICY "Admins can manage backups"
-ON public.data_backups FOR ALL
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-    AND users.role = 'admin'
-  )
-);
+-- DATA BACKUPS policy removed - table doesn't exist and isn't needed
 
 -- ================== USER-SPECIFIC TABLES ==================
 -- These tables contain user-specific data with stricter access control
