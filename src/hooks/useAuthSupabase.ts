@@ -384,6 +384,44 @@ export const useAuthSupabase = () => {
     }
   }
 
+  // Reset password
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      })
+
+      if (error) {
+        console.error('Reset password error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error) {
+      console.error('Reset password error:', error)
+      return { error: 'Failed to send reset email' }
+    }
+  }
+
+  // Update password
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        console.error('Update password error:', error)
+        return { error: error.message }
+      }
+
+      return { error: null }
+    } catch (error) {
+      console.error('Update password error:', error)
+      return { error: 'Failed to update password' }
+    }
+  }
+
   return {
     user,
     userProfile,
@@ -392,5 +430,7 @@ export const useAuthSupabase = () => {
     signUp,
     signOut,
     signInWithCompanyCode,
+    resetPassword,
+    updatePassword,
   }
 }

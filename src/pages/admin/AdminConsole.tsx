@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
-import * as XLSX from 'xlsx'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
 
 const AdminConsole: React.FC = () => {
@@ -176,21 +175,7 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleUpdateCompanyCode = () => {
-    if (editingCompanyCode && editCompanyCode) {
-      updateCompanyCode(editingCompanyCode, editCompanyCode)
-      setEditingCompanyCode(null)
-      setEditCompanyCode({ code: '', companyName: '', adminEmail: '', maxUsers: 10, expiresAt: '', isActive: true })
-    }
-  }
-
-  // const handleUpdateCompanyCode = () => {
-  //   if (editingCompanyCode && editCompanyCode) {
-  //     updateCompanyCode(editingCompanyCode, editCompanyCode)
-  //     setEditingCompanyCode(null)
-  //     setEditCompanyCode({})
-  //   }
-  // }
+  // handleUpdateCompanyCode removed - edit functionality will be implemented later
 
   const handleDeleteCompanyCode = (id: string) => {
     if (confirm('Haluatko varmasti poistaa tämän yrityskoodin?')) {
