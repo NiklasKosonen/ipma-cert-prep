@@ -15,7 +15,7 @@ INSERT INTO public.users (
   created_at,
   updated_at
 ) VALUES (
-  'admin-niklas-' || md5('niklas.kosonen@talentnetwork.fi'),
+  gen_random_uuid(),
   'niklas.kosonen@talentnetwork.fi',
   'Niklas Kosonen',
   'admin',
