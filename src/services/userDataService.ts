@@ -267,6 +267,12 @@ export class UserDataService {
   // Authenticate user (sign in or sign up)
   async authenticateUser(email: string, password: string, isSignUp: boolean = false, name?: string, companyCode?: string): Promise<UserProfile | null> {
     try {
+      // ONLY allow the admin email to access the platform
+      const ALLOWED_EMAIL = 'niklas.kosonen@talentnetwork.fi'
+      if (email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+        throw new Error('Access denied. Only authorized users can access this platform.')
+      }
+
       let authResult
       
       if (isSignUp) {
