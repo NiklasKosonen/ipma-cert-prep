@@ -99,77 +99,7 @@ export const useAuthSupabase = () => {
     try {
       setLoading(true)
       
-      // Special credentials for niklas.kosonen@talentnetwork.fi
-      if (email.toLowerCase() === 'niklas.kosonen@talentnetwork.fi' && password === 'Niipperi2026ipm#') {
-        console.log('🔐 Niklas login detected with role:', role)
-        
-        // Create or update user profile
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .single()
-
-        const userProfileData: UserProfile = {
-          id: `niklas_${role}`,
-          email: email,
-          name: 'Niklas Kosonen',
-          role: role,
-          companyCode: role === 'admin' ? 'TALENT_NETWORK' : 'TEST_COMPANY',
-          companyName: role === 'admin' ? 'Talent Network' : 'Test Company',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-
-        if (existingUser) {
-          // Update existing user
-          const { error } = await supabase
-            .from('users')
-            .update({
-              role: role,
-              company_code: userProfileData.companyCode,
-              company_name: userProfileData.companyName,
-              updated_at: new Date().toISOString()
-            })
-            .eq('email', email)
-
-          if (error) {
-            console.error('Error updating user:', error)
-            return { data: null, error: 'Failed to update user profile' }
-          }
-        } else {
-          // Create new user
-          const { error } = await supabase
-            .from('users')
-            .insert([userProfileData])
-
-          if (error) {
-            console.error('Error creating user:', error)
-            return { data: null, error: 'Failed to create user profile' }
-          }
-        }
-
-        // Create auth user object
-        const authUser: AuthUser = {
-          id: userProfileData.id,
-          email: email,
-          role: role,
-          companyCode: userProfileData.companyCode,
-        }
-
-        setUser(authUser)
-        setUserProfile(userProfileData)
-
-        console.log('✅ Niklas signed in:', { 
-          email: email, 
-          role: role, 
-          name: 'Niklas Kosonen'
-        })
-
-        return { data: { user: authUser }, error: null }
-      }
-
-      // Regular Supabase authentication
+      // Use Supabase authentication only (no hardcoded credentials)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
