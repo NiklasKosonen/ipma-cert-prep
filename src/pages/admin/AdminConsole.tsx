@@ -1386,72 +1386,8 @@ const AdminConsole: React.FC = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Questions Management</h2>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleAddQuestion}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                  >
-                    Add Question
-                  </button>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleExcelImport}
-                    className="hidden"
-                    id="excel-import"
-                  />
-                  <label
-                    htmlFor="excel-import"
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
-                  >
-                    Import Excel (Local)
-                  </label>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleExcelToSupabaseImport}
-                    className="hidden"
-                    id="excel-supabase-import"
-                  />
-                  <label
-                    htmlFor="excel-supabase-import"
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 cursor-pointer"
-                  >
-                    Import Excel (Supabase)
-                  </label>
-                </div>
               </div>
 
-              {/* Excel Import Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="text-lg font-medium text-blue-900 mb-2">Excel Import Options</h3>
-                <div className="mb-4">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Import Excel (Local):</strong> Imports data to local storage only. Safe for testing.
-                  </p>
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Import Excel (Supabase):</strong> Imports data directly to Supabase database. Recommended for production.
-                  </p>
-                </div>
-                <p className="text-sm text-blue-800 mb-2">
-                  Upload an Excel file with the following columns:
-                </p>
-                <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
-                  <li><strong>topic</strong> - Main topic name (will be created if doesn't exist)</li>
-                  <li><strong>topic_description</strong> - Description for the topic (optional)</li>
-                  <li><strong>subtopic</strong> - Subtopic name (will be created if doesn't exist)</li>
-                  <li><strong>question</strong> - The question prompt</li>
-                  <li><strong>kpis</strong> - KPI names separated by semicolons (;)</li>
-                  <li><strong>example_answer</strong> - Sample answer for training (optional)</li>
-                  <li><strong>evaluation_detected</strong> - KPIs found in the answer (optional)</li>
-                  <li><strong>evaluation_missing</strong> - KPIs missing from the answer (optional)</li>
-                  <li><strong>score</strong> - Score 0-3 for the example answer (optional)</li>
-                  <li><strong>evaluation_criteria</strong> - Feedback/coaching notes (optional)</li>
-                </ul>
-                <p className="text-sm text-blue-800 mt-2">
-                  <strong>Structure:</strong> Each subtopic should have multiple questions. All questions within a subtopic will share the same KPIs.
-                </p>
-              </div>
 
               {/* Add Question Form */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">
@@ -1528,6 +1464,16 @@ const AdminConsole: React.FC = () => {
                           </label>
                         ))}
                     </div>
+                  </div>
+                  
+                  {/* Add Question Button - Moved below Connect KPIs */}
+                  <div className="pt-4">
+                    <button
+                      onClick={handleAddQuestion}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    >
+                      Add Question
+                    </button>
                   </div>
                 </div>
               </div>
