@@ -120,7 +120,7 @@ export class ExamDataService {
       }
 
       // Convert to ExamResult format
-      const examResults: ExamResult[] = data.map(row => ({
+      const examResults: ExamResult[] = data.map((row: any) => ({
         attemptId: row.attempt_id,
         totalQuestions: row.total_questions,
         totalKpis: row.total_kpis,
@@ -164,7 +164,7 @@ export class ExamDataService {
       }
 
       // Convert to AttemptItem format
-      const attemptItems: AttemptItem[] = data.map(row => ({
+      const attemptItems: AttemptItem[] = data.map((row: any) => ({
         id: row.id,
         attemptId: row.attempt_id,
         questionId: row.question_id,
@@ -209,7 +209,7 @@ export class ExamDataService {
         throw usersError
       }
 
-      const userIds = users.map(user => user.id)
+      const userIds = users.map((user: any) => user.id)
 
       if (userIds.length === 0) {
         return {
@@ -234,11 +234,11 @@ export class ExamDataService {
       }
 
       const totalExams = data.length
-      const averageScore = totalExams > 0 ? data.reduce((sum, exam) => sum + exam.score_percentage, 0) / totalExams : 0
-      const passedExams = data.filter(exam => exam.passed).length
+      const averageScore = totalExams > 0 ? data.reduce((sum: any, exam: any) => sum + exam.score_percentage, 0) / totalExams : 0
+      const passedExams = data.filter((exam: any) => exam.passed).length
       const passRate = totalExams > 0 ? (passedExams / totalExams) * 100 : 0
 
-      const recentExams: ExamResult[] = data.map(row => ({
+      const recentExams: ExamResult[] = data.map((row: any) => ({
         attemptId: row.attempt_id,
         totalQuestions: row.total_questions,
         totalKpis: row.total_kpis,
