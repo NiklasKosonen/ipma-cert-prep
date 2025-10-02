@@ -23,6 +23,7 @@ WITH CHECK (true);
 -- Step 2: Add missing INSERT policies for subtopics
 -- The subtopics table is missing INSERT policies entirely
 
+DROP POLICY IF EXISTS "Authenticated users can insert subtopics" ON public.subtopics;
 CREATE POLICY "Authenticated users can insert subtopics"
 ON public.subtopics FOR INSERT
 TO authenticated
