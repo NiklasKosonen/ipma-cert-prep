@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Topic, Question, KPI, CompanyCode, Subtopic, SampleAnswer, TrainingExample, Attempt, AttemptItem, UserProfile, Subscription } from '../types'
+import { Topic, Question, KPI, CompanyCode, Subtopic, SampleAnswer, TrainingExample, Attempt, AttemptItem, UserProfile, Subscription, ExamResult } from '../types'
 import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, mockSampleAnswers, mockTrainingExamples } from '../lib/mockData'
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
 import { SupabaseDataService } from '../services/supabaseDataService'
+import { ExamDataService } from '../services/examDataService'
 
 // Data persistence utilities with user-specific storage
 const STORAGE_KEYS = {
@@ -153,6 +154,19 @@ interface DataContextType {
   updateAttemptItem: (id: string, updates: Partial<AttemptItem>) => void
   getAttemptItems: (attemptId: string) => AttemptItem[]
   selectRandomQuestions: (topicId: string) => string[]
+  
+  // Exam data persistence (Supabase)
+  saveExamAttempt: (attempt: Attempt) => Promise<void>
+  saveExamAttemptItem: (attemptItem: AttemptItem) => Promise<void>
+  saveExamResult: (examResult: ExamResult, userId: string) => Promise<void>
+  getUserExamHistory: (userId: string) => Promise<ExamResult[]>
+  getUserDetailedAnswers: (userId: string, attemptId?: string) => Promise<AttemptItem[]>
+  getCompanyExamStats: (companyCode: string) => Promise<{
+    totalExams: number
+    averageScore: number
+    passRate: number
+    recentExams: ExamResult[]
+  }>
   
   // Data management
   clearAllData: () => void
@@ -1187,6 +1201,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updateAttemptItem,
       getAttemptItems,
       selectRandomQuestions,
+      
+      // Exam data persistence (Supabase)
+      saveExamAttempt: ExamDataService.saveAttempt,
+      saveExamAttemptItem: ExamDataService.saveAttemptItem,
+      saveExamResult: ExamDataService.saveExamResult,
+      getUserExamHistory: ExamDataService.getUserExamHistory,
+      getUserDetailedAnswers: ExamDataService.getUserAttemptItems,
+      getCompanyExamStats: ExamDataService.getCompanyExamStats,
       
       // Data management
       clearAllData,
