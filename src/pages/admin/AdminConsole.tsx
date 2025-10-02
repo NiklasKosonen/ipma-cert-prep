@@ -304,7 +304,38 @@ const AdminConsole: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Console</h1>
+        {/* Admin Navigation Menu */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="p-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Admin Console</h1>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="/admin"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                🏠 Admin Dashboard
+              </a>
+              <a
+                href="/user"
+                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+              >
+                👤 User View
+              </a>
+              <a
+                href="/trainer"
+                className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+              >
+                🎓 Trainer View
+              </a>
+              <a
+                href="/"
+                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+              >
+                🏡 Landing Page
+              </a>
+            </div>
+          </div>
+        </div>
         
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
