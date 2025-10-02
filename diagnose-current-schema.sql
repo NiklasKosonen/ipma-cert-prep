@@ -16,8 +16,7 @@ ORDER BY table_name;
 SELECT 
     schemaname,
     tablename,
-    rowsecurity as rls_enabled,
-    hasrls as has_rls
+    rowsecurity as rls_enabled
 FROM pg_tables 
 WHERE schemaname = 'public' 
 ORDER BY tablename;
