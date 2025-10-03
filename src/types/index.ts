@@ -173,6 +173,8 @@ export interface Attempt {
   status: 'in_progress' | 'completed' | 'timeout' | 'abandoned'
   totalTime: number // in minutes
   timeRemaining: number // in seconds
+  score?: number
+  passed?: boolean
   submittedAt?: string
   createdAt: string
   updatedAt: string

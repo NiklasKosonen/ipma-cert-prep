@@ -8,7 +8,7 @@ import { Attempt } from '../../types'
 
 export const UserHome = () => {
   const { t } = useLanguage()
-  const { topics, subtopics, getUserAttempts, getAttemptItems, selectRandomQuestions, createAttempt } = useData()
+  const { topics, subtopics, getUserAttempts, selectRandomQuestions, createAttempt } = useData()
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   
@@ -30,14 +30,12 @@ export const UserHome = () => {
 
   // Get user's actual attempts (async)
   const [userAttempts, setUserAttempts] = useState<Attempt[]>([])
-  const [attemptsLoading, setAttemptsLoading] = useState(true)
   
   // Load user attempts
   useEffect(() => {
     const loadUserAttempts = async () => {
       if (!user) {
         setUserAttempts([])
-        setAttemptsLoading(false)
         return
       }
       
@@ -47,8 +45,6 @@ export const UserHome = () => {
       } catch (error) {
         console.error('Error loading user attempts:', error)
         setUserAttempts([])
-      } finally {
-        setAttemptsLoading(false)
       }
     }
     

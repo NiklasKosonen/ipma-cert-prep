@@ -40,7 +40,6 @@ export const TraineeDashboard: React.FC = () => {
 
   // Get all student attempts (async)
   const [allStudentAttempts, setAllStudentAttempts] = useState<Attempt[]>([]);
-  const [attemptsLoading, setAttemptsLoading] = useState(true);
 
   useEffect(() => {
     const loadStudentAttempts = async () => {
@@ -57,8 +56,6 @@ export const TraineeDashboard: React.FC = () => {
       } catch (error) {
         console.error('Error loading student attempts:', error);
         setAllStudentAttempts([]);
-      } finally {
-        setAttemptsLoading(false);
       }
     };
 
