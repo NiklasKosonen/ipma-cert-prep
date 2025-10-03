@@ -31,60 +31,67 @@ const Exam: React.FC = () => {
 
   // Load attempt and questions
   useEffect(() => {
-    if (!attemptId) {
-      console.log('❌ No attemptId provided')
-      navigate('/exam-selection')
-      return
-    }
-
-    if (!user) {
-      console.log('❌ No user authenticated')
-      
-      // If still loading, wait a bit more
-      if (loading) {
-        console.log('⏳ Auth still loading, will retry...')
+    const loadExam = async () => {
+      if (!attemptId) {
+        console.log('❌ No attemptId provided')
+        navigate('/exam-selection')
         return
       }
-      
-      console.log('❌ No user found, redirecting to login')
-      navigate('/auth/company')
-      return
+
+      if (!user) {
+        console.log('❌ No user authenticated')
+        
+        // If still loading, wait a bit more
+        if (loading) {
+          console.log('⏳ Auth still loading, will retry...')
+          return
+        }
+        
+        console.log('❌ No user found, redirecting to login')
+        navigate('/auth/company')
+        return
+      }
+
+      console.log('🔍 Looking for attempt:', attemptId, 'for user:', user.id)
+
+      try {
+        const currentAttempt = await getAttempt(attemptId)
+        console.log('🔍 Attempt lookup result:', currentAttempt)
+        
+        if (!currentAttempt) {
+          console.log('❌ Attempt not found:', attemptId)
+          navigate('/exam-selection')
+          return
+        }
+
+        console.log('✅ Found attempt:', currentAttempt.id, 'with', currentAttempt.selectedQuestionIds.length, 'questions')
+
+        setAttempt(currentAttempt)
+        setTimeRemaining(currentAttempt.timeRemaining)
+
+        // Load questions for this attempt
+        const attemptQuestions = currentAttempt.selectedQuestionIds
+          .map(id => questions.find(q => q.id === id))
+          .filter((q): q is Question => q !== undefined)
+
+        console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
+
+        setExamQuestions(attemptQuestions)
+
+        // Load existing answers
+        const existingItems = await getAttemptItems(attemptId)
+        const existingAnswers: Record<string, string> = {}
+        existingItems.forEach(item => {
+          existingAnswers[item.questionId] = item.answer
+        })
+        setAnswers(existingAnswers)
+      } catch (error) {
+        console.error('Error loading exam:', error)
+        navigate('/exam-selection')
+      }
     }
 
-    console.log('🔍 Looking for attempt:', attemptId, 'for user:', user.id)
-
-    const currentAttempt = getAttempt(attemptId)
-    console.log('🔍 Attempt lookup result:', currentAttempt)
-    
-    if (!currentAttempt) {
-      console.log('❌ Attempt not found:', attemptId)
-      console.log('❌ Available attempts for user:', getUserAttempts(user.id))
-      console.log('❌ All users:', users.map(u => ({ id: u.id, email: u.email })))
-      navigate('/exam-selection')
-      return
-    }
-
-    console.log('✅ Found attempt:', currentAttempt.id, 'with', currentAttempt.selectedQuestionIds.length, 'questions')
-
-    setAttempt(currentAttempt)
-    setTimeRemaining(currentAttempt.timeRemaining)
-
-    // Load questions for this attempt
-    const attemptQuestions = currentAttempt.selectedQuestionIds
-      .map(id => questions.find(q => q.id === id))
-      .filter((q): q is Question => q !== undefined)
-
-    console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
-
-    setExamQuestions(attemptQuestions)
-
-    // Load existing answers
-    const existingItems = getAttemptItems(attemptId)
-    const existingAnswers: Record<string, string> = {}
-    existingItems.forEach(item => {
-      existingAnswers[item.questionId] = item.answer
-    })
-    setAnswers(existingAnswers)
+    loadExam()
   }, [attemptId, getAttempt, questions, getAttemptItems, navigate, user, loading])
 
   // Submit exam
@@ -95,14 +102,14 @@ const Exam: React.FC = () => {
 
     try {
       // Update attempt status
-      updateAttempt(attempt.id, {
+      await updateAttempt(attempt.id, {
         status: 'completed',
         endTime: new Date().toISOString(),
         timeRemaining: 0
       })
 
       // Evaluate each answer
-      const attemptItems = getAttemptItems(attemptId)
+      const attemptItems = await getAttemptItems(attemptId)
       const questionResults: AttemptItem[] = []
 
       for (const question of examQuestions) {
@@ -140,9 +147,9 @@ const Exam: React.FC = () => {
           }
 
           if (existingItem) {
-            updateAttemptItem(existingItem.id, result)
+            await updateAttemptItem(existingItem.id, result)
           } else {
-            createAttemptItem(attemptId, question.id, answer)
+            await createAttemptItem(attemptId, question.id, answer)
           }
 
           questionResults.push(result)

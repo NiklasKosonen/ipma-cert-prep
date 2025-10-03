@@ -82,7 +82,7 @@ export const UserHome = () => {
   }
 
   // Start exam from popup
-  const handleStartExam = () => {
+  const handleStartExam = async () => {
     console.log('🚀 Start Exam clicked, user:', user?.email, 'role:', user?.role, 'loading:', loading)
     console.log('🚀 User object details:', { 
       id: user?.id, 
@@ -112,8 +112,8 @@ export const UserHome = () => {
         return
       }
 
-      // Create attempt record
-      const attempt = createAttempt(user.id, selectedTopic.id, selectedQuestionIds)
+      // Create attempt record in Supabase
+      const attempt = await createAttempt(user.id, selectedTopic.id, selectedQuestionIds)
       
       console.log('🚀 Starting exam:', {
         attemptId: attempt.id,

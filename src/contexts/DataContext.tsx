@@ -145,15 +145,15 @@ interface DataContextType {
   checkSubscriptionExpiry: () => { expired: UserProfile[], expiringSoon: UserProfile[] }
   updateSubscriptionReminderStatus: (subscriptionId: string, reminderType: 'sevenDays' | 'oneDay') => void
   
-  // User-specific attempt management
-  getUserAttempts: (userId: string) => Attempt[]
-  getUserAttemptItems: (userId: string) => AttemptItem[]
-  createAttempt: (userId: string, topicId: string, selectedQuestionIds: string[]) => Attempt
-  updateAttempt: (id: string, updates: Partial<Attempt>) => void
-  getAttempt: (id: string) => Attempt | undefined
-  createAttemptItem: (attemptId: string, questionId: string, answer: string) => AttemptItem
-  updateAttemptItem: (id: string, updates: Partial<AttemptItem>) => void
-  getAttemptItems: (attemptId: string) => AttemptItem[]
+  // User-specific attempt management (Supabase)
+  getUserAttempts: (userId: string) => Promise<Attempt[]>
+  getUserAttemptItems: (userId: string) => Promise<AttemptItem[]>
+  createAttempt: (userId: string, topicId: string, selectedQuestionIds: string[]) => Promise<Attempt>
+  updateAttempt: (id: string, updates: Partial<Attempt>) => Promise<void>
+  getAttempt: (id: string) => Promise<Attempt | undefined>
+  createAttemptItem: (attemptId: string, questionId: string, answer: string) => Promise<AttemptItem>
+  updateAttemptItem: (id: string, updates: Partial<AttemptItem>) => Promise<void>
+  getAttemptItems: (attemptId: string) => Promise<AttemptItem[]>
   selectRandomQuestions: (topicId: string) => string[]
   
   // Exam data persistence (Supabase)
@@ -1102,17 +1102,50 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     })
   }
 
-  const getUserAttempts = (userId: string): Attempt[] => {
-    const attempts = loadFromStorage(STORAGE_KEYS.attempts(userId), [])
-    return attempts
+  const getUserAttempts = async (userId: string): Promise<Attempt[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching user attempts:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Error in getUserAttempts:', error)
+      return []
+    }
   }
 
-  const getUserAttemptItems = (userId: string): AttemptItem[] => {
-    const attemptItems = loadFromStorage(STORAGE_KEYS.attemptItems(userId), [])
-    return attemptItems
+  const getUserAttemptItems = async (userId: string): Promise<AttemptItem[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('attempt_items')
+        .select(`
+          *,
+          attempts!inner(user_id)
+        `)
+        .eq('attempts.user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching user attempt items:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Error in getUserAttemptItems:', error)
+      return []
+    }
   }
 
-  const createAttempt = (userId: string, topicId: string, selectedQuestionIds: string[]): Attempt => {
+  const createAttempt = async (userId: string, topicId: string, selectedQuestionIds: string[]): Promise<Attempt> => {
     const newAttempt: Attempt = {
       id: `attempt_${Date.now()}`,
       userId,
@@ -1126,85 +1159,87 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     
-    const attempts = getUserAttempts(userId)
-    const updatedAttempts = [...attempts, newAttempt]
-    saveToStorage(STORAGE_KEYS.attempts(userId), updatedAttempts)
-    
-    return newAttempt
-  }
-
-  const updateAttempt = (id: string, updates: Partial<Attempt>) => {
-    // Find the user who owns this attempt
-    const allUsers = users
-    let attemptOwner: string | null = null
-    
-    for (const user of allUsers) {
-      const userAttempts = getUserAttempts(user.id)
-      if (userAttempts.some(attempt => attempt.id === id)) {
-        attemptOwner = user.id
-        break
-      }
-    }
-    
-    if (attemptOwner) {
-      const attempts = getUserAttempts(attemptOwner)
-      const updatedAttempts = attempts.map(attempt => 
-        attempt.id === id 
-          ? { ...attempt, ...updates, updatedAt: new Date().toISOString() }
-          : attempt
-      )
-      saveToStorage(STORAGE_KEYS.attempts(attemptOwner), updatedAttempts)
-    }
-  }
-
-  const getAttempt = (id: string): Attempt | undefined => {
-    console.log('🔍 getAttempt called with id:', id)
-    console.log('🔍 Available users:', users.map(u => ({ id: u.id, email: u.email })))
-    
-    // Try to find attempt across all users
-    for (const user of users) {
-      const userAttempts = getUserAttempts(user.id)
-      console.log(`🔍 Checking user ${user.email} (${user.id}):`, userAttempts.length, 'attempts')
-      const attempt = userAttempts.find(attempt => attempt.id === id)
-      if (attempt) {
-        console.log('✅ Found attempt for user:', user.email)
-        return attempt
-      }
-    }
-    
-    // Also check localStorage directly for any attempts
     try {
-      const keys = Object.keys(localStorage)
-      const attemptKeys = keys.filter(key => key.startsWith('ipma_attempts_'))
-      
-      for (const key of attemptKeys) {
-        const stored = localStorage.getItem(key)
-        if (stored) {
-          const attempts = JSON.parse(stored)
-          if (Array.isArray(attempts)) {
-            const attempt = attempts.find((a: any) => a.id === id)
-            if (attempt) {
-              console.log('📝 Found attempt in localStorage:', attempt.id)
-              return attempt
-            }
-          } else if (typeof stored === 'object' && stored && 'data' in stored && Array.isArray((stored as any).data)) {
-            const attempt = (stored as any).data.find((a: any) => a.id === id)
-            if (attempt) {
-              console.log('📝 Found attempt in localStorage (with data wrapper):', attempt.id)
-              return attempt
-            }
-          }
-        }
+      const { error } = await supabase
+        .from('attempts')
+        .insert({
+          id: newAttempt.id,
+          user_id: newAttempt.userId,
+          topic_id: newAttempt.topicId,
+          selected_question_ids: newAttempt.selectedQuestionIds,
+          status: newAttempt.status,
+          start_time: newAttempt.startTime,
+          total_time: newAttempt.totalTime,
+          time_remaining: newAttempt.timeRemaining,
+          created_at: newAttempt.createdAt,
+          updated_at: newAttempt.updatedAt
+        })
+
+      if (error) {
+        console.error('Error creating attempt:', error)
+        throw new Error(`Failed to create attempt: ${error.message}`)
       }
+
+      console.log('✅ Attempt created in Supabase:', newAttempt.id)
+    return newAttempt
     } catch (error) {
-      console.error('Error searching localStorage for attempt:', error)
+      console.error('Error in createAttempt:', error)
+      throw error
     }
-    
-    console.log('❌ Attempt not found:', id)
-    return undefined
   }
 
-  const createAttemptItem = (attemptId: string, questionId: string, answer: string): AttemptItem => {
+  const updateAttempt = async (id: string, updates: Partial<Attempt>) => {
+    try {
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('attempts')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error updating attempt:', error)
+        throw new Error(`Failed to update attempt: ${error.message}`)
+      }
+
+      console.log('✅ Attempt updated in Supabase:', id)
+    } catch (error) {
+      console.error('Error in updateAttempt:', error)
+      throw error
+    }
+  }
+
+  const getAttempt = async (id: string): Promise<Attempt | undefined> => {
+    console.log('🔍 getAttempt called with id:', id)
+    
+    try {
+      const { data, error } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('❌ Attempt not found in Supabase:', id)
+          return undefined
+        }
+        console.error('Error fetching attempt:', error)
+        return undefined
+      }
+
+      console.log('✅ Found attempt in Supabase:', data.id)
+      return data
+    } catch (error) {
+      console.error('Error in getAttempt:', error)
+      return undefined
+    }
+  }
+
+  const createAttemptItem = async (attemptId: string, questionId: string, answer: string): Promise<AttemptItem> => {
     const newAttemptItem: AttemptItem = {
       id: `attempt_item_${Date.now()}`,
       attemptId,
@@ -1221,59 +1256,77 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: new Date().toISOString(),
     }
     
-    // Find the user who owns this attempt
-    const allUsers = users
-    let attemptOwner: string | null = null
-    
-    for (const user of allUsers) {
-      const userAttempts = getUserAttempts(user.id)
-      if (userAttempts.some(attempt => attempt.id === attemptId)) {
-        attemptOwner = user.id
-        break
-      }
-    }
-    
-    if (attemptOwner) {
-      const attemptItems = getUserAttemptItems(attemptOwner)
-      const updatedAttemptItems = [...attemptItems, newAttemptItem]
-      saveToStorage(STORAGE_KEYS.attemptItems(attemptOwner), updatedAttemptItems)
-    }
-    
-    return newAttemptItem
-  }
+    try {
+      const { error } = await supabase
+        .from('attempt_items')
+        .insert({
+          id: newAttemptItem.id,
+          attempt_id: newAttemptItem.attemptId,
+          question_id: newAttemptItem.questionId,
+          answer: newAttemptItem.answer,
+          score: newAttemptItem.score,
+          feedback: newAttemptItem.feedback,
+          is_evaluated: newAttemptItem.isEvaluated,
+          duration_sec: newAttemptItem.durationSec,
+          created_at: newAttemptItem.createdAt,
+          updated_at: newAttemptItem.updatedAt
+        })
 
-  const updateAttemptItem = (id: string, updates: Partial<AttemptItem>) => {
-    // Find the user who owns this attempt item
-    const allUsers = users
-    let attemptOwner: string | null = null
-    
-    for (const user of allUsers) {
-      const userAttemptItems = getUserAttemptItems(user.id)
-      if (userAttemptItems.some(item => item.id === id)) {
-        attemptOwner = user.id
-        break
+      if (error) {
+        console.error('Error creating attempt item:', error)
+        throw new Error(`Failed to create attempt item: ${error.message}`)
       }
-    }
-    
-    if (attemptOwner) {
-      const attemptItems = getUserAttemptItems(attemptOwner)
-      const updatedAttemptItems = attemptItems.map(item => 
-        item.id === id 
-          ? { ...item, ...updates, updatedAt: new Date().toISOString() }
-          : item
-      )
-      saveToStorage(STORAGE_KEYS.attemptItems(attemptOwner), updatedAttemptItems)
+
+      console.log('✅ Attempt item created in Supabase:', newAttemptItem.id)
+      return newAttemptItem
+    } catch (error) {
+      console.error('Error in createAttemptItem:', error)
+      throw error
     }
   }
 
-  const getAttemptItems = (attemptId: string): AttemptItem[] => {
-    const allUsers = users
-    for (const user of allUsers) {
-      const userAttemptItems = getUserAttemptItems(user.id)
-      const items = userAttemptItems.filter(item => item.attemptId === attemptId)
-      if (items.length > 0) return items
+  const updateAttemptItem = async (id: string, updates: Partial<AttemptItem>) => {
+    try {
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('attempt_items')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error updating attempt item:', error)
+        throw new Error(`Failed to update attempt item: ${error.message}`)
+      }
+
+      console.log('✅ Attempt item updated in Supabase:', id)
+    } catch (error) {
+      console.error('Error in updateAttemptItem:', error)
+      throw error
     }
-    return []
+  }
+
+  const getAttemptItems = async (attemptId: string): Promise<AttemptItem[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('attempt_items')
+        .select('*')
+        .eq('attempt_id', attemptId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching attempt items:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Error in getAttemptItems:', error)
+      return []
+    }
   }
 
   const selectRandomQuestions = (topicId: string): string[] => {
