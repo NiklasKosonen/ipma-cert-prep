@@ -22,6 +22,7 @@ import TrainerDashboardComponent from './pages/trainer/TrainerDashboard'
 import { UserHome } from './pages/user/Home'
 import { Practice } from './pages/user/Practice'
 import { UserHistory } from './pages/user/History'
+import Profile from './pages/user/Profile'
 
 // Lazy load heavy components
 const ExamSelection = lazy(() => import('./pages/user/ExamSelection'))
@@ -152,6 +153,16 @@ function AppContent() {
             <ProtectedRoute allowedRoles={["user"]}>
               <ProtectedLayout>
                 <UserHistory />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/profile"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <ProtectedLayout>
+                <Profile />
               </ProtectedLayout>
             </ProtectedRoute>
           }

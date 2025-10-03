@@ -113,6 +113,16 @@ export const Header = () => {
                     <div className="px-4 py-3 text-xs font-semibold text-gray-500 border-b border-gray-100 uppercase tracking-wide">
                       {user.role} Account
                     </div>
+                    {user.role === 'user' && (
+                      <Link
+                        to="/app/profile"
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <User className="w-4 h-4" />
+                        <span>My Profile</span>
+                      </Link>
+                    )}
                     <button
                       onClick={handleSignOut}
                       className="w-full text-left px-4 py-3 text-sm text-error-600 hover:bg-error-50 flex items-center space-x-3 transition-colors"

@@ -151,7 +151,12 @@ const Exam: React.FC = () => {
           if (existingItem) {
             await updateAttemptItem(existingItem.id, result)
           } else {
-            await createAttemptItem(attemptId, question.id, answer)
+            await createAttemptItem(attemptId, question.id, answer, {
+              kpisDetected: evaluation.toteutuneet_kpi,
+              kpisMissing: evaluation.puuttuvat_kpi,
+              score: evaluation.pisteet,
+              feedback: evaluation.sanallinen_arvio
+            })
           }
 
           questionResults.push(result)

@@ -151,7 +151,12 @@ interface DataContextType {
   createAttempt: (userId: string, topicId: string, selectedQuestionIds: string[]) => Promise<Attempt>
   updateAttempt: (id: string, updates: Partial<Attempt>) => Promise<void>
   getAttempt: (id: string) => Promise<Attempt | undefined>
-  createAttemptItem: (attemptId: string, questionId: string, answer: string) => Promise<AttemptItem>
+  createAttemptItem: (attemptId: string, questionId: string, answer: string, evaluationData?: {
+    kpisDetected: string[],
+    kpisMissing: string[],
+    score: number,
+    feedback: string
+  }) => Promise<AttemptItem>
   updateAttemptItem: (id: string, updates: Partial<AttemptItem>) => Promise<void>
   getAttemptItems: (attemptId: string) => Promise<AttemptItem[]>
   selectRandomQuestions: (topicId: string) => string[]
@@ -1262,22 +1267,32 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return mappedAttempt
     } catch (error) {
       console.error('Error in getAttempt:', error)
-      return undefined
+    return undefined
     }
   }
 
-  const createAttemptItem = async (attemptId: string, questionId: string, answer: string): Promise<AttemptItem> => {
+  const createAttemptItem = async (
+    attemptId: string, 
+    questionId: string, 
+    answer: string, 
+    evaluationData?: {
+      kpisDetected: string[],
+      kpisMissing: string[],
+      score: number,
+      feedback: string
+    }
+  ): Promise<AttemptItem> => {
     const newAttemptItem: AttemptItem = {
       id: crypto.randomUUID(), // Use UUID instead of string ID
       attemptId,
       questionId,
       answer,
-      kpisDetected: [],
-      kpisMissing: [],
-      score: 0,
+      kpisDetected: evaluationData?.kpisDetected || [],
+      kpisMissing: evaluationData?.kpisMissing || [],
+      score: evaluationData?.score || 0,
       maxScore: 3,
-      feedback: '',
-      isEvaluated: false,
+      feedback: evaluationData?.feedback || '',
+      isEvaluated: !!evaluationData,
       durationSec: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1295,6 +1310,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           feedback: newAttemptItem.feedback,
           is_evaluated: newAttemptItem.isEvaluated,
           duration_sec: newAttemptItem.durationSec,
+          kpis_detected: newAttemptItem.kpisDetected,
+          kpis_missing: newAttemptItem.kpisMissing,
           created_at: newAttemptItem.createdAt,
           updated_at: newAttemptItem.updatedAt
         })
@@ -1314,10 +1331,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAttemptItem = async (id: string, updates: Partial<AttemptItem>) => {
     try {
-      const updateData = {
-        ...updates,
+      // Map application fields to database fields
+      const updateData: any = {
         updated_at: new Date().toISOString()
       }
+      
+      // Map camelCase to snake_case
+      if (updates.answer !== undefined) updateData.answer = updates.answer
+      if (updates.score !== undefined) updateData.score = updates.score
+      if (updates.feedback !== undefined) updateData.feedback = updates.feedback
+      if (updates.isEvaluated !== undefined) updateData.is_evaluated = updates.isEvaluated
+      if (updates.durationSec !== undefined) updateData.duration_sec = updates.durationSec
+      if (updates.kpisDetected !== undefined) updateData.kpis_detected = updates.kpisDetected
+      if (updates.kpisMissing !== undefined) updateData.kpis_missing = updates.kpisMissing
 
       const { error } = await supabase
         .from('attempt_items')
@@ -1349,7 +1375,24 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return []
       }
 
-      return data || []
+      // Map database fields to application interface
+      const mappedItems: AttemptItem[] = (data || []).map((item: any) => ({
+        id: item.id,
+        attemptId: item.attempt_id,
+        questionId: item.question_id,
+        answer: item.answer || '',
+        kpisDetected: item.kpis_detected || [],
+        kpisMissing: item.kpis_missing || [],
+        score: item.score || 0,
+        maxScore: item.max_score || 3,
+        feedback: item.feedback || '',
+        isEvaluated: item.is_evaluated || false,
+        durationSec: item.duration_sec || 0,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }))
+      
+      return mappedItems
     } catch (error) {
       console.error('Error in getAttemptItems:', error)
     return []
@@ -1357,23 +1400,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const selectRandomQuestions = (topicId: string): string[] => {
+    console.log('🔍 selectRandomQuestions called for topicId:', topicId)
+    console.log('🔍 Total subtopics available:', subtopics.length)
+    console.log('🔍 Total questions available:', questions.length)
+    
     // Get all subtopics for this topic
     const topicSubtopics = subtopics.filter(s => s.topicId === topicId && s.isActive)
+    console.log('🔍 Topic subtopics found:', topicSubtopics.length, topicSubtopics.map(s => ({ id: s.id, title: s.title })))
     
     // Select one random question from each subtopic
     const selectedQuestions: string[] = []
     
     for (const subtopic of topicSubtopics) {
       const subtopicQuestions = questions.filter(q => q.subtopicId === subtopic.id && q.isActive)
+      console.log(`🔍 Subtopic "${subtopic.title}" has ${subtopicQuestions.length} questions`)
       
       if (subtopicQuestions.length > 0) {
         // Randomly select one question from this subtopic
         const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
-        selectedQuestions.push(subtopicQuestions[randomIndex].id)
+        const selectedQuestion = subtopicQuestions[randomIndex]
+        selectedQuestions.push(selectedQuestion.id)
+        console.log(`✅ Selected question: "${selectedQuestion.prompt.substring(0, 50)}..."`)
+      } else {
+        console.log(`❌ No questions found for subtopic: ${subtopic.title}`)
       }
     }
     
     console.log(`📝 Selected ${selectedQuestions.length} questions from ${topicSubtopics.length} subtopics for topic ${topicId}`)
+    console.log('🔍 Selected question IDs:', selectedQuestions)
     return selectedQuestions
   }
 
