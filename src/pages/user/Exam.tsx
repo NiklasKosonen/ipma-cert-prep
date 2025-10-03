@@ -128,8 +128,13 @@ const Exam: React.FC = () => {
           
           console.log('🔍 Evaluating answer for question:', question.prompt.substring(0, 50))
           console.log('🔍 Connected KPI IDs:', question.connectedKPIs)
+          console.log('🔍 All available KPIs:', kpis.map(k => ({ id: k.id, name: k.name, subtopicId: k.subtopicId })))
           console.log('🔍 KPI Names to detect:', kpiNames)
           console.log('🔍 User answer:', answer.substring(0, 100))
+          
+          if (kpiNames.length === 0) {
+            console.error('❌ No KPIs found for question! Check KPI-subtopic linking in admin panel.')
+          }
           
           // Evaluate the answer
           const evaluation = await evaluateAnswer(answer, kpiNames)

@@ -51,6 +51,12 @@ const evaluateWithOpenAI = async (answer: string, kpis: string[]): Promise<Evalu
     throw new Error('OpenAI API key not found. Please set VITE_OPENAI_API_KEY in your environment variables.')
   }
 
+  // Check if KPIs are provided
+  if (!kpis || kpis.length === 0) {
+    console.warn('⚠️ No KPIs provided for evaluation, using fallback')
+    throw new Error('No KPIs provided for evaluation')
+  }
+
   const prompt = `You are an expert evaluator for IPMA Level C certification exams. Your task is to evaluate a student's answer and detect which Key Performance Indicators (KPIs) are mentioned or demonstrated.
 
 KPIs to detect: ${kpis.join(', ')}
@@ -78,49 +84,81 @@ Scoring criteria:
 
 Be generous in detecting KPIs - look for synonyms, related concepts, and implied understanding.`
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert evaluator for IPMA Level C certification exams. Always respond with valid JSON.'
+  // Add retry logic for rate limiting
+  const maxRetries = 3
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🤖 OpenAI API attempt ${attempt}/${maxRetries}`)
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
-        {
-          role: 'user',
-          content: prompt
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert evaluator for IPMA Level C certification exams. Always respond with valid JSON.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 500
+        })
+      })
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          // Rate limit - wait and retry
+          const waitTime = Math.pow(2, attempt) * 1000 // Exponential backoff
+          console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
         }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
-    })
-  })
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
+      }
 
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
-  }
-
-  const data = await response.json()
-  const content = data.choices[0].message.content
-  
-  try {
-    const result = JSON.parse(content)
-    
-    return {
-      toteutuneet_kpi: result.detected_kpis || [],
-      puuttuvat_kpi: result.missing_kpis || [],
-      pisteet: result.score || 0,
-      sanallinen_arvio: result.feedback || 'No feedback provided'
+      // Success - break out of retry loop
+      const data = await response.json()
+      const content = data.choices[0].message.content
+      
+      try {
+        const result = JSON.parse(content)
+        
+        return {
+          toteutuneet_kpi: result.detected_kpis || [],
+          puuttuvat_kpi: result.missing_kpis || [],
+          pisteet: result.score || 0,
+          sanallinen_arvio: result.feedback || 'No feedback provided'
+        }
+      } catch (parseError) {
+        console.error('Failed to parse OpenAI response:', content)
+        throw new Error('Invalid response format from OpenAI')
+      }
+    } catch (error) {
+      lastError = error as Error
+      console.error(`❌ OpenAI API attempt ${attempt} failed:`, error)
+      
+      if (attempt === maxRetries) {
+        throw lastError
+      }
+      
+      // Wait before retry
+      const waitTime = Math.pow(2, attempt) * 1000
+      console.log(`⏳ Waiting ${waitTime}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, waitTime))
     }
-  } catch (parseError) {
-    console.error('Failed to parse OpenAI response:', content)
-    throw new Error('Invalid response format from OpenAI')
   }
+
+  throw lastError || new Error('All retry attempts failed')
 }
 
 /**
