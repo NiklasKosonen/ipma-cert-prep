@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { Question, Attempt, AttemptItem } from '../../types'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
@@ -9,6 +10,7 @@ const Exam: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>()
   const navigate = useNavigate()
   const { user, loading } = useAuth()
+  const { language } = useLanguage()
   const { 
     getAttempt, 
     updateAttempt, 
@@ -161,7 +163,7 @@ const Exam: React.FC = () => {
           }
           
           // Evaluate the answer
-          const evaluation = await evaluateAnswer(answer, kpiNames)
+          const evaluation = await evaluateAnswer(answer, kpiNames, language)
           
           const result: AttemptItem = existingItem ? {
             ...existingItem,

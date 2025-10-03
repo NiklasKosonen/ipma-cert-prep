@@ -15,13 +15,14 @@ let aiModel = {
   learnedPatterns: new Map<string, string[]>(), // KPI name -> learned variations
   contextPatterns: new Map<string, string[]>(), // Context -> related KPIs
 }
-export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<EvaluationResult> => {
+export const evaluateAnswer = async (answer: string, kpis: string[], language: string = 'fi'): Promise<EvaluationResult> => {
   console.log('🤖 OpenAI Evaluation - Answer:', answer.substring(0, 100))
   console.log('🤖 OpenAI Evaluation - KPIs to detect:', kpis)
+  console.log('🤖 OpenAI Evaluation - Language:', language)
   
   try {
     // Use OpenAI API for evaluation
-    const evaluation = await evaluateWithOpenAI(answer, kpis)
+    const evaluation = await evaluateWithOpenAI(answer, kpis, language)
     console.log('✅ OpenAI Evaluation Result:', evaluation)
     return evaluation
   } catch (error) {
@@ -32,7 +33,7 @@ export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<Ev
     const detectedKPIs = detectKPIs(answer, kpis)
     const missingKPIs = kpis.filter(kpi => !detectedKPIs.includes(kpi))
     const score = calculateScore(detectedKPIs.length)
-    const feedback = generateFeedback(detectedKPIs, missingKPIs, score)
+    const feedback = generateFeedback(detectedKPIs, missingKPIs, score, language)
 
     return {
       toteutuneet_kpi: detectedKPIs,
@@ -44,7 +45,7 @@ export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<Ev
 }
 
 // OpenAI-based evaluation function
-const evaluateWithOpenAI = async (answer: string, kpis: string[]): Promise<EvaluationResult> => {
+const evaluateWithOpenAI = async (answer: string, kpis: string[], language: string = 'fi'): Promise<EvaluationResult> => {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   
   if (!apiKey) {
@@ -57,6 +58,9 @@ const evaluateWithOpenAI = async (answer: string, kpis: string[]): Promise<Evalu
     throw new Error('No KPIs provided for evaluation')
   }
 
+  const isFinnish = language === 'fi'
+  const feedbackLanguage = isFinnish ? 'Finnish' : 'English'
+  
   const prompt = `You are an expert evaluator for IPMA Level C certification exams. Your task is to evaluate a student's answer and detect which Key Performance Indicators (KPIs) are mentioned or demonstrated.
 
 KPIs to detect: ${kpis.join(', ')}
@@ -73,7 +77,7 @@ Return your response as a JSON object with this exact structure:
   "detected_kpis": ["list of KPI names that were found"],
   "missing_kpis": ["list of KPI names that were not found"],
   "score": number (0-3),
-  "feedback": "constructive feedback in Finnish"
+  "feedback": "constructive feedback in ${feedbackLanguage}"
 }
 
 Scoring criteria:
@@ -82,7 +86,9 @@ Scoring criteria:
 - 1 point: 1 KPI addressed
 - 0 points: No KPIs addressed or answer is irrelevant
 
-Be generous in detecting KPIs - look for synonyms, related concepts, and implied understanding.`
+Be generous in detecting KPIs - look for synonyms, related concepts, and implied understanding.
+
+IMPORTANT: The feedback must be written in ${feedbackLanguage}.`
 
   // Add retry logic for rate limiting
   const maxRetries = 3
@@ -354,23 +360,41 @@ const extractPhrases = (text: string): string[] => {
 const generateFeedback = (
   detectedKPIs: string[], 
   missingKPIs: string[], 
-  score: number
+  score: number,
+  language: string = 'fi'
 ): string => {
   const detectedNames = detectedKPIs
+  const isFinnish = language === 'fi'
   
   if (score === 3) {
-    return `Excellent work! You've covered all the key areas: ${detectedNames.join(', ')}. Your answer demonstrates comprehensive understanding of the topic. The AI has successfully detected these KPIs even with variations in wording.`
+    if (isFinnish) {
+      return `Erinomaista työtä! Olet käsitellyt kaikki keskeiset alueet: ${detectedNames.join(', ')}. Vastauksesi osoittaa kattavaa ymmärrystä aiheesta. Tekoäly onnistui tunnistamaan nämä KPI:t vaikka sanamuodot vaihtelivat.`
+    } else {
+      return `Excellent work! You've covered all the key areas: ${detectedNames.join(', ')}. Your answer demonstrates comprehensive understanding of the topic. The AI has successfully detected these KPIs even with variations in wording.`
+    }
   }
   
   if (score === 2) {
-    return `Good effort! You've addressed ${detectedNames.join(' and ')}, which shows solid understanding. The AI detected these concepts even though they weren't written exactly as the KPI names. Consider also discussing ${missingKPIs.slice(0, 2).join(' and ')} to strengthen your response.`
+    if (isFinnish) {
+      return `Hyvä yritys! Olet käsitellyt ${detectedNames.join(' ja ')}, mikä osoittaa vankkaa ymmärrystä. Tekoäly tunnisti nämä käsitteet vaikka ne eivät olleet kirjoitettu täsmälleen KPI-nimillä. Harkitse myös ${missingKPIs.slice(0, 2).join(' ja ')} käsittelemistä vahvistaaksesi vastaustasi.`
+    } else {
+      return `Good effort! You've addressed ${detectedNames.join(' and ')}, which shows solid understanding. The AI detected these concepts even though they weren't written exactly as the KPI names. Consider also discussing ${missingKPIs.slice(0, 2).join(' and ')} to strengthen your response.`
+    }
   }
   
   if (score === 1) {
-    return `You've made a start by mentioning ${detectedNames[0]}, which is good. The AI was able to detect this concept from your wording. To improve, try to incorporate ${missingKPIs.slice(0, 2).join(' and ')} in your answer for a more comprehensive response.`
+    if (isFinnish) {
+      return `Olet aloittanut hyvin mainitsemalla ${detectedNames[0]}, mikä on hyvä. Tekoäly pystyi tunnistamaan tämän käsitteen sanamuodostasi. Parantaaksesi vastausta, yritä sisällyttää ${missingKPIs.slice(0, 2).join(' ja ')} vastaukseesi kattavamman vastauksen saamiseksi.`
+    } else {
+      return `You've made a start by mentioning ${detectedNames[0]}, which is good. The AI was able to detect this concept from your wording. To improve, try to incorporate ${missingKPIs.slice(0, 2).join(' and ')} in your answer for a more comprehensive response.`
+    }
   }
   
-  return `Your answer could be strengthened by addressing key areas such as ${missingKPIs.slice(0, 3).join(', ')}. Consider providing more specific details and examples to demonstrate your understanding. The AI is trained to detect these concepts even with different wording.`
+  if (isFinnish) {
+    return `Vastaustasi voisi vahvistaa käsittelemällä keskeisiä alueita kuten ${missingKPIs.slice(0, 3).join(', ')}. Harkitse tarkempien yksityiskohtien ja esimerkkien antamista ymmärryksesi osoittamiseksi. Tekoäly on koulutettu tunnistamaan nämä käsitteet vaikka sanamuodot vaihtelisivat.`
+  } else {
+    return `Your answer could be strengthened by addressing key areas such as ${missingKPIs.slice(0, 3).join(', ')}. Consider providing more specific details and examples to demonstrate your understanding. The AI is trained to detect these concepts even with different wording.`
+  }
 }
 
 
