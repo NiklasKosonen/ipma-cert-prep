@@ -1408,26 +1408,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const topicSubtopics = subtopics.filter(s => s.topicId === topicId && s.isActive)
     console.log('🔍 Topic subtopics found:', topicSubtopics.length, topicSubtopics.map(s => ({ id: s.id, title: s.title })))
     
+    // Debug: Show all questions and their subtopic links
+    console.log('🔍 All questions with subtopic links:', questions.map(q => ({
+      id: q.id,
+      prompt: q.prompt.substring(0, 30),
+      subtopicId: q.subtopicId,
+      isActive: q.isActive
+    })))
+    
     // Select one random question from each subtopic
     const selectedQuestions: string[] = []
     
     for (const subtopic of topicSubtopics) {
       const subtopicQuestions = questions.filter(q => q.subtopicId === subtopic.id && q.isActive)
-      console.log(`🔍 Subtopic "${subtopic.title}" has ${subtopicQuestions.length} questions`)
+      console.log(`🔍 Subtopic "${subtopic.title}" (ID: ${subtopic.id}) has ${subtopicQuestions.length} questions`)
       
       if (subtopicQuestions.length > 0) {
         // Randomly select one question from this subtopic
         const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
         const selectedQuestion = subtopicQuestions[randomIndex]
         selectedQuestions.push(selectedQuestion.id)
-        console.log(`✅ Selected question: "${selectedQuestion.prompt.substring(0, 50)}..."`)
+        console.log(`✅ Selected question: "${selectedQuestion.prompt.substring(0, 50)}..." (ID: ${selectedQuestion.id})`)
       } else {
-        console.log(`❌ No questions found for subtopic: ${subtopic.title}`)
+        console.log(`❌ No questions found for subtopic: ${subtopic.title} (ID: ${subtopic.id})`)
+        console.log(`🔍 Available questions for this subtopic:`, questions.filter(q => q.subtopicId === subtopic.id))
       }
     }
     
     console.log(`📝 Selected ${selectedQuestions.length} questions from ${topicSubtopics.length} subtopics for topic ${topicId}`)
     console.log('🔍 Selected question IDs:', selectedQuestions)
+    
+    if (selectedQuestions.length === 0) {
+      console.error('❌ No questions selected! Check that:')
+      console.error('1. Topic has subtopics')
+      console.error('2. Subtopics have questions linked to them')
+      console.error('3. Questions are marked as active')
+    }
+    
     return selectedQuestions
   }
 

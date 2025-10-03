@@ -75,8 +75,22 @@ const Exam: React.FC = () => {
         console.log('🔍 Debug - selectedQuestionIds:', currentAttempt.selectedQuestionIds)
         console.log('🔍 Debug - available questions:', questions.length)
         console.log('🔍 Debug - attemptQuestions found:', attemptQuestions.length)
-        console.log('🔍 Debug - questions data:', questions.map(q => ({ id: q.id, prompt: q.prompt.substring(0, 50), subtopicId: q.subtopicId })))
-        console.log('🔍 Debug - subtopics data:', subtopics.map(s => ({ id: s.id, title: s.title, topicId: s.topicId })))
+        console.log('🔍 Debug - questions data:', questions.map(q => ({ 
+          id: q.id, 
+          prompt: q.prompt.substring(0, 50), 
+          subtopicId: q.subtopicId,
+          connectedKPIs: q.connectedKPIs 
+        })))
+        console.log('🔍 Debug - subtopics data:', subtopics.map(s => ({ 
+          id: s.id, 
+          title: s.title, 
+          topicId: s.topicId 
+        })))
+        console.log('🔍 Debug - KPIs data:', kpis.map(k => ({ 
+          id: k.id, 
+          name: k.name, 
+          subtopicId: k.subtopicId 
+        })))
 
         console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
 
@@ -122,18 +136,28 @@ const Exam: React.FC = () => {
 
         if (answer.trim()) {
           // Get KPI names from IDs
-          const kpiNames = question.connectedKPIs
+          let kpiNames = question.connectedKPIs
             .map(kpiId => kpis.find(kpi => kpi.id === kpiId)?.name)
             .filter(Boolean) as string[]
           
           console.log('🔍 Evaluating answer for question:', question.prompt.substring(0, 50))
           console.log('🔍 Connected KPI IDs:', question.connectedKPIs)
           console.log('🔍 All available KPIs:', kpis.map(k => ({ id: k.id, name: k.name, subtopicId: k.subtopicId })))
-          console.log('🔍 KPI Names to detect:', kpiNames)
+          console.log('🔍 KPI Names to detect (from question):', kpiNames)
+          
+          // Fallback: If no KPIs linked to question, get KPIs from subtopic
+          if (kpiNames.length === 0 && question.subtopicId) {
+            console.log('⚠️ No KPIs linked to question, trying to get KPIs from subtopic:', question.subtopicId)
+            const subtopicKPIs = kpis.filter(kpi => kpi.subtopicId === question.subtopicId)
+            kpiNames = subtopicKPIs.map(kpi => kpi.name)
+            console.log('🔍 KPI Names to detect (from subtopic):', kpiNames)
+          }
+          
+          console.log('🔍 Final KPI Names to detect:', kpiNames)
           console.log('🔍 User answer:', answer.substring(0, 100))
           
           if (kpiNames.length === 0) {
-            console.error('❌ No KPIs found for question! Check KPI-subtopic linking in admin panel.')
+            console.error('❌ No KPIs found for question or subtopic! Check KPI-subtopic linking in admin panel.')
           }
           
           // Evaluate the answer
