@@ -124,7 +124,9 @@ export const UserHome = () => {
 
     try {
       // Select random questions (one per subtopic)
+      console.log('🚀 Starting exam for topic:', selectedTopic.title, 'ID:', selectedTopic.id)
       const selectedQuestionIds = selectRandomQuestions(selectedTopic.id)
+      console.log('🚀 Selected question IDs:', selectedQuestionIds)
       
       if (selectedQuestionIds.length === 0) {
         alert('No questions available for this topic. Please add questions first.')

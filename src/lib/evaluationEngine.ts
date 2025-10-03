@@ -16,24 +16,110 @@ let aiModel = {
   contextPatterns: new Map<string, string[]>(), // Context -> related KPIs
 }
 export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<EvaluationResult> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
-  // Mock KPI detection based on keyword matching
-  const detectedKPIs = detectKPIs(answer, kpis)
-  const missingKPIs = kpis.filter(kpi => !detectedKPIs.includes(kpi))
-
-  // Calculate score based on KPI count rubric
-  const score = calculateScore(detectedKPIs.length)
+  console.log('🤖 OpenAI Evaluation - Answer:', answer.substring(0, 100))
+  console.log('🤖 OpenAI Evaluation - KPIs to detect:', kpis)
   
-  // Generate coaching feedback
-  const feedback = generateFeedback(detectedKPIs, missingKPIs, score)
+  try {
+    // Use OpenAI API for evaluation
+    const evaluation = await evaluateWithOpenAI(answer, kpis)
+    console.log('✅ OpenAI Evaluation Result:', evaluation)
+    return evaluation
+  } catch (error) {
+    console.error('❌ OpenAI Evaluation Error:', error)
+    
+    // Fallback to mock evaluation if OpenAI fails
+    console.log('🔄 Falling back to mock evaluation')
+    const detectedKPIs = detectKPIs(answer, kpis)
+    const missingKPIs = kpis.filter(kpi => !detectedKPIs.includes(kpi))
+    const score = calculateScore(detectedKPIs.length)
+    const feedback = generateFeedback(detectedKPIs, missingKPIs, score)
 
-  return {
-    toteutuneet_kpi: detectedKPIs,
-    puuttuvat_kpi: missingKPIs,
-    pisteet: score,
-    sanallinen_arvio: feedback
+    return {
+      toteutuneet_kpi: detectedKPIs,
+      puuttuvat_kpi: missingKPIs,
+      pisteet: score,
+      sanallinen_arvio: feedback
+    }
+  }
+}
+
+// OpenAI-based evaluation function
+const evaluateWithOpenAI = async (answer: string, kpis: string[]): Promise<EvaluationResult> => {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+  
+  if (!apiKey) {
+    throw new Error('OpenAI API key not found. Please set VITE_OPENAI_API_KEY in your environment variables.')
+  }
+
+  const prompt = `You are an expert evaluator for IPMA Level C certification exams. Your task is to evaluate a student's answer and detect which Key Performance Indicators (KPIs) are mentioned or demonstrated.
+
+KPIs to detect: ${kpis.join(', ')}
+
+Student's answer: "${answer}"
+
+Please analyze the answer and:
+1. Identify which KPIs are mentioned, demonstrated, or implied in the answer
+2. Provide a score from 0-3 based on how well the student addressed the KPIs
+3. Give constructive feedback
+
+Return your response as a JSON object with this exact structure:
+{
+  "detected_kpis": ["list of KPI names that were found"],
+  "missing_kpis": ["list of KPI names that were not found"],
+  "score": number (0-3),
+  "feedback": "constructive feedback in Finnish"
+}
+
+Scoring criteria:
+- 3 points: 3+ KPIs clearly addressed
+- 2 points: 2 KPIs addressed
+- 1 point: 1 KPI addressed
+- 0 points: No KPIs addressed or answer is irrelevant
+
+Be generous in detecting KPIs - look for synonyms, related concepts, and implied understanding.`
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert evaluator for IPMA Level C certification exams. Always respond with valid JSON.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
+  }
+
+  const data = await response.json()
+  const content = data.choices[0].message.content
+  
+  try {
+    const result = JSON.parse(content)
+    
+    return {
+      toteutuneet_kpi: result.detected_kpis || [],
+      puuttuvat_kpi: result.missing_kpis || [],
+      pisteet: result.score || 0,
+      sanallinen_arvio: result.feedback || 'No feedback provided'
+    }
+  } catch (parseError) {
+    console.error('Failed to parse OpenAI response:', content)
+    throw new Error('Invalid response format from OpenAI')
   }
 }
 

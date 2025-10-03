@@ -75,6 +75,8 @@ const Exam: React.FC = () => {
         console.log('🔍 Debug - selectedQuestionIds:', currentAttempt.selectedQuestionIds)
         console.log('🔍 Debug - available questions:', questions.length)
         console.log('🔍 Debug - attemptQuestions found:', attemptQuestions.length)
+        console.log('🔍 Debug - questions data:', questions.map(q => ({ id: q.id, prompt: q.prompt.substring(0, 50), subtopicId: q.subtopicId })))
+        console.log('🔍 Debug - subtopics data:', subtopics.map(s => ({ id: s.id, title: s.title, topicId: s.topicId })))
 
         console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
 
