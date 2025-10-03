@@ -15,20 +15,6 @@ export const UserHome = () => {
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('')
   const [showExamInstructions, setShowExamInstructions] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
-
-  // Show loading state while auth is loading
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Get user's actual attempts (async)
   const [userAttempts, setUserAttempts] = useState<Attempt[]>([])
   
   // Load user attempts
@@ -50,6 +36,18 @@ export const UserHome = () => {
     
     loadUserAttempts()
   }, [user, getUserAttempts])
+
+  // Show loading state while auth is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   
   // Calculate statistics
   const totalAttempts = userAttempts.length
