@@ -1147,7 +1147,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const createAttempt = async (userId: string, topicId: string, selectedQuestionIds: string[]): Promise<Attempt> => {
     const newAttempt: Attempt = {
-      id: `attempt_${Date.now()}`,
+      id: crypto.randomUUID(), // Use UUID instead of string ID
       userId,
       topicId,
       selectedQuestionIds,
@@ -1228,8 +1228,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           return undefined
         }
         console.error('Error fetching attempt:', error)
-        return undefined
-      }
+    return undefined
+  }
 
       console.log('✅ Found attempt in Supabase:', data.id)
       return data
@@ -1241,7 +1241,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const createAttemptItem = async (attemptId: string, questionId: string, answer: string): Promise<AttemptItem> => {
     const newAttemptItem: AttemptItem = {
-      id: `attempt_item_${Date.now()}`,
+      id: crypto.randomUUID(), // Use UUID instead of string ID
       attemptId,
       questionId,
       answer,
@@ -1325,7 +1325,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data || []
     } catch (error) {
       console.error('Error in getAttemptItems:', error)
-      return []
+    return []
     }
   }
 
