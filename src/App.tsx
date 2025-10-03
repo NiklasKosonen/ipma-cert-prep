@@ -109,6 +109,16 @@ function AppContent() {
 
         {/* Protected User Routes */}
         <Route
+          path="/user"
+          element={
+            <ProtectedRoute allowedRoles={["user", "admin"]}>
+              <ProtectedLayout>
+                <UserHome />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/user/dashboard"
           element={
             <ProtectedRoute allowedRoles={["user"]}>
@@ -191,7 +201,7 @@ function AppContent() {
         <Route
           path="/exam-selection"
           element={
-            <ProtectedRoute allowedRoles={["user"]}>
+            <ProtectedRoute allowedRoles={["user", "admin"]}>
               <ProtectedLayout>
                 <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
                   <ExamSelection />
@@ -215,7 +225,7 @@ function AppContent() {
         <Route
           path="/exam/:attemptId"
           element={
-            <ProtectedRoute allowedRoles={["user"]}>
+            <ProtectedRoute allowedRoles={["user", "admin"]}>
               <ProtectedLayout>
                 <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
                   <Exam />
@@ -239,7 +249,7 @@ function AppContent() {
         <Route
           path="/exam-results/:attemptId"
           element={
-            <ProtectedRoute allowedRoles={["user"]}>
+            <ProtectedRoute allowedRoles={["user", "admin"]}>
               <ProtectedLayout>
                 <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
                   <ExamResults />
@@ -267,6 +277,18 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={["trainer", "admin"]}>
               <TrainerDashboardComponent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainee"
+          element={
+            <ProtectedRoute allowedRoles={["trainee", "admin"]}>
+              <ProtectedLayout>
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>}>
+                  <TraineeDashboard />
+                </Suspense>
+              </ProtectedLayout>
             </ProtectedRoute>
           }
         />

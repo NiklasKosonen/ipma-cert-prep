@@ -89,6 +89,7 @@ export interface CompanyCode {
   code: string
   companyName: string
   adminEmail: string // Email for admin access control
+  authorizedEmails: string[] // List of authorized email addresses
   isActive: boolean
   maxUsers: number
   expiresAt: string

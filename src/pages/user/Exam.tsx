@@ -1,22 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { Question, Attempt, AttemptItem } from '../../types'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
 
 const Exam: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>()
   const navigate = useNavigate()
+  const { user, loading } = useAuth()
   const { 
     getAttempt, 
     updateAttempt, 
     getAttemptItems, 
     createAttemptItem, 
     updateAttemptItem,
+    getUserAttempts,
     questions,
     subtopics,
     topics,
-    kpis
+    kpis,
+    users
   } = useData()
 
   const [attempt, setAttempt] = useState<Attempt | null>(null)
@@ -27,13 +31,40 @@ const Exam: React.FC = () => {
 
   // Load attempt and questions
   useEffect(() => {
-    if (!attemptId) return
-
-    const currentAttempt = getAttempt(attemptId)
-    if (!currentAttempt) {
+    if (!attemptId) {
+      console.log('❌ No attemptId provided')
       navigate('/exam-selection')
       return
     }
+
+    if (!user) {
+      console.log('❌ No user authenticated')
+      
+      // If still loading, wait a bit more
+      if (loading) {
+        console.log('⏳ Auth still loading, will retry...')
+        return
+      }
+      
+      console.log('❌ No user found, redirecting to login')
+      navigate('/auth/company')
+      return
+    }
+
+    console.log('🔍 Looking for attempt:', attemptId, 'for user:', user.id)
+
+    const currentAttempt = getAttempt(attemptId)
+    console.log('🔍 Attempt lookup result:', currentAttempt)
+    
+    if (!currentAttempt) {
+      console.log('❌ Attempt not found:', attemptId)
+      console.log('❌ Available attempts for user:', getUserAttempts(user.id))
+      console.log('❌ All users:', users.map(u => ({ id: u.id, email: u.email })))
+      navigate('/exam-selection')
+      return
+    }
+
+    console.log('✅ Found attempt:', currentAttempt.id, 'with', currentAttempt.selectedQuestionIds.length, 'questions')
 
     setAttempt(currentAttempt)
     setTimeRemaining(currentAttempt.timeRemaining)
@@ -42,6 +73,8 @@ const Exam: React.FC = () => {
     const attemptQuestions = currentAttempt.selectedQuestionIds
       .map(id => questions.find(q => q.id === id))
       .filter((q): q is Question => q !== undefined)
+
+    console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
 
     setExamQuestions(attemptQuestions)
 
@@ -52,61 +85,10 @@ const Exam: React.FC = () => {
       existingAnswers[item.questionId] = item.answer
     })
     setAnswers(existingAnswers)
-  }, [attemptId, getAttempt, questions, getAttemptItems, navigate])
-
-  // Timer countdown
-  useEffect(() => {
-    if (!attempt || attempt.status !== 'in_progress') return
-
-    const interval = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          // Time's up - auto submit
-          handleSubmitExam()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [attempt])
-
-  // Auto-save answers
-  const saveAnswer = useCallback((questionId: string, answer: string) => {
-    if (!attemptId) return
-
-    setAnswers(prev => ({ ...prev, [questionId]: answer }))
-
-    // Save to attempt items
-    const existingItems = getAttemptItems(attemptId)
-    const existingItem = existingItems.find(item => item.questionId === questionId)
-
-    if (existingItem) {
-      updateAttemptItem(existingItem.id, { answer })
-    } else {
-      createAttemptItem(attemptId, questionId, answer)
-    }
-  }, [attemptId, getAttemptItems, updateAttemptItem, createAttemptItem])
-
-  // Format time display
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
-  }
-
-  // Get question context
-  const getQuestionContext = (question: Question) => {
-    const subtopic = subtopics.find(s => s.id === question.subtopicId)
-    const topic = topics.find(t => t.id === subtopic?.topicId)
-    const questionKPIs = kpis.filter(k => question.connectedKPIs.includes(k.id))
-
-    return { subtopic, topic, questionKPIs }
-  }
+  }, [attemptId, getAttempt, questions, getAttemptItems, navigate, user, loading])
 
   // Submit exam
-  const handleSubmitExam = async () => {
+  const handleSubmitExam = useCallback(async () => {
     if (!attempt || !attemptId) return
 
     setIsSubmitting(true)
@@ -175,6 +157,57 @@ const Exam: React.FC = () => {
     } finally {
       setIsSubmitting(false)
     }
+  }, [attempt, attemptId, updateAttempt, getAttemptItems, examQuestions, answers, evaluateAnswer, updateAttemptItem, createAttemptItem, navigate])
+
+  // Timer countdown
+  useEffect(() => {
+    if (!attempt || attempt.status !== 'in_progress') return
+
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up - auto submit
+          handleSubmitExam()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [attempt, handleSubmitExam])
+
+  // Auto-save answers
+  const saveAnswer = useCallback((questionId: string, answer: string) => {
+    if (!attemptId) return
+
+    setAnswers(prev => ({ ...prev, [questionId]: answer }))
+
+    // Save to attempt items
+    const existingItems = getAttemptItems(attemptId)
+    const existingItem = existingItems.find(item => item.questionId === questionId)
+
+    if (existingItem) {
+      updateAttemptItem(existingItem.id, { answer })
+    } else {
+      createAttemptItem(attemptId, questionId, answer)
+    }
+  }, [attemptId, getAttemptItems, updateAttemptItem, createAttemptItem])
+
+  // Format time display
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  // Get question context
+  const getQuestionContext = (question: Question) => {
+    const subtopic = subtopics.find(s => s.id === question.subtopicId)
+    const topic = topics.find(t => t.id === subtopic?.topicId)
+    const questionKPIs = kpis.filter(k => question.connectedKPIs.includes(k.id))
+
+    return { subtopic, topic, questionKPIs }
   }
 
   if (!attempt || !examQuestions.length) {

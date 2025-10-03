@@ -16,7 +16,17 @@ export const ProtectedRoute = ({
   const { user, loading } = useAuth()
   const location = useLocation()
 
+  console.log('🛡️ ProtectedRoute check:', { 
+    loading, 
+    user: user?.email, 
+    role: user?.role, 
+    allowedRoles, 
+    path: location.pathname,
+    userObject: user
+  })
+
   if (loading) {
+    console.log('⏳ ProtectedRoute: Still loading...')
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -25,6 +35,7 @@ export const ProtectedRoute = ({
   }
 
   if (!user) {
+    console.log('🚫 ProtectedRoute: No user, redirecting to:', redirectTo)
     return <Navigate to={redirectTo} state={{ from: location }} replace />
   }
 
@@ -33,12 +44,15 @@ export const ProtectedRoute = ({
     // Redirect to appropriate dashboard based on user role
     const roleRedirects: Record<UserRole, string> = {
       admin: '/admin',
-      trainer: '/coach/dashboard',
-      trainee: '/trainee/dashboard',
-      user: '/user/dashboard',
+      trainer: '/trainer',
+      trainee: '/trainee',
+      user: '/user',
     }
-    return <Navigate to={roleRedirects[user.role]} replace />
+    const redirectPath = roleRedirects[user.role] || '/user'
+    console.log('🔄 Redirecting to:', redirectPath)
+    return <Navigate to={redirectPath} replace />
   }
 
+  console.log('✅ ProtectedRoute: Access granted')
   return <>{children}</>
 }

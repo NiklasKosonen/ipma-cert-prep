@@ -4,6 +4,7 @@ import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, m
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
 import { SupabaseDataService } from '../services/supabaseDataService'
 import { ExamDataService } from '../services/examDataService'
+import { supabase } from '../lib/supabase'
 
 // Data persistence utilities with user-specific storage
 const STORAGE_KEYS = {
@@ -168,6 +169,10 @@ interface DataContextType {
     recentExams: ExamResult[]
   }>
   
+  // User management for companies
+  createUserForCompany: (email: string, companyCode: string, companyName: string) => Promise<{success: boolean, userId?: string, error?: string}>
+  removeUserForCompany: (email: string, companyCode: string) => Promise<{success: boolean, error?: string}>
+  
   // Data management
   clearAllData: () => void
   exportAllData: () => DataSnapshot
@@ -206,7 +211,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [trainingExamples, setTrainingExamples] = useState<TrainingExample[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-  
+
   // Initialize Supabase data service
   const supabaseDataService = SupabaseDataService.getInstance()
 
@@ -267,21 +272,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         
         // Emergency fallback to localStorage
         console.log('📦 Attempting emergency fallback to localStorage...')
-        const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
+      const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
         const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
-        const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
-        const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
-        const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
-        const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
-        const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
-        
-        setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
+      const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
+      const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
+      const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
+      const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
+      const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
+
+      setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
         setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
-        setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
-        setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
-        setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
-        setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
-        setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
+      setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
+      setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
+      setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
+      setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
+      setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
       }
     }
 
@@ -681,16 +686,197 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // Create user via serverless function to prevent admin session hijacking
+  const createUserForCompany = async (email: string, companyCode: string, companyName: string) => {
+    try {
+      console.log('🔄 Creating user via serverless function:', { email, companyCode, companyName })
+      
+      // Check if user already exists in public.users
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id, email, company_code')
+        .eq('email', email)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking existing user:', checkError)
+        throw new Error(`Failed to check existing user: ${checkError.message}`)
+      }
+
+      if (existingUser) {
+        console.log('⚠️ User already exists in public.users:', existingUser)
+        
+        // If user exists but has different company code, update it
+        if (existingUser.company_code !== companyCode) {
+          console.log('🔄 Updating existing user with new company code')
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              company_code: companyCode,
+              company_name: companyName,
+              updated_at: new Date().toISOString()
+            })
+            .eq('email', email)
+
+          if (updateError) {
+            console.error('❌ Failed to update existing user:', updateError)
+            throw new Error(`Failed to update existing user: ${updateError.message}`)
+          }
+
+          console.log('✅ Updated existing user with new company code')
+          return { success: true, userId: existingUser.id }
+        } else {
+          console.log('✅ User already exists with correct company code')
+          return { success: true, userId: existingUser.id }
+        }
+      }
+
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('No active session found')
+      }
+
+      // Store current admin session to restore later
+      const adminSession = session
+
+      // Create user in Supabase Auth first (this is required for login)
+      console.log('🔄 Creating user in Supabase Auth...')
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: companyCode.toUpperCase(), // Company code is the password
+        options: {
+          data: {
+            name: email.split('@')[0],
+            company_code: companyCode,
+            company_name: companyName
+          }
+        }
+      })
+
+      console.log('🔄 Supabase Auth signUp result:', { authData, authError })
+
+      if (authError) {
+        console.error('❌ Failed to create user in Supabase Auth:', authError)
+        throw new Error(`Failed to create user in Supabase Auth: ${authError.message}`)
+      }
+
+      if (!authData.user) {
+        throw new Error('No user data returned from Supabase Auth')
+      }
+
+      // Create user profile in our users table using the Auth UUID
+      const userProfileData = {
+        id: authData.user.id, // Use the UUID from Supabase Auth
+        email: email,
+        name: email.split('@')[0],
+        role: 'user',
+        company_code: companyCode,
+        company_name: companyName,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      console.log('🔄 Creating/updating user profile with data:', userProfileData)
+
+      const { error: profileError } = await supabase
+        .from('users')
+        .upsert([userProfileData], { onConflict: 'id' })
+
+      if (profileError) {
+        console.error('❌ Failed to create/update user profile:', profileError)
+        throw new Error(`Failed to create/update user profile: ${profileError.message}`)
+      }
+
+      // Restore admin session to prevent redirect
+      console.log('🔄 Restoring admin session...')
+      await supabase.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token
+      })
+
+      console.log('✅ User created successfully in both auth.users and public.users:', { email, userId: authData.user.id })
+      return { success: true, userId: authData.user.id }
+
+    } catch (error) {
+      console.error('❌ Error creating user:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  // Remove user when email is removed from company
+  const removeUserForCompany = async (email: string, companyCode: string) => {
+    try {
+      console.log('🔄 Removing user from Supabase:', { email, companyCode })
+      
+      // Find user by email and company code
+      const { data: userData, error: findError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .eq('company_code', companyCode)
+        .single()
+
+      if (findError || !userData) {
+        console.warn('⚠️ User not found for removal:', { email, companyCode })
+        return { success: true } // Not an error if user doesn't exist
+      }
+
+      // Note: Cannot delete users via anon key - would need service role key
+      // For now, just delete from our users table
+      console.log('⚠️ Cannot delete from Supabase Auth with anon key - user profile removed from database only')
+
+      // Delete user profile from our users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userData.id)
+
+      if (profileError) {
+        console.error('❌ Failed to delete user profile:', profileError)
+        throw new Error(`Failed to delete user profile: ${profileError.message}`)
+      }
+
+      console.log('✅ User removed successfully:', { email, userId: userData.id })
+      return { success: true }
+
+    } catch (error) {
+      console.error('❌ Error removing user:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
   const updateCompanyCode = async (id: string, updates: Partial<CompanyCode>) => {
     let updatedCompany: CompanyCode | null = null
+    let previousCompany: CompanyCode | null = null
 
     setCompanyCodes(prev => prev.map(company => {
       if (company.id === id) {
+        previousCompany = company
         updatedCompany = { ...company, ...updates, updatedAt: new Date().toISOString() }
         return updatedCompany
       }
       return company
     }))
+
+    // Handle user removal when emails are removed
+    if (previousCompany && updatedCompany && updates.authorizedEmails) {
+      const previousEmails = (previousCompany as CompanyCode).authorizedEmails || []
+      const updatedEmails = updates.authorizedEmails
+      const removedEmails = previousEmails.filter(
+        (email: string) => !updatedEmails.includes(email)
+      )
+      
+      // Remove users for emails that were removed from the company code
+      for (const email of removedEmails) {
+        try {
+          await removeUserForCompany(email, (previousCompany as CompanyCode).code)
+        } catch (error) {
+          console.error('Error handling user removal:', error)
+        }
+      }
+    }
 
     // Sync to Supabase
     if (updatedCompany) {
@@ -972,12 +1158,49 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const getAttempt = (id: string): Attempt | undefined => {
-    const allUsers = users
-    for (const user of allUsers) {
+    console.log('🔍 getAttempt called with id:', id)
+    console.log('🔍 Available users:', users.map(u => ({ id: u.id, email: u.email })))
+    
+    // Try to find attempt across all users
+    for (const user of users) {
       const userAttempts = getUserAttempts(user.id)
+      console.log(`🔍 Checking user ${user.email} (${user.id}):`, userAttempts.length, 'attempts')
       const attempt = userAttempts.find(attempt => attempt.id === id)
-      if (attempt) return attempt
+      if (attempt) {
+        console.log('✅ Found attempt for user:', user.email)
+        return attempt
+      }
     }
+    
+    // Also check localStorage directly for any attempts
+    try {
+      const keys = Object.keys(localStorage)
+      const attemptKeys = keys.filter(key => key.startsWith('ipma_attempts_'))
+      
+      for (const key of attemptKeys) {
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          const attempts = JSON.parse(stored)
+          if (Array.isArray(attempts)) {
+            const attempt = attempts.find((a: any) => a.id === id)
+            if (attempt) {
+              console.log('📝 Found attempt in localStorage:', attempt.id)
+              return attempt
+            }
+          } else if (typeof stored === 'object' && stored && 'data' in stored && Array.isArray((stored as any).data)) {
+            const attempt = (stored as any).data.find((a: any) => a.id === id)
+            if (attempt) {
+              console.log('📝 Found attempt in localStorage (with data wrapper):', attempt.id)
+              return attempt
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error searching localStorage for attempt:', error)
+    }
+    
+    console.log('❌ Attempt not found:', id)
     return undefined
   }
 
@@ -1054,9 +1277,24 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const selectRandomQuestions = (topicId: string): string[] => {
-    const topicQuestions = questions.filter(q => q.topicId === topicId && q.isActive)
-    const shuffled = [...topicQuestions].sort(() => 0.5 - Math.random())
-    return shuffled.slice(0, Math.min(5, shuffled.length)).map(q => q.id)
+    // Get all subtopics for this topic
+    const topicSubtopics = subtopics.filter(s => s.topicId === topicId && s.isActive)
+    
+    // Select one random question from each subtopic
+    const selectedQuestions: string[] = []
+    
+    for (const subtopic of topicSubtopics) {
+      const subtopicQuestions = questions.filter(q => q.subtopicId === subtopic.id && q.isActive)
+      
+      if (subtopicQuestions.length > 0) {
+        // Randomly select one question from this subtopic
+        const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
+        selectedQuestions.push(subtopicQuestions[randomIndex].id)
+      }
+    }
+    
+    console.log(`📝 Selected ${selectedQuestions.length} questions from ${topicSubtopics.length} subtopics for topic ${topicId}`)
+    return selectedQuestions
   }
 
   const clearAllData = () => {
@@ -1209,6 +1447,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       getUserExamHistory: ExamDataService.getUserExamHistory,
       getUserDetailedAnswers: ExamDataService.getUserAttemptItems,
       getCompanyExamStats: ExamDataService.getCompanyExamStats,
+      
+      // User management for companies
+      createUserForCompany,
+      removeUserForCompany,
       
       // Data management
       clearAllData,

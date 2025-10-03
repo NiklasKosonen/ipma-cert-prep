@@ -16,6 +16,14 @@ const createMockSupabase = () => ({
   }
 })
 
+// Debug: Check if environment variables are loaded
+console.log('🔍 Supabase Config Check:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  url: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING',
+  keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0
+})
+
 export const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {

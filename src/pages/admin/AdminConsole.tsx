@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
+import { User, Users, Settings } from 'lucide-react'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
+  const navigate = useNavigate()
   const { 
     topics, subtopics, kpis, questions, trainingExamples, companyCodes, sampleAnswers, users, subscriptions,
     addTopic, updateTopic, deleteTopic,
@@ -13,7 +16,8 @@ const AdminConsole: React.FC = () => {
     addKPI, updateKPI, deleteKPI,
     addQuestion, updateQuestion, deleteQuestion,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
-    addCompanyCode, deleteCompanyCode,
+    addCompanyCode, updateCompanyCode, deleteCompanyCode,
+    createUserForCompany, removeUserForCompany
   } = useData()
 
   // Auto backup removed - data now syncs to Supabase in real-time
@@ -66,11 +70,17 @@ const AdminConsole: React.FC = () => {
     code: '',
     companyName: '',
     adminEmail: '',
+    authorizedEmails: [],
     maxUsers: 1,
     expiresAt: '',
     isActive: true
   })
-  // Company code editing removed for now - will be reimplemented with new design
+  const [newEmail, setNewEmail] = useState('')
+  const [editingCompanyCode, setEditingCompanyCode] = useState<CompanyCode | null>(null)
+  
+  // User management states
+  const [selectedCompanyForUsers, setSelectedCompanyForUsers] = useState<string>('')
+  const [newUserEmail, setNewUserEmail] = useState('')
   // const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
   // const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({...})
   
@@ -147,6 +157,7 @@ const AdminConsole: React.FC = () => {
         code: newCompanyCode.code,
         companyName: newCompanyCode.companyName,
         adminEmail: '', // Not required anymore
+        authorizedEmails: newCompanyCode.authorizedEmails || [],
         maxUsers: newCompanyCode.maxUsers || 10,
         expiresAt: newCompanyCode.expiresAt || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
         isActive: true
@@ -307,7 +318,38 @@ const AdminConsole: React.FC = () => {
         {/* Admin Navigation Menu */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="p-4">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Admin Console</h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-3xl font-bold text-gray-900">Admin Console</h1>
+              
+              {/* Role Switcher */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => navigate('/user')}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  title="Switch to User View"
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  User View
+                </button>
+                <button
+                  onClick={() => navigate('/trainer')}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  title="Switch to Trainer View"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  Trainer View
+                </button>
+                <button
+                  onClick={() => navigate('/trainee')}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  title="Switch to Trainee View"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Trainee View
+                </button>
+              </div>
+            </div>
+            
             <div className="flex flex-wrap gap-3">
               <a
                 href="/admin"
@@ -348,7 +390,6 @@ const AdminConsole: React.FC = () => {
               { id: 'training-examples', label: t('trainingExamples') },
               { id: 'company-codes', label: t('companyCodes') },
               { id: 'backup', label: 'Backup & Sync' },
-              { id: 'email-config', label: t('emailConfig') },
               { id: 'ai-evaluation', label: t('aiEvaluation') }
             ].map((tab) => (
               <button
@@ -1450,12 +1491,14 @@ const AdminConsole: React.FC = () => {
                   />
                 </div>
 
+
                 <div className="mt-6 flex justify-end space-x-4">
                   <button
                     onClick={() => setNewCompanyCode({
                       code: '',
                       companyName: '',
                       adminEmail: '',
+                      authorizedEmails: [],
                       maxUsers: 1,
                       expiresAt: '',
                       isActive: true
@@ -1493,7 +1536,7 @@ const AdminConsole: React.FC = () => {
                               Yritys
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Max käyttäjät
+                              Sallitut sähköpostit
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Viimeinen päivä
@@ -1515,8 +1558,23 @@ const AdminConsole: React.FC = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {code.companyName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {code.maxUsers}
+                              <td className="px-6 py-4 text-sm text-gray-500">
+                                {code.authorizedEmails && code.authorizedEmails.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {code.authorizedEmails.slice(0, 2).map((email, index) => (
+                                      <div key={index} className="text-xs bg-blue-50 px-2 py-1 rounded">
+                                        {email}
+                                      </div>
+                                    ))}
+                                    {code.authorizedEmails.length > 2 && (
+                                      <div className="text-xs text-gray-400">
+                                        +{code.authorizedEmails.length - 2} muuta
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">Ei sähköposteja</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {new Date(code.expiresAt).toLocaleDateString('fi-FI')}
@@ -1530,6 +1588,12 @@ const AdminConsole: React.FC = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                 <button
+                                  onClick={() => setEditingCompanyCode(code)}
+                                  className="text-blue-600 hover:text-blue-900 mr-2"
+                                >
+                                  Muokkaa
+                                </button>
+                                <button
                                   onClick={() => handleDeleteCompanyCode(code.id)}
                                   className="text-red-600 hover:text-red-900"
                                 >
@@ -1542,6 +1606,322 @@ const AdminConsole: React.FC = () => {
                       </table>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* User Management Section - Only show if companies exist */}
+              {companyCodes.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
+            <div className="p-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Käyttäjien hallinta</h3>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Valitse yritys
+                      </label>
+                      <select
+                        value={selectedCompanyForUsers || ''}
+                        onChange={(e) => setSelectedCompanyForUsers(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Valitse yritys...</option>
+                        {companyCodes.map((company) => (
+                          <option key={company.id} value={company.id}>
+                            {company.companyName} ({company.code})
+                          </option>
+                        ))}
+                      </select>
+              </div>
+              
+                    {selectedCompanyForUsers && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Lisää käyttäjä
+                          </label>
+                          <div className="flex space-x-2">
+                            <input
+                              type="email"
+                              value={newUserEmail}
+                              onChange={(e) => setNewUserEmail(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="user@company.com"
+                            />
+                            <button
+                              onClick={async () => {
+                                if (!newUserEmail.trim()) {
+                                  alert('Anna sähköpostiosoite')
+                                  return
+                                }
+
+                                const selectedCompany = companyCodes.find(c => c.id === selectedCompanyForUsers)
+                                if (!selectedCompany) return
+
+                                // Create user in Supabase
+                                const result = await createUserForCompany(
+                                  newUserEmail.trim(),
+                                  selectedCompany.code,
+                                  selectedCompany.companyName
+                                )
+
+                                if (result.success) {
+                                  console.log('✅ User created successfully:', newUserEmail)
+                                  // Update the company code with the new email
+                                  const updatedEmails = [...(selectedCompany.authorizedEmails || []), newUserEmail.trim()]
+                                  updateCompanyCode(selectedCompany.id, { authorizedEmails: updatedEmails })
+                                  setNewUserEmail('')
+                                  alert('Käyttäjä lisätty onnistuneesti!')
+                                } else {
+                                  console.error('❌ Failed to create user:', result.error)
+                                  alert(`Käyttäjän lisääminen epäonnistui: ${result.error}`)
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                              Lisää
+                            </button>
+                          </div>
+              </div>
+              
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Nykyiset käyttäjät</h4>
+                          {(() => {
+                            const selectedCompany = companyCodes.find(c => c.id === selectedCompanyForUsers)
+                            const emails = selectedCompany?.authorizedEmails || []
+                            
+                            if (emails.length === 0) {
+                              return <p className="text-gray-500 text-sm">Ei käyttäjiä lisätty</p>
+                            }
+
+                            return (
+                              <div className="space-y-2">
+                                {emails.map((email, index) => (
+                                  <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                                    <span className="text-sm text-gray-700">{email}</span>
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(`Haluatko varmasti poistaa käyttäjän ${email}?`)) {
+                                          const selectedCompany = companyCodes.find(c => c.id === selectedCompanyForUsers)
+                                          if (!selectedCompany) return
+
+                                          // Remove user from Supabase
+                                          const result = await removeUserForCompany(email, selectedCompany.code)
+
+                                          if (result.success) {
+                                            console.log('✅ User removed successfully:', email)
+                                            // Update the company code
+                                            const updatedEmails = emails.filter(e => e !== email)
+                                            updateCompanyCode(selectedCompany.id, { authorizedEmails: updatedEmails })
+                                            alert('Käyttäjä poistettu onnistuneesti!')
+                                          } else {
+                                            console.error('❌ Failed to remove user:', result.error)
+                                            alert(`Käyttäjän poistaminen epäonnistui: ${result.error}`)
+                                          }
+                                        }
+                                      }}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Poista
+                                    </button>
+                      </div>
+                                ))}
+                      </div>
+                            )
+                          })()}
+                    </div>
+                  </div>
+                    )}
+                </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Company Code Edit Modal */}
+          {editingCompanyCode && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Muokkaa yrityskoodia: {editingCompanyCode.code}
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yrityksen nimi
+                    </label>
+                    <input
+                      type="text"
+                      value={editingCompanyCode.companyName}
+                      onChange={(e) => setEditingCompanyCode({
+                        ...editingCompanyCode,
+                        companyName: e.target.value
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                      </div>
+
+                      <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Viimeinen voimassaolopäivä
+                    </label>
+                    <input
+                      type="date"
+                      value={editingCompanyCode.expiresAt}
+                      onChange={(e) => setEditingCompanyCode({
+                        ...editingCompanyCode,
+                        expiresAt: e.target.value
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                      </div>
+
+                      <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sallitut sähköpostiosoitteet
+                    </label>
+                    <div className="space-y-3">
+                      <div className="flex space-x-2">
+                        <input
+                          type="email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="esim. user@company.com"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (newEmail && !editingCompanyCode.authorizedEmails?.includes(newEmail)) {
+                                setEditingCompanyCode({
+                                  ...editingCompanyCode,
+                                  authorizedEmails: [...(editingCompanyCode.authorizedEmails || []), newEmail]
+                                })
+                                setNewEmail('')
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (newEmail && !editingCompanyCode.authorizedEmails?.includes(newEmail)) {
+                              // Add to local state first
+                              setEditingCompanyCode({
+                                ...editingCompanyCode,
+                                authorizedEmails: [...(editingCompanyCode.authorizedEmails || []), newEmail]
+                              })
+                              
+                              // Create user in Supabase
+                              const result = await createUserForCompany(
+                                newEmail, 
+                                editingCompanyCode.code, 
+                                editingCompanyCode.companyName
+                              )
+                              
+                              if (result.success) {
+                                console.log('✅ User created successfully:', newEmail)
+                                setNewEmail('')
+                              } else {
+                                console.error('❌ Failed to create user:', result.error)
+                                alert(`Failed to create user: ${result.error}`)
+                                // Remove from local state if user creation failed
+                                setEditingCompanyCode({
+                                  ...editingCompanyCode,
+                                  authorizedEmails: editingCompanyCode.authorizedEmails || []
+                                })
+                              }
+                            }
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Lisää
+                        </button>
+                  </div>
+
+                      {/* Display current emails */}
+                      {editingCompanyCode.authorizedEmails && editingCompanyCode.authorizedEmails.length > 0 && (
+                    <div className="space-y-2">
+                          <p className="text-sm text-gray-600">Nykyiset sähköpostit:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {editingCompanyCode.authorizedEmails.map((email, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                              >
+                                {email}
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const emailToRemove = editingCompanyCode.authorizedEmails?.[index]
+                                    if (emailToRemove) {
+                                      // Remove user from Supabase
+                                      const result = await removeUserForCompany(
+                                        emailToRemove, 
+                                        editingCompanyCode.code
+                                      )
+                                      
+                                      if (result.success) {
+                                        console.log('✅ User removed successfully:', emailToRemove)
+                                        // Remove from local state
+                                        setEditingCompanyCode({
+                                          ...editingCompanyCode,
+                                          authorizedEmails: editingCompanyCode.authorizedEmails?.filter((_, i) => i !== index) || []
+                                        })
+                                      } else {
+                                        console.error('❌ Failed to remove user:', result.error)
+                                        alert(`Failed to remove user: ${result.error}`)
+                                      }
+                                    }
+                                  }}
+                                  className="ml-2 text-blue-600 hover:text-blue-800"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                      </div>
+                      </div>
+                      )}
+                      </div>
+                  </div>
+
+                      <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={editingCompanyCode.isActive}
+                      onChange={(e) => setEditingCompanyCode({
+                        ...editingCompanyCode,
+                        isActive: e.target.checked
+                      })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                      Aktiivinen
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button
+                    onClick={() => {
+                      setEditingCompanyCode(null)
+                      setNewEmail('')
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Peruuta
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateCompanyCode(editingCompanyCode.id, editingCompanyCode)
+                      setEditingCompanyCode(null)
+                      setNewEmail('')
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Tallenna muutokset
+                  </button>
                 </div>
               </div>
             </div>
@@ -1563,109 +1943,13 @@ const AdminConsole: React.FC = () => {
             </div>
           )}
 
-          {/* Email Configuration Tab */}
-          {activeTab === 'email-config' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Email Configuration</h2>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">EmailJS Integration Status</h3>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <h4 className="text-sm font-medium text-green-800">EmailJS Successfully Configured</h4>
-                        <p className="text-sm text-green-700 mt-1">
-                          Your EmailJS integration is active and ready to send real emails.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Configuration Details</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Service ID</label>
-                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">service_i6e64ig</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Template ID</label>
-                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">template_ndt42fy</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Public Key</label>
-                        <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded border">KjrQsyWuyRe9mHx0O</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Email Features</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-gray-700">Subscription expiry warnings</span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-gray-700">Final expiry reminders</span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-gray-700">Extension confirmations</span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-gray-700">Professional email templates</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-md font-medium text-gray-900 mb-3">Test Email System</h4>
-                  <button
-                    onClick={() => {
-                      // Test email functionality
-                      console.log('🧪 Testing email system...');
-                      alert('Email system test initiated! Check console for details.');
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Test Email Sending
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">
-                    This will send a test email to verify your EmailJS integration is working correctly.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Backup & Sync Tab */}
           {activeTab === 'backup' && (
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Backup & Data Sync</h2>
-              </div>
+                  </div>
 
               <div className="grid grid-cols-1 gap-6">
                 {/* Supabase Sync Section - localStorage section removed (auto-sync active) */}
@@ -1753,10 +2037,10 @@ const AdminConsole: React.FC = () => {
 
               {/* Info: Data is auto-synced to Supabase */}
               <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center">
+                  <div className="flex items-center">
                   <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                    </svg>
                   <div>
                     <h4 className="text-sm font-medium text-green-800">Automatic Sync Active</h4>
                     <p className="text-sm text-green-700 mt-1">

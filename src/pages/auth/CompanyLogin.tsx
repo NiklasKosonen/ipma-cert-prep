@@ -20,17 +20,17 @@ export const CompanyLogin = () => {
     setSuccess('')
 
     try {
-      // Use the auth hook for company code authentication
-      const { data, error } = await signInWithCompanyCode(email, companyCode)
+      // Use the Supabase auth hook for company code authentication
+      const { data, error } = await signInWithCompanyCode(companyCode, email)
 
       if (error) {
         setError(error)
       } else if (data?.user) {
-        setSuccess(`Welcome! Redirecting to your dashboard...`)
+        setSuccess(`✅ Welcome! Redirecting to your dashboard...`)
         
         // Redirect to user dashboard after successful login
         setTimeout(() => {
-          navigate('/user/dashboard', { replace: true })
+          navigate('/user', { replace: true })
         }, 1500)
       } else {
         setError('Login failed. Please try again.')

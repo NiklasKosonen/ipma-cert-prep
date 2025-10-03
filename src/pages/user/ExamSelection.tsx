@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 
 const ExamSelection: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useLanguage()
   const { topics, subtopics, selectRandomQuestions, createAttempt } = useData()
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
 
@@ -20,6 +22,10 @@ const ExamSelection: React.FC = () => {
 
   const handleStartExam = () => {
     if (!selectedTopicId) return
+    if (!user) {
+      alert('You must be logged in to start an exam.')
+      return
+    }
 
     try {
       // Select random questions (one per subtopic)
@@ -31,8 +37,14 @@ const ExamSelection: React.FC = () => {
       }
 
       // Create attempt record
-      const userId = 'current_user' // In a real app, this would come from auth
-      const attempt = createAttempt(userId, selectedTopicId, selectedQuestionIds)
+      const attempt = createAttempt(user.id, selectedTopicId, selectedQuestionIds)
+      
+      console.log('🚀 Starting exam:', {
+        attemptId: attempt.id,
+        topicId: selectedTopicId,
+        questionCount: selectedQuestionIds.length,
+        duration: attempt.totalTime
+      })
       
       // Navigate to exam page
       navigate(`/exam/${attempt.id}`)

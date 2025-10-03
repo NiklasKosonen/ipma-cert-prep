@@ -225,6 +225,7 @@ export class SupabaseDataService {
         code: company.code,
         company_name: company.companyName,
         admin_email: company.adminEmail,
+        authorized_emails: company.authorizedEmails || [], // ✅ Fixed: Include authorized emails
         is_active: company.isActive,
         max_users: company.maxUsers,
         expires_at: company.expiresAt,

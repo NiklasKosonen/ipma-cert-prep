@@ -21,16 +21,16 @@ export const LoginForm = ({ role }: LoginFormProps) => {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const getDefaultRedirect = (userRole: UserRole): string => {
-    switch (userRole) {
+  const getDefaultRedirect = (selectedRole: UserRole): string => {
+    switch (selectedRole) {
       case 'admin':
         return '/admin'
       case 'trainer':
-        return '/coach/dashboard'
+        return '/trainer'
       case 'trainee':
-        return '/trainee/dashboard'
+        return '/trainee'
       case 'user':
-        return '/user/dashboard'
+        return '/user'
       default:
         return '/'
     }
@@ -51,24 +51,26 @@ export const LoginForm = ({ role }: LoginFormProps) => {
       if (error) {
         console.log('❌ Login error:', error)
         setError(error)
-      } else if (data && data.user) {
+        setLoading(false)
+        return
+      } 
+      
+      if (data && data.user) {
         console.log('✅ Login successful, navigating to:', from)
         console.log('✅ User data:', data.user)
         console.log('✅ User role:', data.user.role)
         console.log('✅ From location:', from)
         
-        // Add a small delay to ensure state is set
-        setTimeout(() => {
-          navigate(from, { replace: true })
-        }, 100)
+        // Navigate immediately without delay
+        navigate(from, { replace: true })
       } else {
         console.log('❌ Login failed - no data or user')
         setError('Login failed - please try again')
+        setLoading(false)
       }
     } catch (err) {
       console.log('❌ Login exception:', err)
       setError('An unexpected error occurred')
-    } finally {
       setLoading(false)
     }
   }

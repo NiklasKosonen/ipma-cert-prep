@@ -7,13 +7,25 @@ import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 
 export const UserHome = () => {
   const { t } = useLanguage()
-  const { topics, subtopics, getUserAttempts, getAttemptItems } = useData()
-  const { user } = useAuth()
+  const { topics, subtopics, getUserAttempts, getAttemptItems, selectRandomQuestions, createAttempt } = useData()
+  const { user, loading } = useAuth()
   const navigate = useNavigate()
   
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('')
   const [showExamInstructions, setShowExamInstructions] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
+
+  // Show loading state while auth is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Get user's actual attempts
   const userAttempts = user ? getUserAttempts(user.id) : []
@@ -71,8 +83,57 @@ export const UserHome = () => {
 
   // Start exam from popup
   const handleStartExam = () => {
-    setShowExamInstructions(false)
-    navigate(`/exam?topicId=${selectedTopic.id}`)
+    console.log('🚀 Start Exam clicked, user:', user?.email, 'role:', user?.role, 'loading:', loading)
+    console.log('🚀 User object details:', { 
+      id: user?.id, 
+      email: user?.email, 
+      role: user?.role, 
+      companyCode: user?.companyCode,
+      fullUser: user 
+    })
+    
+    if (loading) {
+      console.log('⏳ Auth still loading, please wait...')
+      return
+    }
+    
+    if (!user) {
+      console.log('❌ No user found, redirecting to login')
+      navigate('/auth/company')
+      return
+    }
+
+    try {
+      // Select random questions (one per subtopic)
+      const selectedQuestionIds = selectRandomQuestions(selectedTopic.id)
+      
+      if (selectedQuestionIds.length === 0) {
+        alert('No questions available for this topic. Please add questions first.')
+        return
+      }
+
+      // Create attempt record
+      const attempt = createAttempt(user.id, selectedTopic.id, selectedQuestionIds)
+      
+      console.log('🚀 Starting exam:', {
+        attemptId: attempt.id,
+        topicId: selectedTopic.id,
+        questionCount: selectedQuestionIds.length,
+        duration: attempt.totalTime,
+        userEmail: user.email,
+        userRole: user.role
+      })
+      
+      setShowExamInstructions(false)
+      
+      // Navigate directly to exam page
+      console.log('🔄 Navigating to:', `/exam/${attempt.id}`)
+      console.log('🔄 Attempt details:', attempt)
+      navigate(`/exam/${attempt.id}`)
+    } catch (error) {
+      console.error('Error starting exam:', error)
+      alert('Error starting exam. Please try again.')
+    }
   }
 
   return (
@@ -153,14 +214,7 @@ export const UserHome = () => {
                 <div className="text-sm text-gray-500">
                   {t('questionsAvailable')}
                 </div>
-                <div className="flex space-x-2">
-                  <Link
-                    to={`/practice/${topic.id}`}
-                    className="btn-primary flex items-center space-x-1"
-                  >
-                    <Play className="w-4 h-4" />
-                    <span>{t('practice')}</span>
-                  </Link>
+                <div className="flex justify-end">
                   <button
                     onClick={() => handleExamClick(topic)}
                     className="btn-secondary flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white"

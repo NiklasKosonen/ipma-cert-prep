@@ -41,6 +41,14 @@ export const useAuthSupabase = () => {
 
     getInitialSession()
 
+    // Fallback timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.log('⚠️ Auth loading timeout - setting loading to false')
+        setLoading(false)
+      }
+    }, 10000) // 10 second timeout
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: any, session: any) => {
@@ -63,6 +71,7 @@ export const useAuthSupabase = () => {
 
     return () => {
       mounted = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])
@@ -70,32 +79,107 @@ export const useAuthSupabase = () => {
   // Handle authentication state change
   const handleAuthChange = async (supabaseUser: any) => {
     try {
-      // Get user profile from our users table
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', supabaseUser.email)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', error)
-        return
+      console.log('🔄 Handling auth change for:', supabaseUser.email)
+      
+      
+      // Get company code from user metadata (set during magic link signup)
+      const companyCode = supabaseUser.user_metadata?.company_code || 'DEFAULT_COMPANY'
+      const companyName = supabaseUser.user_metadata?.company_name || 'Default Company'
+      const userName = supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0]
+      
+      // Set user immediately with basic info
+      const basicAuthUser: AuthUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        role: 'user', // Default role
+        companyCode: companyCode,
       }
+      setUser(basicAuthUser)
+      setUserProfile(null)
+      console.log('✅ Basic user set:', basicAuthUser.email, 'Company:', companyCode)
+      
+      // Try to get user profile from our users table (with timeout)
+      try {
+        const profilePromise = supabase
+          .from('users')
+          .select('*')
+          .eq('email', supabaseUser.email)
+          .single()
 
-      // Create auth user object
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+        )
+
+        const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching user profile:', error)
+          console.log('✅ Creating new user profile for:', supabaseUser.email)
+          
+          // Create user profile if it doesn't exist
+          const userProfileData: UserProfile = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            name: userName,
+            role: 'user' as UserRole,
+            companyCode: companyCode,
+            companyName: companyName,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert([{
+              id: userProfileData.id,
+              email: userProfileData.email,
+              name: userProfileData.name,
+              role: userProfileData.role,
+              company_code: userProfileData.companyCode,
+              company_name: userProfileData.companyName,
+              created_at: userProfileData.createdAt,
+              updated_at: userProfileData.updatedAt
+            }])
+
+          if (profileError) {
+            console.error('Error creating user profile:', profileError)
+          } else {
+            console.log('✅ User profile created successfully')
+            setUserProfile(userProfileData)
+          }
+          
+          return
+        }
+
+        // Update user with profile data
+        const authUser: AuthUser = {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          role: profile?.role || 'user',
+          companyCode: profile?.company_code || companyCode,
+        }
+
+        setUser(authUser)
+        setUserProfile(profile)
+        
+        
+        console.log('✅ User authenticated with profile:', authUser.email, 'Role:', authUser.role)
+      } catch (profileError) {
+        console.log('⚠️ Profile fetch failed or timed out, using default role for:', supabaseUser.email)
+        // User is already set with basic info above
+      }
+    } catch (error) {
+      console.error('Error in handleAuthChange:', error)
+      // Set user with default values even on error
       const authUser: AuthUser = {
         id: supabaseUser.id,
         email: supabaseUser.email,
-        role: profile?.role || 'user',
-        companyCode: profile?.company_code || 'DEFAULT_COMPANY',
+        role: 'user',
+        companyCode: 'DEFAULT_COMPANY',
       }
-
       setUser(authUser)
-      setUserProfile(profile)
-      
-      console.log('✅ User authenticated:', authUser.email, 'Role:', authUser.role)
-    } catch (error) {
-      console.error('Error in handleAuthChange:', error)
+      setUserProfile(null)
+      console.log('✅ User set with default role after error:', authUser.email)
     }
   }
 
@@ -146,10 +230,12 @@ export const useAuthSupabase = () => {
   const signIn = async (email: string, password: string, _role: UserRole) => {
     try {
       setLoading(true)
+      console.log('🔐 Starting sign in for:', email)
       
       // Check rate limiting
       const rateLimitCheck = checkRateLimit(email)
       if (!rateLimitCheck.allowed) {
+        console.log('🚫 Rate limited for:', email)
         return { 
           data: null, 
           error: `Too many failed attempts. Please try again in ${rateLimitCheck.remainingTime} minutes.` 
@@ -163,20 +249,28 @@ export const useAuthSupabase = () => {
       })
 
       if (error) {
-        console.error('Sign in error:', error)
+        console.error('❌ Sign in error:', error)
         recordFailedAttempt(email) // Record failed attempt
         return { data: null, error: error.message }
       }
 
       if (data.user) {
+        console.log('✅ Supabase auth successful for:', email)
         clearRateLimit(email) // Clear rate limit on success
+        
+        // Wait for handleAuthChange to complete
         await handleAuthChange(data.user)
+        
+        // Return the current user state (which should be set by handleAuthChange)
+        // Use a small delay to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 100))
         return { data: { user: user }, error: null }
       }
 
+      console.log('❌ No user data returned from Supabase')
       return { data: null, error: 'Sign in failed' }
     } catch (error) {
-      console.error('Sign in error:', error)
+      console.error('❌ Sign in exception:', error)
       recordFailedAttempt(email) // Record failed attempt
       return { data: null, error: 'Sign in failed' }
     } finally {
@@ -267,20 +361,24 @@ export const useAuthSupabase = () => {
     }
   }
 
-  // Sign in with company code
+  // Sign in with company code using Supabase Auth (email as username, company code as password)
   const signInWithCompanyCode = async (companyCode: string, userEmail: string) => {
     try {
       setLoading(true)
 
-      // Check if company code exists and is active
+      // Check if company code exists and is active (case-insensitive)
+      console.log('🔄 Looking for company code:', companyCode)
       const { data: company, error: companyError } = await supabase
         .from('company_codes')
         .select('*')
-        .eq('code', companyCode)
+        .ilike('code', companyCode) // Case-insensitive search
         .eq('is_active', true)
         .single()
+      
+      console.log('🔄 Company lookup result:', { company, companyError })
 
       if (companyError || !company) {
+        console.error('Company code validation failed:', companyError)
         return { data: null, error: 'Invalid or inactive company code' }
       }
 
@@ -289,83 +387,46 @@ export const useAuthSupabase = () => {
         return { data: null, error: 'Company code has expired' }
       }
 
-      // Check if user email matches admin email for this company
-      if (company.admin_email && company.admin_email !== userEmail) {
-        return { data: null, error: 'Email does not match company admin email' }
-      }
-
-      // Create or get user profile
-      const { data: existingUser } = await supabase
+      // Check if user exists in our users table
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', userEmail)
+        .eq('email', userEmail.toLowerCase())
+        .eq('company_code', companyCode.toUpperCase())
         .single()
 
-        const userProfileData: UserProfile = {
-          id: existingUser?.id || `user_${Date.now()}`,
-          email: userEmail,
-          name: userEmail.split('@')[0],
-          role: 'user' as UserRole,
-          companyCode: companyCode,
-          companyName: company.company_name,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+      console.log('🔄 User lookup result:', { userData, userError })
 
-      if (existingUser) {
-        // Update existing user
-        const { error } = await supabase
-          .from('users')
-          .update({
-            company_code: companyCode,
-            company_name: company.company_name,
-            updated_at: new Date().toISOString()
-          })
-          .eq('email', userEmail)
-
-        if (error) {
-          console.error('Error updating user:', error)
-          return { data: null, error: 'Failed to update user profile' }
-        }
-      } else {
-        // Create new user
-        const { error } = await supabase
-          .from('users')
-          .insert([{
-            id: userProfileData.id,
-            email: userProfileData.email,
-            name: userProfileData.name,
-            role: userProfileData.role,
-            company_code: userProfileData.companyCode,
-            company_name: userProfileData.companyName,
-            created_at: userProfileData.createdAt,
-            updated_at: userProfileData.updatedAt
-          }])
-
-        if (error) {
-          console.error('Error creating user:', error)
-          return { data: null, error: 'Failed to create user profile' }
-        }
+      if (userError || !userData) {
+        console.error('User not found:', { userEmail, companyCode: companyCode.toUpperCase() })
+        return { data: null, error: 'User not found. Please contact administrator to add your email to this company code.' }
       }
 
-        // Create auth user object
-        const authUser: AuthUser = {
-          id: userProfileData.id,
-          email: userEmail,
-          role: 'user',
-          companyCode: userProfileData.companyCode,
-        }
-
-      setUser(authUser)
-      setUserProfile(userProfileData)
-
-      console.log('✅ User signed in with company code:', { 
-        email: userEmail, 
-        companyCode: companyCode,
-        companyName: company.company_name
+      // Use Supabase Auth for authentication (company code is the password)
+      console.log('🔄 Authenticating with Supabase Auth...')
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: userEmail.toLowerCase(),
+        password: companyCode.toUpperCase() // Company code is the password
       })
 
-      return { data: { user: authUser }, error: null }
+      if (authError) {
+        console.error('❌ Supabase Auth error:', authError)
+        return { data: null, error: 'Invalid email or company code. Please check your credentials.' }
+      }
+
+      if (!authData.user) {
+        return { data: null, error: 'Authentication failed' }
+      }
+
+      console.log('✅ Supabase Auth successful for:', userEmail)
+      
+      // Wait for handleAuthChange to complete and set the correct user role
+      await handleAuthChange(authData.user)
+      
+      // Return the current user state (which should be set by handleAuthChange)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      return { data: { user: user }, error: null }
+
     } catch (error) {
       console.error('Company code sign in error:', error)
       return { data: null, error: 'Sign in failed' }
