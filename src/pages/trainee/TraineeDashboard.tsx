@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { BarChart3, Users, BookOpen, TrendingUp, Eye, MessageSquare, Clock, Target, Award, AlertCircle } from 'lucide-react';
+import { Attempt } from '../../types';
 
 export const TraineeDashboard: React.FC = () => {
   const { t } = useLanguage();
@@ -37,9 +38,32 @@ export const TraineeDashboard: React.FC = () => {
     }
   };
 
-  // Get all student attempts
-  const studentUsers = users.filter(u => u.role === 'user');
-  const allStudentAttempts = studentUsers.flatMap(student => getUserAttempts(student.id));
+  // Get all student attempts (async)
+  const [allStudentAttempts, setAllStudentAttempts] = useState<Attempt[]>([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStudentAttempts = async () => {
+      try {
+        const studentUsers = users.filter(u => u.role === 'user');
+        const attempts: Attempt[] = [];
+        
+        for (const student of studentUsers) {
+          const studentAttempts = await getUserAttempts(student.id);
+          attempts.push(...studentAttempts);
+        }
+        
+        setAllStudentAttempts(attempts);
+      } catch (error) {
+        console.error('Error loading student attempts:', error);
+        setAllStudentAttempts([]);
+      } finally {
+        setAttemptsLoading(false);
+      }
+    };
+
+    loadStudentAttempts();
+  }, [users, getUserAttempts]);
 
   // Filter attempts by selected topic and user
   const filteredAttempts = allStudentAttempts.filter(attempt => {

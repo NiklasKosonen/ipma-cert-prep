@@ -20,7 +20,7 @@ const ExamSelection: React.FC = () => {
     }
   }, [searchParams])
 
-  const handleStartExam = () => {
+  const handleStartExam = async () => {
     if (!selectedTopicId) return
     if (!user) {
       alert('You must be logged in to start an exam.')
@@ -37,7 +37,7 @@ const ExamSelection: React.FC = () => {
       }
 
       // Create attempt record
-      const attempt = createAttempt(user.id, selectedTopicId, selectedQuestionIds)
+      const attempt = await createAttempt(user.id, selectedTopicId, selectedQuestionIds)
       
       console.log('🚀 Starting exam:', {
         attemptId: attempt.id,

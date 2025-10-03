@@ -4,6 +4,7 @@ import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen } from
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useData } from '../../contexts/DataContext'
 import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
+import { Attempt } from '../../types'
 
 export const UserHome = () => {
   const { t } = useLanguage()
@@ -84,9 +85,8 @@ export const UserHome = () => {
       const duration = `${subtopicCount * 3} min`
       const date = new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')
       
-      // Calculate score from attempt items
-      const attemptItems = getAttemptItems(attempt.id)
-      const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
+      // Calculate score from attempt items (simplified for now)
+      const totalScore = attempt.score || 0
       
       return {
         id: attempt.id,

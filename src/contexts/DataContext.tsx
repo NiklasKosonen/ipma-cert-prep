@@ -175,7 +175,7 @@ interface DataContextType {
   
   // Data management
   clearAllData: () => void
-  exportAllData: () => DataSnapshot
+  exportAllData: () => Promise<DataSnapshot>
   importAllData: (snapshot: DataSnapshot) => void
 }
 
@@ -1362,14 +1362,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setSubscriptions([])
   }
 
-  const exportAllData = (): DataSnapshot => {
+  const exportAllData = async (): Promise<DataSnapshot> => {
     const allAttempts: Attempt[] = []
     const allAttemptItems: AttemptItem[] = []
     
-    users.forEach(user => {
-      allAttempts.push(...getUserAttempts(user.id))
-      allAttemptItems.push(...getUserAttemptItems(user.id))
-    })
+    for (const user of users) {
+      try {
+        const userAttempts = await getUserAttempts(user.id)
+        const userAttemptItems = await getUserAttemptItems(user.id)
+        allAttempts.push(...userAttempts)
+        allAttemptItems.push(...userAttemptItems)
+      } catch (error) {
+        console.error(`Error loading data for user ${user.id}:`, error)
+      }
+    }
     
     return {
       topics,

@@ -21,20 +21,31 @@ const ExamResults: React.FC = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!attemptId) {
-      navigate('/app/home')
-      return
+    const loadExamResults = async () => {
+      if (!attemptId) {
+        navigate('/app/home')
+        return
+      }
+
+      try {
+        const currentAttempt = await getAttempt(attemptId)
+        if (!currentAttempt) {
+          navigate('/app/home')
+          return
+        }
+
+        const items = await getAttemptItems(attemptId)
+        setAttempt(currentAttempt)
+        setAttemptItems(items)
+      } catch (error) {
+        console.error('Error loading exam results:', error)
+        navigate('/app/home')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    const currentAttempt = getAttempt(attemptId)
-    if (!currentAttempt) {
-      navigate('/app/home')
-      return
-    }
-
-    setAttempt(currentAttempt)
-    setAttemptItems(getAttemptItems(attemptId))
-    setLoading(false)
+    loadExamResults()
   }, [attemptId, getAttempt, getAttemptItems, navigate])
 
   if (loading || !attempt) {

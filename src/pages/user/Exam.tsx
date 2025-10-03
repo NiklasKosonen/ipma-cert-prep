@@ -15,12 +15,10 @@ const Exam: React.FC = () => {
     getAttemptItems, 
     createAttemptItem, 
     updateAttemptItem,
-    getUserAttempts,
     questions,
     subtopics,
     topics,
-    kpis,
-    users
+    kpis
   } = useData()
 
   const [attempt, setAttempt] = useState<Attempt | null>(null)
@@ -185,19 +183,23 @@ const Exam: React.FC = () => {
   }, [attempt, handleSubmitExam])
 
   // Auto-save answers
-  const saveAnswer = useCallback((questionId: string, answer: string) => {
+  const saveAnswer = useCallback(async (questionId: string, answer: string) => {
     if (!attemptId) return
 
     setAnswers(prev => ({ ...prev, [questionId]: answer }))
 
-    // Save to attempt items
-    const existingItems = getAttemptItems(attemptId)
-    const existingItem = existingItems.find(item => item.questionId === questionId)
+    // Save to attempt items (async)
+    try {
+      const existingItems = await getAttemptItems(attemptId)
+      const existingItem = existingItems.find(item => item.questionId === questionId)
 
-    if (existingItem) {
-      updateAttemptItem(existingItem.id, { answer })
-    } else {
-      createAttemptItem(attemptId, questionId, answer)
+      if (existingItem) {
+        await updateAttemptItem(existingItem.id, { answer })
+      } else {
+        await createAttemptItem(attemptId, questionId, answer)
+      }
+    } catch (error) {
+      console.error('Error saving answer:', error)
     }
   }, [attemptId, getAttemptItems, updateAttemptItem, createAttemptItem])
 
