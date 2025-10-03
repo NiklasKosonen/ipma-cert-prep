@@ -50,7 +50,6 @@ SELECT
   q.subtopic_id,
   t.title as topic_title,
   s.title as subtopic_title,
-  q.connectedkpis as connected_kpis,
   q.is_active,
   q.created_at
 FROM questions q
@@ -58,19 +57,18 @@ LEFT JOIN topics t ON q.topic_id = t.id
 LEFT JOIN subtopics s ON q.subtopic_id = s.id
 ORDER BY t.title, s.title;
 
--- 5. Check Question-KPI relationships (from connectedkpis JSONB)
+-- 5. Check Question-KPI relationships (NO KPI COLUMN EXISTS)
 SELECT 
   'QUESTION_KPI_RELATIONSHIPS' as table_name,
   q.id as question_id,
   LEFT(q.prompt, 30) as question_preview,
   s.title as subtopic_title,
   t.title as topic_title,
-  q.connectedkpis as connected_kpis,
-  jsonb_array_length(q.connectedkpis) as kpi_count
+  'NO KPI COLUMN' as connected_kpis,
+  0 as kpi_count
 FROM questions q
 LEFT JOIN subtopics s ON q.subtopic_id = s.id
 LEFT JOIN topics t ON s.topic_id = t.id
-WHERE q.connectedkpis IS NOT NULL
 ORDER BY t.title, s.title;
 
 -- 6. Summary Statistics
@@ -114,10 +112,9 @@ UNION ALL
 
 SELECT 
   'ISSUES' as table_name,
-  'Questions without KPIs' as issue_type,
+  'Questions without KPIs (NO KPI COLUMN)' as issue_type,
   COUNT(*) as count
-FROM questions 
-WHERE connectedkpis IS NULL OR jsonb_array_length(connectedkpis) = 0
+FROM questions
 
 UNION ALL
 
