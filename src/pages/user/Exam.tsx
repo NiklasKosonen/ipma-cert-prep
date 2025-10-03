@@ -71,6 +71,10 @@ const Exam: React.FC = () => {
         const attemptQuestions = (currentAttempt.selectedQuestionIds || [])
           .map(id => questions.find(q => q.id === id))
           .filter((q): q is Question => q !== undefined)
+        
+        console.log('🔍 Debug - selectedQuestionIds:', currentAttempt.selectedQuestionIds)
+        console.log('🔍 Debug - available questions:', questions.length)
+        console.log('🔍 Debug - attemptQuestions found:', attemptQuestions.length)
 
         console.log('📝 Loaded', attemptQuestions.length, 'questions for exam')
 

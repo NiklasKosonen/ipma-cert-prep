@@ -1190,10 +1190,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAttempt = async (id: string, updates: Partial<Attempt>) => {
     try {
-      const updateData = {
-        ...updates,
+      // Map application fields to database fields
+      const updateData: any = {
         updated_at: new Date().toISOString()
       }
+      
+      // Map camelCase to snake_case
+      if (updates.endTime !== undefined) updateData.end_time = updates.endTime
+      if (updates.status !== undefined) updateData.status = updates.status
+      if (updates.timeRemaining !== undefined) updateData.time_remaining = updates.timeRemaining
+      if (updates.score !== undefined) updateData.score = updates.score
+      if (updates.passed !== undefined) updateData.passed = updates.passed
+      if (updates.submittedAt !== undefined) updateData.submitted_at = updates.submittedAt
 
       const { error } = await supabase
         .from('attempts')
