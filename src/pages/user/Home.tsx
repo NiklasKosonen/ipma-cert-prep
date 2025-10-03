@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -27,8 +27,32 @@ export const UserHome = () => {
     )
   }
 
-  // Get user's actual attempts
-  const userAttempts = user ? getUserAttempts(user.id) : []
+  // Get user's actual attempts (async)
+  const [userAttempts, setUserAttempts] = useState<Attempt[]>([])
+  const [attemptsLoading, setAttemptsLoading] = useState(true)
+  
+  // Load user attempts
+  useEffect(() => {
+    const loadUserAttempts = async () => {
+      if (!user) {
+        setUserAttempts([])
+        setAttemptsLoading(false)
+        return
+      }
+      
+      try {
+        const attempts = await getUserAttempts(user.id)
+        setUserAttempts(attempts)
+      } catch (error) {
+        console.error('Error loading user attempts:', error)
+        setUserAttempts([])
+      } finally {
+        setAttemptsLoading(false)
+      }
+    }
+    
+    loadUserAttempts()
+  }, [user, getUserAttempts])
   
   // Calculate statistics
   const totalAttempts = userAttempts.length
@@ -39,10 +63,9 @@ export const UserHome = () => {
   
   const averageScore = userAttempts.length > 0 
     ? userAttempts.reduce((sum, attempt) => {
-        // Calculate score from attempt items
-        const attemptItems = getAttemptItems(attempt.id)
-        const totalScore = attemptItems.reduce((itemSum: number, item: any) => itemSum + (item.score || 0), 0)
-        return sum + totalScore
+        // For now, use a simple calculation based on attempt status
+        // TODO: Load attempt items to calculate actual scores
+        return sum + (attempt.score || 0)
       }, 0) / userAttempts.length 
     : 0
 
