@@ -62,13 +62,13 @@ const Exam: React.FC = () => {
           return
         }
 
-        console.log('✅ Found attempt:', currentAttempt.id, 'with', currentAttempt.selectedQuestionIds.length, 'questions')
+        console.log('✅ Found attempt:', currentAttempt.id, 'with', currentAttempt.selectedQuestionIds?.length || 0, 'questions')
 
         setAttempt(currentAttempt)
         setTimeRemaining(currentAttempt.timeRemaining)
 
         // Load questions for this attempt
-        const attemptQuestions = currentAttempt.selectedQuestionIds
+        const attemptQuestions = (currentAttempt.selectedQuestionIds || [])
           .map(id => questions.find(q => q.id === id))
           .filter((q): q is Question => q !== undefined)
 

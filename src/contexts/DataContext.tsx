@@ -1232,7 +1232,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
       console.log('✅ Found attempt in Supabase:', data.id)
-      return data
+      
+      // Map database fields to application interface
+      const mappedAttempt: Attempt = {
+        id: data.id,
+        userId: data.user_id,
+        topicId: data.topic_id,
+        selectedQuestionIds: data.selected_question_ids || [],
+        startTime: data.start_time,
+        endTime: data.end_time,
+        status: data.status,
+        totalTime: data.total_time,
+        timeRemaining: data.time_remaining,
+        score: data.score,
+        passed: data.passed,
+        submittedAt: data.submitted_at,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
+      
+      return mappedAttempt
     } catch (error) {
       console.error('Error in getAttempt:', error)
       return undefined
