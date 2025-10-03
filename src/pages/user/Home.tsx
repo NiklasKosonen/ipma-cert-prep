@@ -8,7 +8,7 @@ import { Attempt } from '../../types'
 
 export const UserHome = () => {
   const { t } = useLanguage()
-  const { topics, subtopics, getUserAttempts, selectRandomQuestions, createAttempt } = useData()
+  const { topics, subtopics, getUserAttempts, getUserAttemptItems, selectRandomQuestions, createAttempt } = useData()
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   
@@ -16,6 +16,7 @@ export const UserHome = () => {
   const [showExamInstructions, setShowExamInstructions] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
   const [userAttempts, setUserAttempts] = useState<Attempt[]>([])
+  const [userAttemptItems, setUserAttemptItems] = useState<any[]>([])
   
   // Load user attempts
   useEffect(() => {
@@ -27,15 +28,18 @@ export const UserHome = () => {
       
       try {
         const attempts = await getUserAttempts(user.id)
+        const attemptItems = await getUserAttemptItems(user.id)
         setUserAttempts(attempts)
+        setUserAttemptItems(attemptItems)
       } catch (error) {
         console.error('Error loading user attempts:', error)
         setUserAttempts([])
+        setUserAttemptItems([])
       }
     }
     
     loadUserAttempts()
-  }, [user, getUserAttempts])
+  }, [user, getUserAttempts, getUserAttemptItems])
 
   // Show loading state while auth is loading
   if (loading) {
@@ -56,13 +60,10 @@ export const UserHome = () => {
     return total + (subtopicCount * 3) // 3 minutes per subtopic
   }, 0)
   
-  const averageScore = userAttempts.length > 0 
-    ? userAttempts.reduce((sum, attempt) => {
-        // For now, use a simple calculation based on attempt status
-        // TODO: Load attempt items to calculate actual scores
-        return sum + (attempt.score || 0)
-      }, 0) / userAttempts.length 
-    : 0
+  // Calculate average score from actual attempt items
+  const totalScore = userAttemptItems.reduce((sum, item) => sum + (item.score || 0), 0)
+  const totalQuestions = userAttemptItems.length
+  const averageScore = totalQuestions > 0 ? totalScore / totalQuestions : 0
 
   // Filter attempts by selected topic
   const filteredAttempts = userAttempts.filter(attempt => 
@@ -79,8 +80,9 @@ export const UserHome = () => {
       const duration = `${subtopicCount * 3} min`
       const date = new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')
       
-      // Calculate score from attempt items (simplified for now)
-      const totalScore = attempt.score || 0
+      // Calculate score from attempt items
+      const attemptItemsForAttempt = userAttemptItems.filter(item => item.attemptId === attempt.id)
+      const totalScore = attemptItemsForAttempt.reduce((sum, item) => sum + (item.score || 0), 0)
       
       return {
         id: attempt.id,

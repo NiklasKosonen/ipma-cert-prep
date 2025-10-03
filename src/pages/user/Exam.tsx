@@ -119,8 +119,18 @@ const Exam: React.FC = () => {
         const existingItem = attemptItems.find(item => item.questionId === question.id)
 
         if (answer.trim()) {
+          // Get KPI names from IDs
+          const kpiNames = question.connectedKPIs
+            .map(kpiId => kpis.find(kpi => kpi.id === kpiId)?.name)
+            .filter(Boolean) as string[]
+          
+          console.log('🔍 Evaluating answer for question:', question.prompt.substring(0, 50))
+          console.log('🔍 Connected KPI IDs:', question.connectedKPIs)
+          console.log('🔍 KPI Names to detect:', kpiNames)
+          console.log('🔍 User answer:', answer.substring(0, 100))
+          
           // Evaluate the answer
-          const evaluation = await evaluateAnswer(answer, question.connectedKPIs)
+          const evaluation = await evaluateAnswer(answer, kpiNames)
           
           const result: AttemptItem = existingItem ? {
             ...existingItem,

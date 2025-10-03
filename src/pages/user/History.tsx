@@ -1,68 +1,153 @@
-import { useState } from 'react'
-import { Download, Calendar, Clock, BarChart3 } from 'lucide-react'
-import { useLanguage } from '../../contexts/LanguageContext'
+import { useState, useEffect } from 'react'
+import { Download, Calendar, Clock, BarChart3, Filter, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
+import { useData } from '../../contexts/DataContext'
+import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
+import { Attempt, AttemptItem } from '../../types'
 
 export const UserHistory = () => {
-  const { t } = useLanguage()
-  const [filter, setFilter] = useState('all')
+  const { getUserAttempts, getUserAttemptItems, topics, subtopics } = useData()
+  const { user } = useAuth()
+  const [selectedTopic, setSelectedTopic] = useState<string>('all')
+  const [attempts, setAttempts] = useState<Attempt[]>([])
+  const [attemptItems, setAttemptItems] = useState<AttemptItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock history data
-  const historyData = [
-    {
-      id: '1',
-      topic: 'Project Planning and Control',
-      date: '2024-01-15',
-      time: '14:30',
-      duration: '12:30',
-      score: 3,
-      totalQuestions: 3,
-      correctAnswers: 3,
-      feedback: 'Excellent work! You\'ve covered all the key areas: Project Charter, Work Breakdown Structure, Schedule Management.',
-    },
-    {
-      id: '2',
-      topic: 'Risk Management',
-      date: '2024-01-14',
-      time: '10:15',
-      duration: '15:45',
-      score: 2,
-      totalQuestions: 3,
-      correctAnswers: 2,
-      feedback: 'Good effort! You\'ve addressed Risk Identification and Risk Mitigation. Consider also discussing risk assessment to strengthen your response.',
-    },
-    {
-      id: '3',
-      topic: 'Project Planning and Control',
-      date: '2024-01-12',
-      time: '16:20',
-      duration: '18:20',
-      score: 1,
-      totalQuestions: 3,
-      correctAnswers: 1,
-      feedback: 'You\'ve made a start by mentioning Project Charter. To improve, try to incorporate Work Breakdown Structure and Schedule Management in your answer.',
-    },
-  ]
+  // Load user data
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!user?.id) return
 
-  const filteredData = filter === 'all' 
-    ? historyData 
-    : historyData.filter(item => 
-        filter === 'excellent' ? item.score === 3 :
-        filter === 'good' ? item.score === 2 :
-        filter === 'needs-improvement' ? item.score === 1 :
-        item.score === 0
-      )
+      try {
+        const userAttempts = await getUserAttempts(user.id)
+        const userAttemptItems = await getUserAttemptItems(user.id)
+        setAttempts(userAttempts)
+        setAttemptItems(userAttemptItems)
+      } catch (error) {
+        console.error('Error loading user data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserData()
+  }, [user?.id, getUserAttempts, getUserAttemptItems])
+
+  // Filter attempts
+  const filteredAttempts = attempts.filter(attempt => {
+    if (selectedTopic !== 'all' && attempt.topicId !== selectedTopic) return false
+    return true
+  })
+
+  // Calculate statistics for selected topic
+  const calculateTopicStats = () => {
+    const topicAttempts = selectedTopic === 'all' ? attempts : attempts.filter(a => a.topicId === selectedTopic)
+    const topicAttemptItems = selectedTopic === 'all' ? attemptItems : attemptItems.filter(item => 
+      topicAttempts.some(attempt => attempt.id === item.attemptId)
+    )
+
+    const totalExams = topicAttempts.length
+    const totalTime = topicAttempts.reduce((sum, attempt) => {
+      const subtopicCount = subtopics.filter(s => s.topicId === attempt.topicId).length
+      return sum + (subtopicCount * 3) // 3 minutes per subtopic
+    }, 0)
+
+    const totalScore = topicAttemptItems.reduce((sum, item) => sum + (item.score || 0), 0)
+    const totalQuestions = topicAttemptItems.length
+    const averageScore = totalQuestions > 0 ? totalScore / totalQuestions : 0
+    const maxPossibleScore = totalQuestions * 3
+    const averagePercentage = maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 100 : 0
+
+    // Calculate pass rate (80% questions answered + 50% points earned)
+    const passedExams = topicAttempts.filter(attempt => {
+      const attemptItemsForAttempt = topicAttemptItems.filter(item => item.attemptId === attempt.id)
+      const answeredQuestions = attemptItemsForAttempt.filter(item => item.answer && item.answer.trim().length > 0).length
+      const totalQuestionsForAttempt = attemptItemsForAttempt.length
+      const attemptScore = attemptItemsForAttempt.reduce((sum, item) => sum + (item.score || 0), 0)
+      const maxScoreForAttempt = totalQuestionsForAttempt * 3
+      
+      const questionsAnsweredPercentage = totalQuestionsForAttempt > 0 ? (answeredQuestions / totalQuestionsForAttempt) * 100 : 0
+      const pointsPercentage = maxScoreForAttempt > 0 ? (attemptScore / maxScoreForAttempt) * 100 : 0
+      
+      return questionsAnsweredPercentage >= 80 && pointsPercentage >= 50
+    }).length
+
+    const passRate = totalExams > 0 ? (passedExams / totalExams) * 100 : 0
+
+    return {
+      totalExams,
+      totalTime,
+      averageScore: averageScore.toFixed(1),
+      averagePercentage: averagePercentage.toFixed(1),
+      passRate: passRate.toFixed(1),
+      totalScore,
+      maxPossibleScore
+    }
+  }
+
+  const stats = calculateTopicStats()
+
+  // Get topic name
+  const getTopicName = (topicId: string) => {
+    return topics.find(t => t.id === topicId)?.title || 'Unknown Topic'
+  }
+
+  // Format time
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes} min`
+    }
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return `${hours}h ${remainingMinutes}min`
+  }
+
+  // Check if exam passed
+  const isExamPassed = (attempt: Attempt) => {
+    const attemptItemsForAttempt = attemptItems.filter(item => item.attemptId === attempt.id)
+    const answeredQuestions = attemptItemsForAttempt.filter(item => item.answer && item.answer.trim().length > 0).length
+    const totalQuestionsForAttempt = attemptItemsForAttempt.length
+    const attemptScore = attemptItemsForAttempt.reduce((sum, item) => sum + (item.score || 0), 0)
+    const maxScoreForAttempt = totalQuestionsForAttempt * 3
+    
+    const questionsAnsweredPercentage = totalQuestionsForAttempt > 0 ? (answeredQuestions / totalQuestionsForAttempt) * 100 : 0
+    const pointsPercentage = maxScoreForAttempt > 0 ? (attemptScore / maxScoreForAttempt) * 100 : 0
+    
+    return questionsAnsweredPercentage >= 80 && pointsPercentage >= 50
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading history...</p>
+        </div>
+      </div>
+    )
+  }
 
   const exportToCSV = () => {
-    const headers = ['Date', 'Topic', 'Score', 'Duration', 'Feedback']
+    const headers = ['Date', 'Topic', 'Score', 'Duration', 'Passed', 'Questions Answered']
     const csvContent = [
       headers.join(','),
-      ...filteredData.map(item => [
-        item.date,
-        `"${item.topic}"`,
-        item.score,
-        item.duration,
-        `"${item.feedback}"`
-      ].join(','))
+      ...filteredAttempts.map(attempt => {
+        const attemptItemsForAttempt = attemptItems.filter(item => item.attemptId === attempt.id)
+        const totalScore = attemptItemsForAttempt.reduce((sum, item) => sum + (item.score || 0), 0)
+        const answeredQuestions = attemptItemsForAttempt.filter(item => item.answer && item.answer.trim().length > 0).length
+        const passed = isExamPassed(attempt)
+        const date = new Date(attempt.createdAt).toLocaleDateString()
+        const subtopicCount = subtopics.filter(s => s.topicId === attempt.topicId).length
+        const duration = `${subtopicCount * 3} min`
+        
+        return [
+          date,
+          `"${getTopicName(attempt.topicId)}"`,
+          totalScore,
+          duration,
+          passed ? 'Yes' : 'No',
+          answeredQuestions
+        ].join(',')
+      })
     ].join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv' })
@@ -74,173 +159,186 @@ export const UserHistory = () => {
     window.URL.revokeObjectURL(url)
   }
 
-  const getScoreColor = (score: number) => {
-    switch (score) {
-      case 3: return 'text-green-600 bg-green-100'
-      case 2: return 'text-yellow-600 bg-yellow-100'
-      case 1: return 'text-orange-600 bg-orange-100'
-      default: return 'text-red-600 bg-red-100'
-    }
-  }
-
-  const getScoreLabel = (score: number) => {
-    switch (score) {
-      case 3: return 'Excellent'
-      case 2: return 'Good'
-      case 1: return 'Needs Improvement'
-      default: return 'Poor'
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t('history.title')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Exam History</h1>
           <p className="mt-2 text-gray-600">
             Track your practice sessions and monitor your progress over time.
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BarChart3 className="h-8 w-8 text-primary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Sessions</p>
-                <p className="text-2xl font-semibold text-gray-900">{historyData.length}</p>
-              </div>
-            </div>
+        {/* Topic Filter */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex items-center space-x-4 mb-4">
+            <Filter className="h-5 w-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Filter by Topic</h2>
           </div>
           
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-green-600" />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTopic('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedTopic === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              All Topics
+            </button>
+            {topics.map(topic => (
+              <button
+                key={topic.id}
+                onClick={() => setSelectedTopic(topic.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedTopic === topic.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {topic.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Exams */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Exams</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.totalExams}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Time</p>
-                <p className="text-2xl font-semibold text-gray-900">46m 35s</p>
-              </div>
+              <BarChart3 className="h-8 w-8 text-blue-600" />
             </div>
           </div>
-          
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-blue-600" />
+
+          {/* Total Time */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Study Time</p>
+                <p className="text-3xl font-bold text-gray-900">{formatTime(stats.totalTime)}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Average Score</p>
-                <p className="text-2xl font-semibold text-gray-900">2.0/3</p>
-              </div>
+              <Clock className="h-8 w-8 text-green-600" />
             </div>
           </div>
-          
-          <div className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BarChart3 className="h-8 w-8 text-purple-600" />
+
+          {/* Average Score */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Average Score</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.averagePercentage}%</p>
+                <p className="text-xs text-gray-500">{stats.averageScore}/{stats.maxPossibleScore > 0 ? (stats.maxPossibleScore / stats.totalExams).toFixed(1) : 0} avg</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Success Rate</p>
-                <p className="text-2xl font-semibold text-gray-900">67%</p>
+              <Target className="h-8 w-8 text-purple-600" />
+            </div>
+          </div>
+
+          {/* Pass Rate */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pass Rate</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.passRate}%</p>
+                <p className="text-xs text-gray-500">≥80% answered + ≥50% points</p>
               </div>
+              <TrendingUp className="h-8 w-8 text-orange-600" />
             </div>
           </div>
         </div>
 
-        {/* Filters and Export */}
-        <div className="card mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center space-x-4 mb-4 sm:mb-0">
-              <label className="text-sm font-medium text-gray-700">Filter by score:</label>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="input-field w-auto"
-              >
-                <option value="all">All Scores</option>
-                <option value="excellent">Excellent (3)</option>
-                <option value="good">Good (2)</option>
-                <option value="needs-improvement">Needs Improvement (1)</option>
-                <option value="poor">Poor (0)</option>
-              </select>
-            </div>
-            
-            <button
-              onClick={exportToCSV}
-              className="btn-outline flex items-center"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {t('history.export')}
-            </button>
-          </div>
+        {/* Export Button */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={exportToCSV}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export to CSV</span>
+          </button>
         </div>
 
         {/* History List */}
         <div className="space-y-4">
-          {filteredData.map((item) => (
-            <div key={item.id} className="card">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex-1 mb-4 lg:mb-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{item.topic}</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(item.score)}`}>
-                      {getScoreLabel(item.score)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-6 text-sm text-gray-500 mb-3">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {item.date} at {item.time}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {item.duration}
-                    </div>
-                    <div>
-                      Score: {item.score}/3
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-700 text-sm">
-                    {item.feedback}
-                  </p>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {item.score}/3
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {item.correctAnswers}/{item.totalQuestions} correct
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {filteredAttempts.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No exam history found for the selected filter.</p>
             </div>
-          ))}
+          ) : (
+            filteredAttempts
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .map((attempt) => {
+                const attemptItemsForAttempt = attemptItems.filter(item => item.attemptId === attempt.id)
+                const totalScore = attemptItemsForAttempt.reduce((sum, item) => sum + (item.score || 0), 0)
+                const answeredQuestions = attemptItemsForAttempt.filter(item => item.answer && item.answer.trim().length > 0).length
+                const totalQuestions = attemptItemsForAttempt.length
+                const passed = isExamPassed(attempt)
+                const date = new Date(attempt.createdAt).toLocaleDateString()
+                const subtopicCount = subtopics.filter(s => s.topicId === attempt.topicId).length
+                const duration = `${subtopicCount * 3} min`
+                
+                return (
+                  <div key={attempt.id} className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex-1 mb-4 lg:mb-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {getTopicName(attempt.topicId)}
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            {passed ? (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-600" />
+                            )}
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              passed 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {passed ? 'Passed' : 'Failed'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-6 text-sm text-gray-500 mb-3">
+                          <div className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {date}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {duration}
+                          </div>
+                          <div className="flex items-center">
+                            <BarChart3 className="w-4 h-4 mr-1" />
+                            {answeredQuestions}/{totalQuestions} questions answered
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {totalScore}/{totalQuestions * 3}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {((totalScore / (totalQuestions * 3)) * 100).toFixed(0)}% score
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+          )}
         </div>
-
-        {filteredData.length === 0 && (
-          <div className="card text-center py-12">
-            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No practice sessions found</h3>
-            <p className="text-gray-500">
-              {filter === 'all' 
-                ? 'Start practicing to see your history here.'
-                : 'No sessions match the selected filter.'
-              }
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

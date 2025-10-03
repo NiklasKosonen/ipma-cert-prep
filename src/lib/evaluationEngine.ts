@@ -42,31 +42,93 @@ export const evaluateAnswer = async (answer: string, kpis: string[]): Promise<Ev
  */
 const detectKPIs = (answer: string, kpis: string[]): string[] => {
   const answerLower = answer.toLowerCase()
+  const detectedKPIs: string[] = []
   
-  return kpis.filter(kpi => {
-    // Check main name
-    if (answerLower.includes(kpi.toLowerCase())) {
-      return true
+  console.log('🔍 KPI Detection - Answer:', answer.substring(0, 100))
+  console.log('🔍 KPI Detection - KPIs to check:', kpis)
+  
+  for (const kpi of kpis) {
+    const kpiLower = kpi.toLowerCase()
+    let detected = false
+    
+    // 1. Check exact name match
+    if (answerLower.includes(kpiLower)) {
+      detected = true
+      console.log(`✅ Exact match found for: ${kpi}`)
     }
     
-    // Check learned patterns for this KPI
-    const learnedPatterns = aiModel.learnedPatterns.get(kpi) || []
-    if (learnedPatterns.some(pattern => 
-      answerLower.includes(pattern.toLowerCase())
-    )) {
-      return true
+    // 2. Check individual words from KPI name
+    if (!detected) {
+      const kpiWords = kpiLower.split(/\s+/).filter(word => word.length > 2)
+      const wordMatches = kpiWords.filter(word => answerLower.includes(word))
+      if (wordMatches.length >= Math.ceil(kpiWords.length * 0.6)) { // 60% of words must match
+        detected = true
+        console.log(`✅ Word match found for: ${kpi} (matched: ${wordMatches.join(', ')})`)
+      }
     }
     
-    // Check context-based patterns
-    const contextPatterns = aiModel.contextPatterns.get(kpi) || []
-    if (contextPatterns.some(pattern => 
-      answerLower.includes(pattern.toLowerCase())
-    )) {
-      return true
+    // 3. Check synonyms and related terms
+    if (!detected) {
+      const synonyms = getKPISynonyms(kpi)
+      for (const synonym of synonyms) {
+        if (answerLower.includes(synonym.toLowerCase())) {
+          detected = true
+          console.log(`✅ Synonym match found for: ${kpi} (synonym: ${synonym})`)
+          break
+        }
+      }
     }
     
-    return false
-  })
+    // 4. Check learned patterns
+    if (!detected) {
+      const learnedPatterns = aiModel.learnedPatterns.get(kpi) || []
+      if (learnedPatterns.some(pattern => 
+        answerLower.includes(pattern.toLowerCase())
+      )) {
+        detected = true
+        console.log(`✅ Learned pattern match found for: ${kpi}`)
+      }
+    }
+    
+    if (detected) {
+      detectedKPIs.push(kpi)
+    } else {
+      console.log(`❌ No match found for: ${kpi}`)
+    }
+  }
+  
+  console.log('🔍 Final detected KPIs:', detectedKPIs)
+  return detectedKPIs
+}
+
+// Helper function to get synonyms for common KPI terms
+const getKPISynonyms = (kpi: string): string[] => {
+  const synonymMap: Record<string, string[]> = {
+    'leadership': ['lead', 'manage', 'guide', 'direct', 'supervise', 'oversee'],
+    'communication': ['communicate', 'discuss', 'talk', 'speak', 'convey', 'express'],
+    'teamwork': ['collaborate', 'cooperate', 'work together', 'team work', 'joint effort'],
+    'planning': ['plan', 'organize', 'schedule', 'prepare', 'arrange', 'coordinate'],
+    'problem solving': ['solve', 'resolve', 'address', 'tackle', 'fix', 'handle'],
+    'decision making': ['decide', 'choose', 'select', 'determine', 'conclude'],
+    'stakeholder management': ['stakeholder', 'client', 'customer', 'partner', 'relationship'],
+    'risk management': ['risk', 'threat', 'danger', 'uncertainty', 'mitigate'],
+    'quality management': ['quality', 'standard', 'excellence', 'improvement', 'control'],
+    'change management': ['change', 'transformation', 'transition', 'adaptation', 'evolution'],
+    'project management': ['project', 'initiative', 'deliverable', 'milestone', 'timeline'],
+    'resource management': ['resource', 'budget', 'cost', 'allocation', 'utilization'],
+    'performance management': ['performance', 'evaluation', 'assessment', 'review', 'feedback'],
+    'strategic thinking': ['strategy', 'strategic', 'vision', 'direction', 'long-term'],
+    'innovation': ['innovate', 'creative', 'new', 'novel', 'improvement', 'enhancement']
+  }
+  
+  const kpiLower = kpi.toLowerCase()
+  for (const [key, synonyms] of Object.entries(synonymMap)) {
+    if (kpiLower.includes(key)) {
+      return synonyms
+    }
+  }
+  
+  return []
 }
 
 /**
