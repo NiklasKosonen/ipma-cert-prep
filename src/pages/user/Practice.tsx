@@ -3,8 +3,7 @@ import { Clock, ArrowLeft, Trophy, AlertCircle, BookOpen, Play, Info } from 'luc
 import { useData } from '../../contexts/DataContext'
 import { useAuthSupabase } from '../../hooks/useAuthSupabase'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
-import { Question, Topic, Subtopic, Attempt, AttemptItem } from '../../types'
-import { UserDataService } from '../../services/userDataService'
+import { Question, Topic, Subtopic, Attempt } from '../../types'
 
 // Utility function to randomly select questions
 const selectRandomQuestions = (questions: Question[], subtopics: Subtopic[]): Question[] => {
@@ -241,7 +240,7 @@ const Exam = ({ topic, onBack, onComplete }: {
   onBack: () => void, 
   onComplete: (results: any) => void
 }) => {
-  const { questions, subtopics, kpis, createAttempt, createAttemptItem, updateAttempt, updateAttemptItem, getAttemptItems } = useData()
+  const { questions, subtopics, kpis, createAttempt, createAttemptItem, updateAttempt } = useData()
   const { user } = useAuthSupabase()
   
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([])

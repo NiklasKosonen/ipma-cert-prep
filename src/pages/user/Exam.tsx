@@ -270,11 +270,9 @@ const Exam: React.FC = () => {
 
   // Get question context
   const getQuestionContext = (question: Question) => {
-    const subtopic = subtopics.find(s => s.id === question.subtopicId)
-    const topic = topics.find(t => t.id === subtopic?.topicId)
     const questionKPIs = kpis.filter(k => question.connectedKPIs.includes(k.id))
 
-    return { subtopic, topic, questionKPIs }
+    return { questionKPIs }
   }
 
   if (!attempt || !examQuestions.length) {
@@ -357,7 +355,7 @@ const Exam: React.FC = () => {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="space-y-8">
           {examQuestions.map((question, index) => {
-            const { subtopic, topic, questionKPIs } = getQuestionContext(question)
+            const { questionKPIs } = getQuestionContext(question)
             
             return (
               <div key={question.id} className="bg-white rounded-lg shadow-lg p-8">
