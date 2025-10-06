@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Clock, ArrowLeft, Trophy, AlertCircle, BookOpen, Play, Info } from 'lucide-react'
 import { useData } from '../../contexts/DataContext'
+import { useAuthSupabase } from '../../hooks/useAuthSupabase'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
 import { Question, Topic, Subtopic, Attempt, AttemptItem } from '../../types'
 import { UserDataService } from '../../services/userDataService'
@@ -238,9 +239,10 @@ const TopicDetails = ({ topic, onStartExam, onBack }: {
 const Exam = ({ topic, onBack, onComplete }: { 
   topic: Topic, 
   onBack: () => void, 
-  onComplete: (results: any) => void 
+  onComplete: (results: any) => void
 }) => {
-  const { questions, subtopics, kpis } = useData()
+  const { questions, subtopics, kpis, createAttempt, createAttemptItem, updateAttempt, updateAttemptItem, getAttemptItems } = useData()
+  const { user } = useAuthSupabase()
   
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -251,37 +253,35 @@ const Exam = ({ topic, onBack, onComplete }: {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
-    const randomQuestions = selectRandomQuestions(questions, topicSubtopics)
-    
-    console.log('Exam setup:', {
-      topicId: topic.id,
-      topicSubtopics: topicSubtopics.length,
-      availableQuestions: questions.length,
-      selectedQuestions: randomQuestions.length
-    })
-    
-    setSelectedQuestions(randomQuestions)
-    setTimeRemaining(randomQuestions.length * 3 * 60) // 3 minutes per question
-    
-    // Create attempt record
-    const newAttempt: Attempt = {
-      id: `attempt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      userId: 'current_user', // Will be replaced with actual user ID
-      topicId: topic.id,
-      selectedQuestionIds: [],
-      startTime: new Date().toISOString(),
-      endTime: undefined,
-      status: 'in_progress',
-      totalTime: randomQuestions.length * 3, // 3 minutes per question
-      timeRemaining: randomQuestions.length * 3 * 60, // in seconds
-      submittedAt: undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const setupExam = async () => {
+      if (!user?.id) return
+      
+      const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
+      const randomQuestions = selectRandomQuestions(questions, topicSubtopics)
+      
+      console.log('Practice exam setup:', {
+        topicId: topic.id,
+        topicSubtopics: topicSubtopics.length,
+        availableQuestions: questions.length,
+        selectedQuestions: randomQuestions.length
+      })
+      
+      setSelectedQuestions(randomQuestions)
+      setTimeRemaining(randomQuestions.length * 3 * 60) // 3 minutes per question
+      
+      // Create attempt record using the standard system
+      try {
+        const selectedQuestionIds = randomQuestions.map(q => q.id)
+        const newAttempt = await createAttempt(user.id, topic.id, selectedQuestionIds)
+        setAttempt(newAttempt)
+        console.log('✅ Practice attempt created:', newAttempt.id)
+      } catch (error) {
+        console.error('❌ Error creating practice attempt:', error)
+      }
     }
     
-    setAttempt(newAttempt)
-  }, [topic.id, questions, subtopics])
+    setupExam()
+  }, [topic.id, questions, subtopics, user?.id, createAttempt])
 
   useEffect(() => {
     if (timeRemaining > 0 && !isSubmitted) {
@@ -293,7 +293,7 @@ const Exam = ({ topic, onBack, onComplete }: {
   }, [timeRemaining, isSubmitted])
 
   const handleSubmit = async () => {
-    if (isSubmitted || isSaving) return
+    if (isSubmitted || isSaving || !attempt) return
     
     setIsSubmitted(true)
     setIsSaving(true)
@@ -314,93 +314,53 @@ const Exam = ({ topic, onBack, onComplete }: {
         return
       }
       
-      // Evaluate all answers
-      const results = await Promise.all(
-        selectedQuestions.map(async (question) => {
-          try {
-            const answer = answers[question.id] || ''
-            const connectedKPIs = kpis.filter(kpi => question.connectedKPIs?.includes(kpi.id))
-            const evaluation = await evaluateAnswer(answer, connectedKPIs.map(kpi => kpi.name))
-            
-            console.log('Question evaluation:', {
-              questionId: question.id,
-              answer: answer.substring(0, 50) + '...',
-              connectedKPIs: connectedKPIs.length,
-              evaluation
-            })
-            
-            return {
-              question,
-              answer,
-              ...evaluation
-            }
-          } catch (error) {
-            console.error('Error evaluating question:', question.id, error)
-            return {
-              question,
-              answer: answers[question.id] || '',
-              toteutuneet_kpi: [],
-              puuttuvat_kpi: [],
-              pisteet: 0,
-              sanallinen_arvio: 'Evaluation failed'
-            }
+      // Update attempt status
+      await updateAttempt(attempt.id, {
+        status: 'completed',
+        endTime: new Date().toISOString(),
+        timeRemaining: 0
+      })
+
+      // Evaluate each answer and save attempt items
+      const results = []
+      for (const question of selectedQuestions) {
+        const answer = answers[question.id] || ''
+        
+        if (answer.trim()) {
+          // Get KPI names from IDs
+          let kpiNames = question.connectedKPIs
+            .map(kpiId => kpis.find(kpi => kpi.id === kpiId)?.name)
+            .filter(Boolean) as string[]
+          
+          // Fallback: If no KPIs linked to question, get KPIs from subtopic
+          if (kpiNames.length === 0 && question.subtopicId) {
+            const subtopicKPIs = kpis.filter(kpi => kpi.subtopicId === question.subtopicId)
+            kpiNames = subtopicKPIs.map(kpi => kpi.name)
           }
-        })
-      )
+          
+          // Evaluate the answer
+          const evaluation = await evaluateAnswer(answer, kpiNames, 'fi') // Default to Finnish for practice
+          
+          // Create attempt item
+          await createAttemptItem(attempt.id, question.id, answer, {
+            kpisDetected: evaluation.toteutuneet_kpi,
+            kpisMissing: evaluation.puuttuvat_kpi,
+            score: evaluation.pisteet,
+            feedback: evaluation.sanallinen_arvio
+          })
+          
+          results.push({
+            question,
+            answer,
+            ...evaluation
+          })
+        }
+      }
       
       const totalScore = results.reduce((sum, result) => sum + (result.pisteet || 0), 0)
       const maxScore = results.length * 3
       const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
       const passed = percentage >= 80
-      
-      // Create attempt items
-      const newAttemptItems: AttemptItem[] = results.map(result => ({
-        id: `attempt_item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        attemptId: attempt?.id || '',
-        questionId: result.question.id,
-        answer: result.answer,
-        kpisDetected: result.toteutuneet_kpi || [],
-        kpisMissing: result.puuttuvat_kpi || [],
-        score: result.pisteet || 0,
-        maxScore: 3,
-        feedback: result.sanallinen_arvio || '',
-        isEvaluated: true,
-        durationSec: 180, // 3 minutes per question
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }))
-      
-      // Store attempt items for saving
-      
-      // Update attempt with completion
-      const completedAttempt: Attempt = {
-        ...attempt!,
-        endTime: new Date().toISOString(),
-        status: 'completed',
-        submittedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      // Generate comprehensive evaluation
-      const strengths = results.filter(r => (r.pisteet || 0) >= 2).map(r => r.question.prompt.substring(0, 50) + '...')
-      const weaknesses = results.filter(r => (r.pisteet || 0) < 2).map(r => r.question.prompt.substring(0, 50) + '...')
-      const recommendations = [
-        percentage >= 80 ? 'Excellent work! You have a strong understanding of this topic.' : 'Consider reviewing the areas where you scored lower.',
-        'Practice more questions in the weak areas to improve your performance.',
-        'Review the feedback for each question to understand the correct approach.'
-      ]
-      
-      const evaluation = {
-        overallScore: percentage,
-        strengths: strengths.slice(0, 3), // Top 3 strengths
-        weaknesses: weaknesses.slice(0, 3), // Top 3 weaknesses
-        recommendations,
-        detailedFeedback: `You scored ${percentage}% on this exam. ${passed ? 'Congratulations, you passed!' : 'You need to score at least 80% to pass.'}`
-      }
-      
-      // Save exam result to Supabase
-      const userDataService = UserDataService.getInstance()
-      const savedResult = await userDataService.saveExamResult(completedAttempt, newAttemptItems, evaluation)
       
       const examResults = {
         totalScore,
@@ -408,20 +368,18 @@ const Exam = ({ topic, onBack, onComplete }: {
         percentage,
         passed,
         results,
-        timeSpent: (selectedQuestions.length * 3 * 60) - timeRemaining,
-        evaluation,
-        savedResult
+        timeSpent: (selectedQuestions.length * 3 * 60) - timeRemaining
       }
       
       setExamResults(examResults)
-      console.log('✅ Exam results saved to Supabase:', savedResult?.id)
+      console.log('✅ Practice exam results saved to standard attempt system')
       
       // Navigate to evaluation page
       onComplete(examResults)
       
     } catch (error) {
-      console.error('❌ Error saving exam results:', error)
-      alert('❌ Error saving exam results. Please try again.')
+      console.error('❌ Error submitting practice exam:', error)
+      alert('❌ Error submitting practice exam. Please try again.')
     } finally {
       setIsSaving(false)
     }

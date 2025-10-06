@@ -67,6 +67,25 @@ KPIs to detect: ${kpis.join(', ')}
 
 Student's answer: "${answer}"
 
+IMPORTANT INSTRUCTIONS:
+1. Be VERY GENEROUS in detecting KPIs - look for synonyms, related concepts, and implied understanding
+2. Consider Finnish and English variations of the same concept
+3. Look for partial matches and conceptual understanding, not just exact word matches
+4. If a student demonstrates understanding of a concept even with different wording, count it as detected
+5. Focus on the MEANING and CONTEXT, not just keywords
+
+Examples of what to detect:
+- "johtaminen" = "leadership" 
+- "kommunikaatio" = "communication"
+- "tiimityö" = "teamwork"
+- "suunnittelu" = "planning"
+- "ongelmien ratkaisu" = "problem solving"
+- "päätöksenteko" = "decision making"
+- "sidosryhmäjohtaminen" = "stakeholder management"
+- "riskinhallinta" = "risk management"
+- "laadunhallinta" = "quality management"
+- "muutosjohtaminen" = "change management"
+
 Please analyze the answer and:
 1. Identify which KPIs are mentioned, demonstrated, or implied in the answer
 2. Provide a score from 0-3 based on how well the student addressed the KPIs
@@ -81,12 +100,12 @@ Return your response as a JSON object with this exact structure:
 }
 
 Scoring criteria:
-- 3 points: 3+ KPIs clearly addressed
-- 2 points: 2 KPIs addressed
-- 1 point: 1 KPI addressed
-- 0 points: No KPIs addressed or answer is irrelevant
+- 3 points: 3+ KPIs clearly addressed OR comprehensive understanding shown
+- 2 points: 2 KPIs addressed OR good understanding shown
+- 1 point: 1 KPI addressed OR basic understanding shown
+- 0 points: No KPIs addressed AND answer is irrelevant/unclear
 
-Be generous in detecting KPIs - look for synonyms, related concepts, and implied understanding.
+Be GENEROUS with scoring - if the student shows understanding of the concepts, give them credit even if the wording is different.
 
 IMPORTANT: The feedback must be written in ${feedbackLanguage}.`
 
@@ -234,21 +253,21 @@ const detectKPIs = (answer: string, kpis: string[]): string[] => {
 // Helper function to get synonyms for common KPI terms
 const getKPISynonyms = (kpi: string): string[] => {
   const synonymMap: Record<string, string[]> = {
-    'leadership': ['lead', 'manage', 'guide', 'direct', 'supervise', 'oversee'],
-    'communication': ['communicate', 'discuss', 'talk', 'speak', 'convey', 'express'],
-    'teamwork': ['collaborate', 'cooperate', 'work together', 'team work', 'joint effort'],
-    'planning': ['plan', 'organize', 'schedule', 'prepare', 'arrange', 'coordinate'],
-    'problem solving': ['solve', 'resolve', 'address', 'tackle', 'fix', 'handle'],
-    'decision making': ['decide', 'choose', 'select', 'determine', 'conclude'],
-    'stakeholder management': ['stakeholder', 'client', 'customer', 'partner', 'relationship'],
-    'risk management': ['risk', 'threat', 'danger', 'uncertainty', 'mitigate'],
-    'quality management': ['quality', 'standard', 'excellence', 'improvement', 'control'],
-    'change management': ['change', 'transformation', 'transition', 'adaptation', 'evolution'],
-    'project management': ['project', 'initiative', 'deliverable', 'milestone', 'timeline'],
-    'resource management': ['resource', 'budget', 'cost', 'allocation', 'utilization'],
-    'performance management': ['performance', 'evaluation', 'assessment', 'review', 'feedback'],
-    'strategic thinking': ['strategy', 'strategic', 'vision', 'direction', 'long-term'],
-    'innovation': ['innovate', 'creative', 'new', 'novel', 'improvement', 'enhancement']
+    'leadership': ['lead', 'manage', 'guide', 'direct', 'supervise', 'oversee', 'johtaminen', 'johtaa', 'johto', 'johtaja'],
+    'communication': ['communicate', 'discuss', 'talk', 'speak', 'convey', 'express', 'kommunikaatio', 'viestintä', 'keskustelu'],
+    'teamwork': ['collaborate', 'cooperate', 'work together', 'team work', 'joint effort', 'tiimityö', 'yhteistyö', 'tiimi'],
+    'planning': ['plan', 'organize', 'schedule', 'prepare', 'arrange', 'coordinate', 'suunnittelu', 'suunnitelma', 'suunnitella'],
+    'problem solving': ['solve', 'resolve', 'address', 'tackle', 'fix', 'handle', 'ongelmien ratkaisu', 'ratkaista', 'ongelma'],
+    'decision making': ['decide', 'choose', 'select', 'determine', 'conclude', 'päätöksenteko', 'päätös', 'päättää'],
+    'stakeholder management': ['stakeholder', 'client', 'customer', 'partner', 'relationship', 'sidosryhmä', 'asiakas', 'kumppani'],
+    'risk management': ['risk', 'threat', 'danger', 'uncertainty', 'mitigate', 'riskinhallinta', 'riski', 'uhka'],
+    'quality management': ['quality', 'standard', 'excellence', 'improvement', 'control', 'laadunhallinta', 'laatu', 'standardi'],
+    'change management': ['change', 'transformation', 'transition', 'adaptation', 'evolution', 'muutosjohtaminen', 'muutos', 'muuttaminen'],
+    'project management': ['project', 'initiative', 'deliverable', 'milestone', 'timeline', 'projektinhallinta', 'projekti', 'hankkeet'],
+    'resource management': ['resource', 'budget', 'cost', 'allocation', 'utilization', 'resurssien hallinta', 'resurssi', 'budjetti'],
+    'performance management': ['performance', 'evaluation', 'assessment', 'review', 'feedback', 'suorituskyvyn hallinta', 'suoritus', 'arviointi'],
+    'strategic thinking': ['strategy', 'strategic', 'vision', 'direction', 'long-term', 'strateginen ajattelu', 'strategia', 'visio'],
+    'innovation': ['innovate', 'creative', 'new', 'novel', 'improvement', 'enhancement', 'innovointi', 'luovuus', 'uusinta']
   }
   
   const kpiLower = kpi.toLowerCase()

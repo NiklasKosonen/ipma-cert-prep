@@ -28,6 +28,7 @@ const Exam: React.FC = () => {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEvaluating, setIsEvaluating] = useState(false)
 
   // Load attempt and questions
   useEffect(() => {
@@ -119,6 +120,7 @@ const Exam: React.FC = () => {
     if (!attempt || !attemptId) return
 
     setIsSubmitting(true)
+    setIsEvaluating(true)
 
     try {
       // Update attempt status
@@ -206,6 +208,9 @@ const Exam: React.FC = () => {
         }
       }
 
+      // Small delay to show evaluation message
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
       // Navigate to results
       navigate(`/exam-results/${attemptId}`)
     } catch (error) {
@@ -213,8 +218,9 @@ const Exam: React.FC = () => {
       alert('Error submitting exam. Please try again.')
     } finally {
       setIsSubmitting(false)
+      setIsEvaluating(false)
     }
-  }, [attempt, attemptId, updateAttempt, getAttemptItems, examQuestions, answers, evaluateAnswer, updateAttemptItem, createAttemptItem, navigate])
+  }, [attempt, attemptId, updateAttempt, getAttemptItems, examQuestions, answers, evaluateAnswer, updateAttemptItem, createAttemptItem, navigate, language, kpis])
 
   // Timer countdown
   useEffect(() => {
@@ -282,6 +288,42 @@ const Exam: React.FC = () => {
     )
   }
 
+  // Show evaluation loading screen
+  if (isEvaluating) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            {language === 'fi' ? 'Tarkastetaan koetta...' : 'Evaluating your exam...'}
+          </h2>
+          <p className="text-gray-600 text-lg">
+            {language === 'fi' 
+              ? 'AI-arviointi käynnissä. Tämä voi kestää hetken...' 
+              : 'AI evaluation in progress. This may take a moment...'}
+          </p>
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-blue-800 text-sm">
+              {language === 'fi' 
+                ? '✓ Vastauksesi tallennettu' 
+                : '✓ Your answers have been saved'}
+            </p>
+            <p className="text-blue-800 text-sm mt-1">
+              {language === 'fi' 
+                ? '✓ KPI:t analysoidaan...' 
+                : '✓ Analyzing KPIs...'}
+            </p>
+            <p className="text-blue-800 text-sm mt-1">
+              {language === 'fi' 
+                ? '✓ Palaute luodaan...' 
+                : '✓ Generating feedback...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Timer */}
@@ -323,9 +365,6 @@ const Exam: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                       Question {index + 1} of {examQuestions.length}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {topic?.title} - {subtopic?.title}
                     </span>
                   </div>
                   
