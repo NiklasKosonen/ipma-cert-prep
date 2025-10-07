@@ -173,10 +173,15 @@ const AdminConsole: React.FC = () => {
     // Note: Individual add/update/delete operations will be handled by the AIEvaluationRules component
   }
 
-  // Load data when language changes
+  // Load data when language changes or component mounts
   React.useEffect(() => {
     loadLanguageData(adminLanguage)
-  }, [adminLanguage])
+  }, [adminLanguage, getTopicsByLanguage, getSubtopicsByLanguage, getKPIsByLanguage, getQuestionsByLanguage])
+
+  // Initial load when component mounts
+  React.useEffect(() => {
+    loadLanguageData(adminLanguage)
+  }, [])
 
   // Load AI tips when language changes or AI evaluation tab is opened
   React.useEffect(() => {

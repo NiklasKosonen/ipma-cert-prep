@@ -202,7 +202,7 @@ interface DataContextType {
   addAIEvaluationCriteria: (tip: string, language: 'fi' | 'en') => Promise<void>
   updateAIEvaluationCriteria: (id: string, tip: string) => Promise<void>
   deleteAIEvaluationCriteria: (id: string) => Promise<void>
-
+  
   // Data management
   clearAllData: () => void
   exportAllData: () => Promise<DataSnapshot>
@@ -516,7 +516,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const newSubtopic: Subtopic = {
       ...subtopicData,
       id: language === 'en' ? `${baseId}_en` : baseId,
-      topicId: language === 'en' ? `${subtopicData.topicId}_en` : subtopicData.topicId,
+      // Don't modify topicId - it's already the correct ID for the selected language
+      topicId: subtopicData.topicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -652,8 +653,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       prompt: sanitizeInput(questionData.prompt),
       connectedKPIs: questionData.connectedKPIs || [],
       id: language === 'en' ? `${baseId}_en` : baseId,
-      topicId: language === 'en' ? `${questionData.topicId}_en` : questionData.topicId,
-      subtopicId: language === 'en' ? `${questionData.subtopicId}_en` : questionData.subtopicId,
+      // Don't modify topicId and subtopicId - they're already the correct IDs for the selected language
+      topicId: questionData.topicId,
+      subtopicId: questionData.subtopicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -760,8 +762,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       ...kpiData,
       connectedQuestions: kpiData.connectedQuestions || [],
       id: language === 'en' ? `${baseId}_en` : baseId,
-      topicId: language === 'en' ? `${kpiData.topicId}_en` : kpiData.topicId,
-      subtopicId: language === 'en' ? `${kpiData.subtopicId}_en` : kpiData.subtopicId,
+      // Don't modify topicId and subtopicId - they're already the correct IDs for the selected language
+      topicId: kpiData.topicId,
+      subtopicId: kpiData.subtopicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -960,38 +963,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('No active session found')
       }
 
-      // Store current admin session to restore later
-      const adminSession = session
-
-      // Create user in Supabase Auth first (this is required for login)
-      console.log('🔄 Creating user in Supabase Auth...')
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: companyCode.toUpperCase(), // Company code is the password
-        options: {
-          data: {
-            name: email.split('@')[0],
-            company_code: companyCode,
-            company_name: companyName
-          }
-        }
-      })
-
-      console.log('🔄 Supabase Auth signUp result:', { authData, authError })
-
-      if (authError) {
-        console.error('❌ Failed to create user in Supabase Auth:', authError)
-        throw new Error(`Failed to create user in Supabase Auth: ${authError.message}`)
-      }
-
-      if (!authData.user) {
-        throw new Error('No user data returned from Supabase Auth')
-      }
-
-      // Create user profile in our users table using the Auth UUID
+      // Create user profile directly in our users table (skip Supabase Auth for now)
+      // This prevents the admin session from being hijacked
       const userProfileData = {
-        id: authData.user.id, // Use the UUID from Supabase Auth
+        id: crypto.randomUUID(), // Generate a UUID for the user
         email: email,
         name: email.split('@')[0],
         role: 'user',
@@ -1001,26 +976,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         updated_at: new Date().toISOString()
       }
 
-      console.log('🔄 Creating/updating user profile with data:', userProfileData)
+      console.log('🔄 Creating user profile with data:', userProfileData)
 
       const { error: profileError } = await supabase
         .from('users')
-        .upsert([userProfileData], { onConflict: 'id' })
+        .insert([userProfileData])
 
       if (profileError) {
-        console.error('❌ Failed to create/update user profile:', profileError)
-        throw new Error(`Failed to create/update user profile: ${profileError.message}`)
+        console.error('❌ Failed to create user profile:', profileError)
+        throw new Error(`Failed to create user profile: ${profileError.message}`)
       }
 
-      // Restore admin session to prevent redirect
-      console.log('🔄 Restoring admin session...')
-      await supabase.auth.setSession({
-        access_token: adminSession.access_token,
-        refresh_token: adminSession.refresh_token
-      })
-
-      console.log('✅ User created successfully in both auth.users and public.users:', { email, userId: authData.user.id })
-      return { success: true, userId: authData.user.id }
+      console.log('✅ User created successfully in public.users:', { email, userId: userProfileData.id })
+      return { success: true, userId: userProfileData.id }
 
     } catch (error) {
       console.error('❌ Error creating user:', error)
