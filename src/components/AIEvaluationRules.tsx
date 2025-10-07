@@ -9,14 +9,35 @@ export interface EvaluationRule {
   condition: 'exactly' | 'at_least' | 'at_most';
 }
 
+interface AITip {
+  id: string;
+  tip_text: string;
+}
+
 interface AIEvaluationRulesProps {
   rules: EvaluationRule[];
   onRulesChange: (rules: EvaluationRule[]) => void;
   tips?: string[];
   onTipsChange?: (tips: string[]) => void;
+  language?: 'fi' | 'en';
+  onAddTip?: (tip: string, language: 'fi' | 'en') => Promise<void>;
+  onUpdateTip?: (id: string, tip: string) => Promise<void>;
+  onDeleteTip?: (id: string) => Promise<void>;
+  tipsLoading?: boolean;
+  tipsWithIds?: AITip[];
 }
 
-const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesChange, tips = [], onTipsChange }) => {
+const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ 
+  rules, 
+  onRulesChange, 
+  tips = [], 
+  onTipsChange,
+  language = 'fi',
+  onAddTip,
+  onUpdateTip,
+  onDeleteTip,
+  tipsWithIds = []
+}) => {
   const { t } = useLanguage();
   const [newRule, setNewRule] = useState<Partial<EvaluationRule>>({
     description: '',
@@ -61,10 +82,20 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
   //   ));
   // };
 
-  const addTip = () => {
-    if (newTip.trim() && onTipsChange) {
-      onTipsChange([...tips, newTip.trim()]);
-      setNewTip('');
+  const addTip = async () => {
+    if (newTip.trim()) {
+      if (onAddTip) {
+        try {
+          await onAddTip(newTip.trim(), language);
+          setNewTip('');
+        } catch (error) {
+          console.error('Error adding tip:', error);
+          alert('Error adding tip. Please try again.');
+        }
+      } else if (onTipsChange) {
+        onTipsChange([...tips, newTip.trim()]);
+        setNewTip('');
+      }
     }
   };
 
@@ -73,18 +104,36 @@ const AIEvaluationRules: React.FC<AIEvaluationRulesProps> = ({ rules, onRulesCha
     setEditingTip(tips[index]);
   };
 
-  const updateTip = () => {
-    if (editingTipIndex !== null && editingTip.trim() && onTipsChange) {
-      const updatedTips = [...tips];
-      updatedTips[editingTipIndex] = editingTip.trim();
-      onTipsChange(updatedTips);
-      setEditingTipIndex(null);
-      setEditingTip('');
+  const updateTip = async () => {
+    if (editingTipIndex !== null && editingTip.trim()) {
+      if (onUpdateTip && tipsWithIds[editingTipIndex]) {
+        try {
+          await onUpdateTip(tipsWithIds[editingTipIndex].id, editingTip.trim());
+          setEditingTipIndex(null);
+          setEditingTip('');
+        } catch (error) {
+          console.error('Error updating tip:', error);
+          alert('Error updating tip. Please try again.');
+        }
+      } else if (onTipsChange) {
+        const updatedTips = [...tips];
+        updatedTips[editingTipIndex] = editingTip.trim();
+        onTipsChange(updatedTips);
+        setEditingTipIndex(null);
+        setEditingTip('');
+      }
     }
   };
 
-  const deleteTip = (index: number) => {
-    if (onTipsChange) {
+  const deleteTip = async (index: number) => {
+    if (onDeleteTip && tipsWithIds[index]) {
+      try {
+        await onDeleteTip(tipsWithIds[index].id);
+      } catch (error) {
+        console.error('Error deleting tip:', error);
+        alert('Error deleting tip. Please try again.');
+      }
+    } else if (onTipsChange) {
       onTipsChange(tips.filter((_, i) => i !== index));
     }
   };

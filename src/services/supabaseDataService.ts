@@ -326,11 +326,9 @@ export class SupabaseDataService {
       .upsert({
         id: example.id,
         question_id: example.questionId,
-        answer_text: example.answerText,
-        quality_rating: example.qualityRating,
-        detected_kpis: example.detectedKPIs,
-        feedback: example.feedback,
-        example_type: example.exampleType,
+        answer_text: example.answerText, // Use answer_text to match actual database schema
+        quality_score: example.qualityRating, // Map qualityRating to quality_score
+        is_active: true, // Add required field
         created_at: example.createdAt,
         updated_at: example.updatedAt
       }, { onConflict: 'id' })

@@ -11,43 +11,51 @@ const AdminConsole: React.FC = () => {
   const navigate = useNavigate()
   const { 
     topics, subtopics, kpis, questions, trainingExamples, companyCodes, sampleAnswers, users, subscriptions,
-    addTopic, updateTopic, deleteTopic,
-    addSubtopic, updateSubtopic, deleteSubtopic,
-    addKPI, updateKPI, deleteKPI,
-    addQuestion, updateQuestion, deleteQuestion,
+    updateTopic, deleteTopic, addTopicWithLanguage,
+    updateSubtopic, deleteSubtopic, addSubtopicWithLanguage,
+    updateKPI, deleteKPI, addKPIWithLanguage,
+    updateQuestion, deleteQuestion, addQuestionWithLanguage,
     addTrainingExample, updateTrainingExample, deleteTrainingExample,
     addCompanyCode, updateCompanyCode, deleteCompanyCode,
-    createUserForCompany, removeUserForCompany
+    createUserForCompany, removeUserForCompany,
+    getTopicsByLanguage, getSubtopicsByLanguage, getKPIsByLanguage, getQuestionsByLanguage,
+    getAIEvaluationCriteria, getAIEvaluationCriteriaWithIds, addAIEvaluationCriteria, updateAIEvaluationCriteria, deleteAIEvaluationCriteria
   } = useData()
 
   // Auto backup removed - data now syncs to Supabase in real-time
   const [activeTab, setActiveTab] = useState('topics')
-  const handleAddQuestion = () => {
+  const [adminLanguage, setAdminLanguage] = useState<'fi' | 'en'>('fi')
+  const handleAddQuestion = async () => {
     if (!newQuestion.subtopicId || !newQuestion.prompt.trim()) {
       alert('Please select a subtopic and enter a question prompt')
       return
     }
 
-    const questionToAdd = {
-      ...newQuestion,
-      prompt: newQuestion.prompt.trim(),
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    try {
+      const questionToAdd = {
+        ...newQuestion,
+        prompt: newQuestion.prompt.trim(),
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
 
-    addQuestion(questionToAdd)
-    
-    // Reset form
-    setNewQuestion({
-      subtopicId: '',
-      topicId: '',
-      prompt: '',
-      connectedKPIs: [],
-      isActive: true
-    })
-    
-    alert('Question added successfully!')
+      await addQuestionWithLanguage(questionToAdd, adminLanguage)
+      
+      // Reset form
+      setNewQuestion({
+        subtopicId: '',
+        topicId: '',
+        prompt: '',
+        connectedKPIs: [],
+        isActive: true
+      })
+      
+      alert(`✅ Question added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
+    } catch (error) {
+      console.error('Error adding question:', error)
+      alert(`❌ Error adding question: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
   
   // Topic states
@@ -96,13 +104,86 @@ const AdminConsole: React.FC = () => {
     { id: 'rule4', description: 'Vastaus ei sisällä KPI:ta', points: 0, kpiCount: 0, condition: 'exactly' }
   ])
   
-  const [aiTips, setAiTips] = useState<string[]>([
-    'KPI:t eivät tarvitse olla kirjoitettu sanatarkasti - AI ymmärtää niiden olemassaolon vastauksen kontekstista',
-    'Synonyymit ja liittyvät käsitteet lasketaan KPI:ksi jos ne liittyvät aiheeseen',
-    'Implisiittiset viittaukset ovat yhtä arvokkaita kuin suorat maininnat',
-    'Vastauksen laadun arviointi perustuu kokonaisuuteen, ei vain KPI-määrään',
-    'Ymmärryksen taso näkyy vastauksen syvyydessä ja perustelujen laadussa'
-  ])
+  const [aiTips, setAiTips] = useState<string[]>([])
+  const [aiTipsWithIds, setAiTipsWithIds] = useState<{id: string, tip_text: string}[]>([])
+  const [aiTipsLoading, setAiTipsLoading] = useState(false)
+
+  // Language-specific data state
+  const [currentTopics, setCurrentTopics] = useState<Topic[]>([])
+  const [currentSubtopics, setCurrentSubtopics] = useState<Subtopic[]>([])
+  const [currentKPIs, setCurrentKPIs] = useState<KPI[]>([])
+  const [currentQuestions, setCurrentQuestions] = useState<Question[]>([])
+  const [dataLoading, setDataLoading] = useState(false)
+
+  // Load language-specific data from Supabase
+  const loadLanguageData = async (language: 'fi' | 'en') => {
+    setDataLoading(true)
+    try {
+      const [topicsData, subtopicsData, kpisData, questionsData] = await Promise.all([
+        getTopicsByLanguage(language),
+        getSubtopicsByLanguage(language),
+        getKPIsByLanguage(language),
+        getQuestionsByLanguage(language)
+      ])
+      
+      setCurrentTopics(topicsData)
+      setCurrentSubtopics(subtopicsData)
+      setCurrentKPIs(kpisData)
+      setCurrentQuestions(questionsData)
+      
+      console.log(`✅ Loaded ${language} data:`, {
+        topics: topicsData.length,
+        subtopics: subtopicsData.length,
+        kpis: kpisData.length,
+        questions: questionsData.length
+      })
+    } catch (error) {
+      console.error(`❌ Error loading ${language} data:`, error)
+      setCurrentTopics([])
+      setCurrentSubtopics([])
+      setCurrentKPIs([])
+      setCurrentQuestions([])
+    } finally {
+      setDataLoading(false)
+    }
+  }
+
+  // Load AI evaluation criteria from Supabase
+  const loadAITips = async (language: 'fi' | 'en') => {
+    setAiTipsLoading(true)
+    try {
+      const [tips, tipsWithIds] = await Promise.all([
+        getAIEvaluationCriteria(language),
+        getAIEvaluationCriteriaWithIds(language)
+      ])
+      setAiTips(tips)
+      setAiTipsWithIds(tipsWithIds)
+    } catch (error) {
+      console.error('Error loading AI tips:', error)
+      setAiTips([])
+      setAiTipsWithIds([])
+    } finally {
+      setAiTipsLoading(false)
+    }
+  }
+
+  // Handle AI tips changes with Supabase integration
+  const handleAITipsChange = async (newTips: string[]) => {
+    setAiTips(newTips)
+    // Note: Individual add/update/delete operations will be handled by the AIEvaluationRules component
+  }
+
+  // Load data when language changes
+  React.useEffect(() => {
+    loadLanguageData(adminLanguage)
+  }, [adminLanguage])
+
+  // Load AI tips when language changes or AI evaluation tab is opened
+  React.useEffect(() => {
+    if (activeTab === 'ai-evaluation') {
+      loadAITips(adminLanguage)
+    }
+  }, [activeTab, adminLanguage])
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [editTopic, setEditTopic] = useState({ title: '', description: '' })
   
@@ -222,10 +303,16 @@ const AdminConsole: React.FC = () => {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
   const [editQuestion, setEditQuestion] = useState({ prompt: '', topicId: '', subtopicId: '', connectedKPIs: [] as string[], isActive: true })
 
-  const handleAddTopic = () => {
+  const handleAddTopic = async () => {
     if (newTopic.title.trim()) {
-      addTopic(newTopic)
-      setNewTopic({ title: '', description: '', isActive: true })
+      try {
+        await addTopicWithLanguage(newTopic, adminLanguage)
+        setNewTopic({ title: '', description: '', isActive: true })
+        alert(`✅ Topic added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
+      } catch (error) {
+        console.error('Error adding topic:', error)
+        alert(`❌ Error adding topic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
@@ -243,10 +330,16 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleAddSubtopic = () => {
+  const handleAddSubtopic = async () => {
     if (newSubtopic.title.trim() && newSubtopic.topicId) {
-      addSubtopic(newSubtopic)
-      setNewSubtopic({ title: '', description: '', topicId: '', isActive: true })
+      try {
+        await addSubtopicWithLanguage(newSubtopic, adminLanguage)
+        setNewSubtopic({ title: '', description: '', topicId: '', isActive: true })
+        alert(`✅ Subtopic added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
+      } catch (error) {
+        console.error('Error adding subtopic:', error)
+        alert(`❌ Error adding subtopic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
@@ -267,17 +360,23 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleAddKPI = () => {
+  const handleAddKPI = async () => {
     console.log('🔍 Adding KPI:', newKPI)
     if (newKPI.name.trim() && newKPI.subtopicId) {
-      const kpiData = {
-        ...newKPI,
-        connectedQuestions: []
+      try {
+        const kpiData = {
+          ...newKPI,
+          connectedQuestions: []
+        }
+        console.log('✅ KPI data:', kpiData)
+        await addKPIWithLanguage(kpiData, adminLanguage)
+        setNewKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+        alert(`✅ KPI added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
+        console.log('✅ KPI added successfully')
+      } catch (error) {
+        console.error('Error adding KPI:', error)
+        alert(`❌ Error adding KPI: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
-      console.log('✅ KPI data:', kpiData)
-      addKPI(kpiData)
-      setNewKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
-      console.log('✅ KPI added successfully')
     } else {
       console.log('❌ KPI validation failed:', { name: newKPI.name.trim(), subtopicId: newKPI.subtopicId })
     }
@@ -406,6 +505,28 @@ const AdminConsole: React.FC = () => {
             ))}
           </div>
 
+          {/* Language Selection */}
+          <div className="p-4 bg-blue-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-gray-700">Content Language:</span>
+                <select
+                  value={adminLanguage}
+                  onChange={(e) => setAdminLanguage(e.target.value as 'fi' | 'en')}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="fi">🇫🇮 Finnish (Suomi)</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </div>
+              <div className="text-sm text-gray-600">
+                {adminLanguage === 'fi' 
+                  ? 'Adding content to Finnish database' 
+                  : 'Adding content to English database'}
+              </div>
+            </div>
+          </div>
+
           {/* Topics Tab */}
           {activeTab === 'topics' && (
             <div className="p-6">
@@ -452,7 +573,13 @@ const AdminConsole: React.FC = () => {
 
               {/* Topics List */}
               <div className="space-y-4">
-                {topics.map((topic) => (
+                {dataLoading ? (
+                  <div className="text-center py-4">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="mt-2 text-gray-600">Loading {adminLanguage === 'fi' ? 'Finnish' : 'English'} topics...</p>
+                  </div>
+                ) : (
+                  currentTopics.map((topic) => (
                   <div key={topic.id} className="bg-white border border-gray-200 rounded-lg p-4">
                     {editingTopic?.id === topic.id ? (
                       <div className="space-y-4">
@@ -522,7 +649,8 @@ const AdminConsole: React.FC = () => {
                       </div>
                     )}
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </div>
           )}
@@ -554,7 +682,7 @@ const AdminConsole: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select a topic</option>
-                      {topics.map((topic) => (
+                      {currentTopics.map((topic) => (
                         <option key={topic.id} value={topic.id}>
                           {topic.title}
                         </option>
@@ -590,8 +718,14 @@ const AdminConsole: React.FC = () => {
 
               {/* Subtopics List */}
               <div className="space-y-6">
-                {topics.map((topic) => {
-                  const topicSubtopics = (subtopics || []).filter(s => s.topicId === topic.id)
+                {dataLoading ? (
+                  <div className="text-center py-4">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="mt-2 text-gray-600">Loading {adminLanguage === 'fi' ? 'Finnish' : 'English'} subtopics...</p>
+                  </div>
+                ) : (
+                  currentTopics.map((topic) => {
+                    const topicSubtopics = (currentSubtopics || []).filter(s => s.topicId === topic.id)
                   if (topicSubtopics.length === 0) return null
                   
                   return (
@@ -600,7 +734,7 @@ const AdminConsole: React.FC = () => {
                         {topic.title}
                       </h3>
                       <div className="space-y-3 ml-4">
-                        {(subtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => (
+                        {(currentSubtopics || []).filter(s => s.topicId === topic.id).map((subtopic) => (
                           <div key={subtopic.id} className="bg-white border border-gray-200 rounded-lg p-4">
                       {editingSubtopic && editingSubtopic.id === subtopic.id ? (
                         <div className="space-y-4 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
@@ -618,7 +752,7 @@ const AdminConsole: React.FC = () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="">Select a topic</option>
-                                {topics.map((topic) => (
+                                {currentTopics.map((topic) => (
                                   <option key={topic.id} value={topic.id}>
                                     {topic.title}
                                   </option>
@@ -705,7 +839,8 @@ const AdminConsole: React.FC = () => {
                       </div>
                     </div>
                   )
-                })}
+                })
+                )}
               </div>
             </div>
           )}
@@ -729,7 +864,7 @@ const AdminConsole: React.FC = () => {
                       value={newKPI.subtopicId}
                       onChange={(e) => {
                         const selectedSubtopicId = e.target.value
-                        const selectedSubtopic = (subtopics || []).find(s => s.id === selectedSubtopicId)
+                        const selectedSubtopic = (currentSubtopics || []).find(s => s.id === selectedSubtopicId)
                         setNewKPI({ 
                           ...newKPI, 
                           subtopicId: selectedSubtopicId,
@@ -1248,9 +1383,9 @@ const AdminConsole: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Valitse kysymys</option>
-                      {questions.map(question => {
-                        const subtopic = (subtopics || []).find(s => s.id === question.subtopicId)
-                        const topic = topics.find(t => t.id === subtopic?.topicId)
+                      {currentQuestions.map(question => {
+                        const subtopic = (currentSubtopics || []).find(s => s.id === question.subtopicId)
+                        const topic = currentTopics.find(t => t.id === subtopic?.topicId)
                         return (
                           <option key={question.id} value={question.id}>
                             {topic?.title} → {subtopic?.title} → {question.prompt}
@@ -1292,27 +1427,58 @@ const AdminConsole: React.FC = () => {
 
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Model Evaluation (Optional)
+                    <span className="text-sm text-gray-500 ml-1">- Helps AI improve grading accuracy</span>
+                  </label>
+                  <textarea
+                    value={newTrainingExample.feedback || ''}
+                    onChange={(e) => setNewTrainingExample({ ...newTrainingExample, feedback: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Example: 'This answer demonstrates excellent understanding of stakeholder management (2 KPIs detected). The response shows clear knowledge of communication strategies and conflict resolution techniques.'"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Provide example feedback that shows how the AI should evaluate similar answers. This helps train the AI to give more accurate and consistent feedback.
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('selectKPIs')}
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {kpis.map(kpi => (
-                      <label key={kpi.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={newTrainingExample.detectedKPIs?.includes(kpi.id) || false}
-                          onChange={(e) => {
-                            const currentKPIs = newTrainingExample.detectedKPIs || []
-                            const updatedKPIs = e.target.checked
-                              ? [...currentKPIs, kpi.id]
-                              : currentKPIs.filter(id => id !== kpi.id)
-                            setNewTrainingExample({ ...newTrainingExample, detectedKPIs: updatedKPIs })
-                          }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">{kpi.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  {newTrainingExample.questionId ? (
+                    (() => {
+                      const selectedQuestion = currentQuestions.find(q => q.id === newTrainingExample.questionId)
+                      const questionSubtopic = selectedQuestion ? (currentSubtopics || []).find(s => s.id === selectedQuestion.subtopicId) : null
+                      const availableKPIs = questionSubtopic ? (currentKPIs || []).filter(kpi => kpi.subtopicId === questionSubtopic.id) : []
+                      
+                      return availableKPIs.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {availableKPIs.map(kpi => (
+                            <label key={kpi.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={newTrainingExample.detectedKPIs?.includes(kpi.id) || false}
+                                onChange={(e) => {
+                                  const currentKPIs = newTrainingExample.detectedKPIs || []
+                                  const updatedKPIs = e.target.checked
+                                    ? [...currentKPIs, kpi.id]
+                                    : currentKPIs.filter(id => id !== kpi.id)
+                                  setNewTrainingExample({ ...newTrainingExample, detectedKPIs: updatedKPIs })
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{kpi.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No KPIs available for the selected question's subtopic.</p>
+                      )
+                    })()
+                  ) : (
+                    <p className="text-gray-500 text-sm">Please select a question first to see available KPIs.</p>
+                  )}
                 </div>
 
                 <div className="mt-6 flex justify-end space-x-4">
@@ -1349,10 +1515,10 @@ const AdminConsole: React.FC = () => {
                   ) : (
                     <div className="space-y-4">
                       {trainingExamples.map((example) => {
-                        const question = questions.find(q => q.id === example.questionId)
-                        const subtopic = (subtopics || []).find(s => s.id === question?.subtopicId)
-                        const topic = topics.find(t => t.id === subtopic?.topicId)
-                        const selectedKPIs = kpis.filter(kpi => example.detectedKPIs.includes(kpi.id))
+                        const question = currentQuestions.find(q => q.id === example.questionId)
+                        const subtopic = (currentSubtopics || []).find(s => s.id === question?.subtopicId)
+                        const topic = currentTopics.find(t => t.id === subtopic?.topicId)
+                        const selectedKPIs = currentKPIs.filter(kpi => example.detectedKPIs.includes(kpi.id))
                         
                         return (
                           <div key={example.id} className="border border-gray-200 rounded-lg p-4">
@@ -1938,7 +2104,13 @@ const AdminConsole: React.FC = () => {
                 rules={evaluationRules}
                 onRulesChange={setEvaluationRules}
                 tips={aiTips}
-                onTipsChange={setAiTips}
+                onTipsChange={handleAITipsChange}
+                language={adminLanguage}
+                onAddTip={addAIEvaluationCriteria}
+                onUpdateTip={updateAIEvaluationCriteria}
+                onDeleteTip={deleteAIEvaluationCriteria}
+                tipsLoading={aiTipsLoading}
+                tipsWithIds={aiTipsWithIds}
               />
             </div>
           )}

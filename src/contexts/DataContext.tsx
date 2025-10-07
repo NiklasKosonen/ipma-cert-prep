@@ -97,20 +97,32 @@ interface DataContextType {
   updateTopic: (id: string, updates: Partial<Topic>) => Promise<void>
   deleteTopic: (id: string) => Promise<void>
   
+  // Language-aware topic management
+  addTopicWithLanguage: (topic: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>, language: 'fi' | 'en') => Promise<void>
+  
   // Subtopic management
   addSubtopic: (subtopic: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   updateSubtopic: (id: string, updates: Partial<Subtopic>) => Promise<void>
   deleteSubtopic: (id: string) => Promise<void>
+  
+  // Language-aware subtopic management
+  addSubtopicWithLanguage: (subtopic: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => Promise<void>
   
   // Question management
   addQuestion: (question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   updateQuestion: (id: string, updates: Partial<Question>) => Promise<void>
   deleteQuestion: (id: string) => Promise<void>
   
+  // Language-aware question management
+  addQuestionWithLanguage: (question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => Promise<void>
+  
   // KPI management
   addKPI: (kpi: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   updateKPI: (id: string, updates: Partial<KPI>) => Promise<void>
   deleteKPI: (id: string) => Promise<void>
+  
+  // Language-aware KPI management
+  addKPIWithLanguage: (kpi: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => Promise<void>
   connectKPIToQuestion: (kpiId: string, questionId: string) => Promise<void>
   disconnectKPIFromQuestion: (kpiId: string, questionId: string) => Promise<void>
   
@@ -178,6 +190,19 @@ interface DataContextType {
   createUserForCompany: (email: string, companyCode: string, companyName: string) => Promise<{success: boolean, userId?: string, error?: string}>
   removeUserForCompany: (email: string, companyCode: string) => Promise<{success: boolean, error?: string}>
   
+  // Language-aware data loading
+  getTopicsByLanguage: (language: 'fi' | 'en') => Promise<Topic[]>
+  getSubtopicsByLanguage: (language: 'fi' | 'en') => Promise<Subtopic[]>
+  getKPIsByLanguage: (language: 'fi' | 'en') => Promise<KPI[]>
+  getQuestionsByLanguage: (language: 'fi' | 'en') => Promise<Question[]>
+
+  // AI Evaluation Criteria management
+  getAIEvaluationCriteria: (language: 'fi' | 'en') => Promise<string[]>
+  getAIEvaluationCriteriaWithIds: (language: 'fi' | 'en') => Promise<{id: string, tip_text: string}[]>
+  addAIEvaluationCriteria: (tip: string, language: 'fi' | 'en') => Promise<void>
+  updateAIEvaluationCriteria: (id: string, tip: string) => Promise<void>
+  deleteAIEvaluationCriteria: (id: string) => Promise<void>
+
   // Data management
   clearAllData: () => void
   exportAllData: () => Promise<DataSnapshot>
@@ -373,6 +398,55 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // Language-aware topic management
+  const addTopicWithLanguage = async (topicData: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'subtopics'>, language: 'fi' | 'en') => {
+    // Validate input
+    const titleValidation = validateTopicTitle(topicData.title)
+    if (!titleValidation.isValid) {
+      throw new Error(titleValidation.error || 'Invalid topic title')
+    }
+
+    // Create new topic with language-specific ID
+    const baseId = `topic_${Date.now()}`
+    const newTopic: Topic = {
+      ...topicData,
+      title: sanitizeInput(topicData.title),
+      description: sanitizeInput(topicData.description),
+      subtopics: [],
+      id: language === 'en' ? `${baseId}_en` : baseId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    // Save to appropriate Supabase table with proper field mapping
+    try {
+      const tableName = language === 'en' ? 'topics_en' : 'topics'
+      
+      // Map camelCase to snake_case for database
+      const dbTopic = {
+        id: newTopic.id,
+        title: newTopic.title,
+        description: newTopic.description,
+        is_active: newTopic.isActive,
+        created_at: newTopic.createdAt,
+        updated_at: newTopic.updatedAt
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .insert([dbTopic])
+      
+      if (error) {
+        throw new Error(`Failed to add topic to ${tableName}: ${error.message}`)
+      }
+      
+      console.log(`✅ Topic added to ${tableName}:`, newTopic.id)
+    } catch (error) {
+      console.error(`❌ Failed to add topic to ${language} database:`, error)
+      throw error
+    }
+  }
+
   const updateTopic = async (id: string, updates: Partial<Topic>) => {
     let updatedTopic: Topic | null = null
     
@@ -432,6 +506,48 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       console.log('✅ Subtopic synced to Supabase:', newSubtopic.id)
     } catch (error) {
       console.warn('⚠️ Failed to sync subtopic to Supabase:', error)
+    }
+  }
+
+  // Language-aware subtopic management
+  const addSubtopicWithLanguage = async (subtopicData: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => {
+    // Create new subtopic with language-specific ID
+    const baseId = `subtopic_${Date.now()}`
+    const newSubtopic: Subtopic = {
+      ...subtopicData,
+      id: language === 'en' ? `${baseId}_en` : baseId,
+      topicId: language === 'en' ? `${subtopicData.topicId}_en` : subtopicData.topicId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    // Save to appropriate Supabase table with proper field mapping
+    try {
+      const tableName = language === 'en' ? 'subtopics_en' : 'subtopics'
+      
+      // Map camelCase to snake_case for database
+      const dbSubtopic = {
+        id: newSubtopic.id,
+        title: newSubtopic.title,
+        description: newSubtopic.description,
+        topic_id: newSubtopic.topicId,
+        is_active: newSubtopic.isActive,
+        created_at: newSubtopic.createdAt,
+        updated_at: newSubtopic.updatedAt
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .insert([dbSubtopic])
+      
+      if (error) {
+        throw new Error(`Failed to add subtopic to ${tableName}: ${error.message}`)
+      }
+      
+      console.log(`✅ Subtopic added to ${tableName}:`, newSubtopic.id)
+    } catch (error) {
+      console.error(`❌ Failed to add subtopic to ${language} database:`, error)
+      throw error
     }
   }
 
@@ -521,6 +637,58 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // Language-aware question management
+  const addQuestionWithLanguage = async (questionData: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => {
+    // Validate input
+    const promptValidation = validateQuestionPrompt(questionData.prompt)
+    if (!promptValidation.isValid) {
+      throw new Error(promptValidation.error || 'Invalid question prompt')
+    }
+
+    // Create new question with language-specific ID
+    const baseId = `question_${Date.now()}`
+    const newQuestion: Question = {
+      ...questionData,
+      prompt: sanitizeInput(questionData.prompt),
+      connectedKPIs: questionData.connectedKPIs || [],
+      id: language === 'en' ? `${baseId}_en` : baseId,
+      topicId: language === 'en' ? `${questionData.topicId}_en` : questionData.topicId,
+      subtopicId: language === 'en' ? `${questionData.subtopicId}_en` : questionData.subtopicId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    // Save to appropriate Supabase table with proper field mapping
+    try {
+      const tableName = language === 'en' ? 'questions_en' : 'questions'
+      
+      // Map camelCase to snake_case for database
+      const dbQuestion = {
+        id: newQuestion.id,
+        prompt: newQuestion.prompt,
+        topic_id: newQuestion.topicId,
+        subtopic_id: newQuestion.subtopicId,
+        connectedkpis: newQuestion.connectedKPIs,
+        is_active: newQuestion.isActive,
+        created_at: newQuestion.createdAt,
+        updated_at: newQuestion.updatedAt
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .insert([dbQuestion])
+      
+      if (error) {
+        throw new Error(`Failed to add question to ${tableName}: ${error.message}`)
+      }
+      
+      console.log(`✅ Question added to ${tableName}:`, newQuestion.id)
+    } catch (error) {
+      console.error(`❌ Failed to add question to ${language} database:`, error)
+      throw error
+    }
+  }
+
   const updateQuestion = async (id: string, updates: Partial<Question>) => {
     let updatedQuestion: Question | null = null
     
@@ -576,6 +744,56 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       console.log('✅ KPI synced to Supabase:', newKPI.id)
     } catch (error) {
       console.warn('⚠️ Failed to sync KPI to Supabase:', error)
+    }
+  }
+
+  // Language-aware KPI management
+  const addKPIWithLanguage = async (kpiData: Omit<KPI, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => {
+    // Ensure KPIs always have a subtopicId
+    if (!kpiData.subtopicId) {
+      throw new Error('KPIs must belong to a specific subtopic')
+    }
+    
+    // Create new KPI with language-specific ID
+    const baseId = `kpi_${Date.now()}`
+    const newKPI: KPI = {
+      ...kpiData,
+      connectedQuestions: kpiData.connectedQuestions || [],
+      id: language === 'en' ? `${baseId}_en` : baseId,
+      topicId: language === 'en' ? `${kpiData.topicId}_en` : kpiData.topicId,
+      subtopicId: language === 'en' ? `${kpiData.subtopicId}_en` : kpiData.subtopicId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    // Save to appropriate Supabase table with proper field mapping
+    try {
+      const tableName = language === 'en' ? 'kpis_en' : 'kpis'
+      
+      // Map camelCase to snake_case for database
+      const dbKPI = {
+        id: newKPI.id,
+        name: newKPI.name,
+        is_essential: newKPI.isEssential,
+        topic_id: newKPI.topicId,
+        subtopic_id: newKPI.subtopicId,
+        connected_questions: newKPI.connectedQuestions,
+        created_at: newKPI.createdAt,
+        updated_at: newKPI.updatedAt
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .insert([dbKPI])
+      
+      if (error) {
+        throw new Error(`Failed to add KPI to ${tableName}: ${error.message}`)
+      }
+      
+      console.log(`✅ KPI added to ${tableName}:`, newKPI.id)
+    } catch (error) {
+      console.error(`❌ Failed to add KPI to ${language} database:`, error)
+      throw error
     }
   }
 
@@ -1460,6 +1678,218 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setSubscriptions([])
   }
 
+  // Language-aware data loading functions
+  const getTopicsByLanguage = async (language: 'fi' | 'en'): Promise<Topic[]> => {
+    try {
+      const tableName = language === 'en' ? 'topics_en' : 'topics'
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch topics: ${error.message}`)
+      }
+
+      return (data || []).map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        isActive: t.is_active,
+        subtopics: [], // Will be populated separately if needed
+        createdAt: t.created_at,
+        updatedAt: t.updated_at
+      }))
+    } catch (error) {
+      console.error(`❌ Failed to get topics for ${language}:`, error)
+      throw error
+    }
+  }
+
+  const getSubtopicsByLanguage = async (language: 'fi' | 'en'): Promise<Subtopic[]> => {
+    try {
+      const tableName = language === 'en' ? 'subtopics_en' : 'subtopics'
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch subtopics: ${error.message}`)
+      }
+
+      return (data || []).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        topicId: s.topic_id,
+        isActive: s.is_active,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at
+      }))
+    } catch (error) {
+      console.error(`❌ Failed to get subtopics for ${language}:`, error)
+      throw error
+    }
+  }
+
+  const getKPIsByLanguage = async (language: 'fi' | 'en'): Promise<KPI[]> => {
+    try {
+      const tableName = language === 'en' ? 'kpis_en' : 'kpis'
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch KPIs: ${error.message}`)
+      }
+
+      return (data || []).map((k: any) => ({
+        id: k.id,
+        name: k.name,
+        topicId: k.topic_id,
+        subtopicId: k.subtopic_id,
+        isEssential: k.is_essential,
+        connectedQuestions: k.connected_questions || [],
+        createdAt: k.created_at,
+        updatedAt: k.updated_at
+      }))
+    } catch (error) {
+      console.error(`❌ Failed to get KPIs for ${language}:`, error)
+      throw error
+    }
+  }
+
+  const getQuestionsByLanguage = async (language: 'fi' | 'en'): Promise<Question[]> => {
+    try {
+      const tableName = language === 'en' ? 'questions_en' : 'questions'
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch questions: ${error.message}`)
+      }
+
+      return (data || []).map((q: any) => ({
+        id: q.id,
+        prompt: q.prompt,
+        topicId: q.topic_id,
+        subtopicId: q.subtopic_id,
+        connectedKPIs: q.connectedkpis || [],
+        isActive: q.is_active,
+        createdAt: q.created_at,
+        updatedAt: q.updated_at
+      }))
+    } catch (error) {
+      console.error(`❌ Failed to get questions for ${language}:`, error)
+      throw error
+    }
+  }
+
+  // AI Evaluation Criteria management
+  const getAIEvaluationCriteria = async (language: 'fi' | 'en'): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_evaluation_criteria')
+        .select('tip_text')
+        .eq('language', language)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch AI evaluation criteria: ${error.message}`)
+      }
+
+      return (data || []).map((item: any) => item.tip_text)
+    } catch (error) {
+      console.error(`❌ Failed to get AI evaluation criteria for ${language}:`, error)
+      throw error
+    }
+  }
+
+  const getAIEvaluationCriteriaWithIds = async (language: 'fi' | 'en'): Promise<{id: string, tip_text: string}[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_evaluation_criteria')
+        .select('id, tip_text')
+        .eq('language', language)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw new Error(`Failed to fetch AI evaluation criteria: ${error.message}`)
+      }
+
+      return data || []
+    } catch (error) {
+      console.error(`❌ Failed to get AI evaluation criteria with IDs for ${language}:`, error)
+      throw error
+    }
+  }
+
+  const addAIEvaluationCriteria = async (tip: string, language: 'fi' | 'en'): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('ai_evaluation_criteria')
+        .insert([{
+          tip_text: tip.trim(),
+          language: language,
+          is_active: true
+        }])
+
+      if (error) {
+        throw new Error(`Failed to add AI evaluation criteria: ${error.message}`)
+      }
+
+      console.log(`✅ AI evaluation criteria added for ${language}:`, tip)
+    } catch (error) {
+      console.error(`❌ Failed to add AI evaluation criteria:`, error)
+      throw error
+    }
+  }
+
+  const updateAIEvaluationCriteria = async (id: string, tip: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('ai_evaluation_criteria')
+        .update({
+          tip_text: tip.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) {
+        throw new Error(`Failed to update AI evaluation criteria: ${error.message}`)
+      }
+
+      console.log(`✅ AI evaluation criteria updated:`, id)
+    } catch (error) {
+      console.error(`❌ Failed to update AI evaluation criteria:`, error)
+      throw error
+    }
+  }
+
+  const deleteAIEvaluationCriteria = async (id: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('ai_evaluation_criteria')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw new Error(`Failed to delete AI evaluation criteria: ${error.message}`)
+      }
+
+      console.log(`✅ AI evaluation criteria deleted:`, id)
+    } catch (error) {
+      console.error(`❌ Failed to delete AI evaluation criteria:`, error)
+      throw error
+    }
+  }
+
   const exportAllData = async (): Promise<DataSnapshot> => {
     const allAttempts: Attempt[] = []
     const allAttemptItems: AttemptItem[] = []
@@ -1537,21 +1967,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       addTopic,
       updateTopic,
       deleteTopic,
+      addTopicWithLanguage,
       
       // Subtopic management
       addSubtopic,
       updateSubtopic,
       deleteSubtopic,
+      addSubtopicWithLanguage,
       
       // Question management
       addQuestion,
       updateQuestion,
       deleteQuestion,
+      addQuestionWithLanguage,
       
       // KPI management
       addKPI,
       updateKPI,
       deleteKPI,
+      addKPIWithLanguage,
       connectKPIToQuestion,
       disconnectKPIFromQuestion,
       
@@ -1608,6 +2042,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // User management for companies
       createUserForCompany,
       removeUserForCompany,
+      
+      // Language-aware data loading
+      getTopicsByLanguage,
+      getSubtopicsByLanguage,
+      getKPIsByLanguage,
+      getQuestionsByLanguage,
+      
+      // AI Evaluation Criteria management
+      getAIEvaluationCriteria,
+      getAIEvaluationCriteriaWithIds,
+      addAIEvaluationCriteria,
+      updateAIEvaluationCriteria,
+      deleteAIEvaluationCriteria,
       
       // Data management
       clearAllData,

@@ -7,8 +7,8 @@ import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { Attempt } from '../../types'
 
 export const UserHome = () => {
-  const { t } = useLanguage()
-  const { topics, subtopics, getUserAttempts, getUserAttemptItems, selectRandomQuestions, createAttempt } = useData()
+  const { t, language } = useLanguage()
+  const { topics, subtopics, getUserAttempts, getUserAttemptItems, selectRandomQuestions, createAttempt, getTopicsByLanguage, getSubtopicsByLanguage } = useData()
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   
@@ -17,6 +17,40 @@ export const UserHome = () => {
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
   const [userAttempts, setUserAttempts] = useState<Attempt[]>([])
   const [userAttemptItems, setUserAttemptItems] = useState<any[]>([])
+  
+  // Language-specific data state
+  const [currentTopics, setCurrentTopics] = useState(topics)
+  const [currentSubtopics, setCurrentSubtopics] = useState(subtopics)
+  const [dataLoading, setDataLoading] = useState(false)
+  
+  // Load language-specific data when language changes
+  useEffect(() => {
+    const loadLanguageData = async () => {
+      setDataLoading(true)
+      try {
+        const [topicsData, subtopicsData] = await Promise.all([
+          getTopicsByLanguage(language),
+          getSubtopicsByLanguage(language)
+        ])
+        
+        setCurrentTopics(topicsData)
+        setCurrentSubtopics(subtopicsData)
+        
+        console.log(`✅ Loaded ${language} data for user home:`, {
+          topics: topicsData.length,
+          subtopics: subtopicsData.length
+        })
+      } catch (error) {
+        console.error(`❌ Error loading ${language} data for user home:`, error)
+        setCurrentTopics([])
+        setCurrentSubtopics([])
+      } finally {
+        setDataLoading(false)
+      }
+    }
+    
+    loadLanguageData()
+  }, [language, getTopicsByLanguage, getSubtopicsByLanguage])
   
   // Load user attempts
   useEffect(() => {
@@ -75,8 +109,8 @@ export const UserHome = () => {
     .sort((a, b) => new Date(b.submittedAt || b.createdAt).getTime() - new Date(a.submittedAt || a.createdAt).getTime())
     .slice(0, 5)
     .map(attempt => {
-      const topic = topics.find(t => t.id === attempt.topicId)
-      const subtopicCount = subtopics.filter(s => s.topicId === attempt.topicId).length
+      const topic = currentTopics.find(t => t.id === attempt.topicId)
+      const subtopicCount = currentSubtopics.filter(s => s.topicId === attempt.topicId).length
       const duration = `${subtopicCount * 3} min`
       const date = new Date(attempt.submittedAt || attempt.createdAt).toLocaleDateString('fi-FI')
       
@@ -213,7 +247,13 @@ export const UserHome = () => {
 
         {/* Topics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {topics.filter(topic => topic.isActive).map((topic) => (
+          {dataLoading ? (
+            <div className="col-span-full text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">Loading {language === 'fi' ? 'Finnish' : 'English'} topics...</p>
+            </div>
+          ) : (
+            currentTopics.filter(topic => topic.isActive).map((topic) => (
             <div key={topic.id} className="card hover:shadow-md transition-shadow duration-200">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
@@ -246,7 +286,8 @@ export const UserHome = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Topic Filter */}
@@ -261,7 +302,7 @@ export const UserHome = () => {
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Kaikki aiheet</option>
-                {topics.filter(topic => topic.isActive).map(topic => (
+                {currentTopics.filter(topic => topic.isActive).map(topic => (
                   <option key={topic.id} value={topic.id}>
                     {topic.title}
                   </option>

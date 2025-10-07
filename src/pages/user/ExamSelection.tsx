@@ -6,11 +6,41 @@ import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 
 const ExamSelection: React.FC = () => {
   const navigate = useNavigate()
-  const { t } = useLanguage()
-  const { topics, subtopics, selectRandomQuestions, createAttempt } = useData()
+  const { t, language } = useLanguage()
+  const { topics, subtopics, selectRandomQuestions, createAttempt, getTopicsByLanguage, getSubtopicsByLanguage } = useData()
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
+  
+  // Language-specific data state
+  const [currentTopics, setCurrentTopics] = useState(topics)
+  const [currentSubtopics, setCurrentSubtopics] = useState(subtopics)
+
+  // Load language-specific data when language changes
+  useEffect(() => {
+    const loadLanguageData = async () => {
+      try {
+        const [topicsData, subtopicsData] = await Promise.all([
+          getTopicsByLanguage(language),
+          getSubtopicsByLanguage(language)
+        ])
+        
+        setCurrentTopics(topicsData)
+        setCurrentSubtopics(subtopicsData)
+        
+        console.log(`✅ Loaded ${language} data for exam selection:`, {
+          topics: topicsData.length,
+          subtopics: subtopicsData.length
+        })
+      } catch (error) {
+        console.error(`❌ Error loading ${language} data for exam selection:`, error)
+        setCurrentTopics([])
+        setCurrentSubtopics([])
+      }
+    }
+    
+    loadLanguageData()
+  }, [language, getTopicsByLanguage, getSubtopicsByLanguage])
 
   // Set initial topic from URL params
   useEffect(() => {
@@ -54,8 +84,8 @@ const ExamSelection: React.FC = () => {
     }
   }
 
-  const selectedTopic = topics.find(t => t.id === selectedTopicId)
-  const topicSubtopics = subtopics.filter(s => s.topicId === selectedTopicId && s.isActive)
+  const selectedTopic = currentTopics.find(t => t.id === selectedTopicId)
+  const topicSubtopics = currentSubtopics.filter(s => s.topicId === selectedTopicId && s.isActive)
   const examDuration = topicSubtopics.length * 3 // 3 minutes per subtopic
 
   const handleGoBack = () => {
@@ -75,7 +105,7 @@ const ExamSelection: React.FC = () => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span>Takaisin</span>
+              <span>{language === 'fi' ? 'Takaisin' : 'Back'}</span>
             </button>
             <h1 className="text-3xl font-bold text-gray-900">{t('startExam')}</h1>
             <div></div> {/* Spacer for centering */}
@@ -85,11 +115,11 @@ const ExamSelection: React.FC = () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
             <h2 className="text-xl font-semibold text-blue-900 mb-4">{t('examInstructions')}</h2>
             <div className="space-y-3 text-blue-800">
-              <p><strong>{t('examStructure')}:</strong> Yksi kysymys per aliaihe valitusta aiheesta</p>
-              <p><strong>{t('timeAllocation')}:</strong> 3 minuuttia kysymystä kohti (yhteensä: {examDuration} minuuttia)</p>
+              <p><strong>{t('examStructure')}:</strong> {language === 'fi' ? 'Yksi kysymys per aliaihe valitusta aiheesta' : 'One question per subtopic from the selected topic'}</p>
+              <p><strong>{t('timeAllocation')}:</strong> {language === 'fi' ? `3 minuuttia kysymystä kohti (yhteensä: ${examDuration} minuuttia)` : `3 minutes per question (total: ${examDuration} minutes)`}</p>
               <p><strong>{t('answerFormat')}:</strong> {t('answerInstructions')}</p>
-              <p><strong>{t('navigation')}:</strong> Kaikki kysymykset näytetään yhdellä sivulla - selaa navigoidaksesi</p>
-              <p><strong>{t('autoSubmit')}:</strong> Tentti lähetetään automaattisesti kun aika loppuu</p>
+              <p><strong>{t('navigation')}:</strong> {language === 'fi' ? 'Kaikki kysymykset näytetään yhdellä sivulla - selaa navigoidaksesi' : 'All questions are displayed on one page - scroll to navigate'}</p>
+              <p><strong>{t('autoSubmit')}:</strong> {language === 'fi' ? 'Tentti lähetetään automaattisesti kun aika loppuu' : 'Exam will be submitted automatically when time runs out'}</p>
             </div>
           </div>
 
@@ -97,8 +127,8 @@ const ExamSelection: React.FC = () => {
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
             <h2 className="text-xl font-semibold text-green-900 mb-4">{t('passingCriteria')}</h2>
             <div className="space-y-2 text-green-800">
-              <p>✓ <strong>{t('kpisRequired')}</strong> on havaittava vastauksistasi</p>
-              <p>✓ <strong>{t('totalPoints')}</strong> on saavutettava</p>
+              <p>✓ <strong>{t('kpisRequired')}</strong> {language === 'fi' ? 'on havaittava vastauksistasi' : 'must be detected in your answers'}</p>
+              <p>✓ <strong>{t('totalPoints')}</strong> {language === 'fi' ? 'on saavutettava' : 'must be achieved'}</p>
             </div>
           </div>
 
@@ -115,9 +145,9 @@ const ExamSelection: React.FC = () => {
                 onChange={(e) => setSelectedTopicId(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
               >
-                <option value="">Select a topic...</option>
-                {topics.filter(topic => topic.isActive).map((topic) => {
-                  const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
+                <option value="">{language === 'fi' ? 'Valitse aihe...' : 'Select a topic...'}</option>
+                {currentTopics.filter(topic => topic.isActive).map((topic) => {
+                  const topicSubtopics = currentSubtopics.filter(s => s.topicId === topic.id && s.isActive)
                   const topicQuestions = topicSubtopics.length
                   return (
                     <option key={topic.id} value={topic.id}>
@@ -147,7 +177,7 @@ const ExamSelection: React.FC = () => {
                 
                 <div className="mt-4 p-4 bg-blue-100 rounded-lg">
                   <p className="text-blue-800">
-                    <strong>Exam Duration:</strong> {examDuration} minutes ({topicSubtopics.length} questions × 3 minutes each)
+                    <strong>{language === 'fi' ? 'Tentin kesto:' : 'Exam Duration:'}</strong> {examDuration} {language === 'fi' ? 'minuuttia' : 'minutes'} ({topicSubtopics.length} {language === 'fi' ? 'kysymystä' : 'questions'} × 3 {language === 'fi' ? 'minuuttia' : 'minutes'} {language === 'fi' ? 'kukin' : 'each'})
                   </p>
                 </div>
               </div>

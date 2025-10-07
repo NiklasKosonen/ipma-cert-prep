@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Clock, ArrowLeft, Trophy, AlertCircle, BookOpen, Play, Info } from 'lucide-react'
 import { useData } from '../../contexts/DataContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuthSupabase } from '../../hooks/useAuthSupabase'
 import { evaluateAnswer } from '../../lib/evaluationEngine'
 import { Question, Topic, Subtopic, Attempt } from '../../types'
@@ -49,23 +50,37 @@ const selectRandomQuestions = (questions: Question[], subtopics: Subtopic[]): Qu
 }
 
 // Topic Selection Component
-const TopicSelection = ({ onTopicSelect }: { onTopicSelect: (topic: Topic) => void }) => {
-  const { topics, subtopics } = useData()
+const TopicSelection = ({ onTopicSelect, topics, subtopics, loading, language }: { 
+  onTopicSelect: (topic: Topic) => void,
+  topics: Topic[],
+  subtopics: Subtopic[],
+  loading: boolean,
+  language: 'fi' | 'en'
+}) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            IPMA Level C Certification Practice
+            {language === 'fi' ? 'IPMA Level C -tutkinnon harjoittelu' : 'IPMA Level C Certification Practice'}
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Select a topic to start your practice session. Each topic contains multiple subtopics with comprehensive questions.
+            {language === 'fi' 
+              ? 'Valitse aihe aloittaaksesi harjoittelun. Jokainen aihe sisältää useita aliaiheita kattavilla kysymyksillä.'
+              : 'Select a topic to start your practice session. Each topic contains multiple subtopics with comprehensive questions.'
+            }
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {topics.filter(topic => topic.isActive).map(topic => {
+          {loading ? (
+            <div className="col-span-full text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">{language === 'fi' ? 'Ladataan aiheita...' : 'Loading topics...'}</p>
+            </div>
+          ) : (
+            topics.filter(topic => topic.isActive).map(topic => {
             const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
             
             return (
@@ -84,29 +99,30 @@ const TopicSelection = ({ onTopicSelect }: { onTopicSelect: (topic: Topic) => vo
                         {topic.title}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {topicSubtopics.length} subtopics
+                        {topicSubtopics.length} {language === 'fi' ? 'aliaihetta' : 'subtopics'}
                       </p>
                     </div>
                   </div>
                   
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {topic.description || 'No description available'}
+                    {topic.description || (language === 'fi' ? 'Ei kuvausta saatavilla' : 'No description available')}
                   </p>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="w-4 h-4 mr-1" />
-                      {topicSubtopics.length * 3} minutes
+                      {topicSubtopics.length * 3} {language === 'fi' ? 'minuuttia' : 'minutes'}
                     </div>
                     <div className="flex items-center text-primary-600 group-hover:text-primary-700">
                       <Play className="w-4 h-4 mr-1" />
-                      <span className="text-sm font-medium">Start</span>
+                      <span className="text-sm font-medium">{language === 'fi' ? 'Aloita' : 'Start'}</span>
                     </div>
                   </div>
                 </div>
               </div>
             )
-          })}
+            })
+          )}
         </div>
       </div>
     </div>
@@ -114,13 +130,12 @@ const TopicSelection = ({ onTopicSelect }: { onTopicSelect: (topic: Topic) => vo
 }
 
 // Topic Details Component
-const TopicDetails = ({ topic, onStartExam, onBack }: { 
+const TopicDetails = ({ topic, onStartExam, onBack, subtopics }: { 
   topic: Topic, 
   onStartExam: () => void, 
-  onBack: () => void 
+  onBack: () => void,
+  subtopics: Subtopic[]
 }) => {
-  const { subtopics } = useData()
-  
   const topicSubtopics = subtopics.filter(s => s.topicId === topic.id && s.isActive)
 
   return (
@@ -235,12 +250,15 @@ const TopicDetails = ({ topic, onStartExam, onBack }: {
 }
 
 // Exam Component
-const Exam = ({ topic, onBack, onComplete }: { 
+const Exam = ({ topic, onBack, onComplete, questions, subtopics, kpis }: { 
   topic: Topic, 
   onBack: () => void, 
-  onComplete: (results: any) => void
+  onComplete: (results: any) => void,
+  questions: Question[],
+  subtopics: Subtopic[],
+  kpis: any[]
 }) => {
-  const { questions, subtopics, kpis, createAttempt, createAttemptItem, updateAttempt } = useData()
+  const { createAttempt, createAttemptItem, updateAttempt } = useData()
   const { user } = useAuthSupabase()
   
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([])
@@ -746,10 +764,55 @@ const Evaluation = ({
 
 // Main Practice Component
 export const Practice = () => {
-  const { topics } = useData()
+  const { topics, getTopicsByLanguage, getSubtopicsByLanguage, getQuestionsByLanguage, getKPIsByLanguage } = useData()
+  const { language } = useLanguage()
   const [currentView, setCurrentView] = useState<'topics' | 'details' | 'exam' | 'evaluation'>('topics')
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
   const [examResults, setExamResults] = useState<any>(null)
+  
+  // Language-specific data state
+  const [currentTopics, setCurrentTopics] = useState(topics)
+  const [currentSubtopics, setCurrentSubtopics] = useState<Subtopic[]>([])
+  const [currentQuestions, setCurrentQuestions] = useState<Question[]>([])
+  const [currentKPIs, setCurrentKPIs] = useState<any[]>([])
+  const [dataLoading, setDataLoading] = useState(false)
+  
+  // Load language-specific data when language changes
+  useEffect(() => {
+    const loadLanguageData = async () => {
+      setDataLoading(true)
+      try {
+        const [topicsData, subtopicsData, questionsData, kpisData] = await Promise.all([
+          getTopicsByLanguage(language),
+          getSubtopicsByLanguage(language),
+          getQuestionsByLanguage(language),
+          getKPIsByLanguage(language)
+        ])
+        
+        setCurrentTopics(topicsData)
+        setCurrentSubtopics(subtopicsData)
+        setCurrentQuestions(questionsData)
+        setCurrentKPIs(kpisData)
+        
+        console.log(`✅ Loaded ${language} data for practice:`, {
+          topics: topicsData.length,
+          subtopics: subtopicsData.length,
+          questions: questionsData.length,
+          kpis: kpisData.length
+        })
+      } catch (error) {
+        console.error(`❌ Error loading ${language} data for practice:`, error)
+        setCurrentTopics([])
+        setCurrentSubtopics([])
+        setCurrentQuestions([])
+        setCurrentKPIs([])
+      } finally {
+        setDataLoading(false)
+      }
+    }
+    
+    loadLanguageData()
+  }, [language, getTopicsByLanguage, getSubtopicsByLanguage, getQuestionsByLanguage, getKPIsByLanguage])
   
   // Check if we have a topicId in the URL
   const urlParams = new URLSearchParams(window.location.search)
@@ -758,13 +821,13 @@ export const Practice = () => {
   // If we have a topicId, go directly to details view
   useEffect(() => {
     if (topicIdFromUrl && topicIdFromUrl !== 'practice') {
-      const topic = topics.find(t => t.id === topicIdFromUrl)
+      const topic = currentTopics.find(t => t.id === topicIdFromUrl)
       if (topic) {
         setSelectedTopic(topic)
         setCurrentView('details')
       }
     }
-  }, [topicIdFromUrl, topics])
+  }, [topicIdFromUrl, currentTopics])
 
   const handleTopicSelect = (topic: Topic) => {
     setSelectedTopic(topic)
@@ -789,7 +852,13 @@ export const Practice = () => {
   }
 
   if (currentView === 'topics') {
-    return <TopicSelection onTopicSelect={handleTopicSelect} />
+    return <TopicSelection 
+      onTopicSelect={handleTopicSelect} 
+      topics={currentTopics}
+      subtopics={currentSubtopics}
+      loading={dataLoading}
+      language={language}
+    />
   }
 
   if (currentView === 'details' && selectedTopic) {
@@ -797,7 +866,8 @@ export const Practice = () => {
       <TopicDetails 
         topic={selectedTopic} 
         onStartExam={handleStartExam} 
-        onBack={handleBackToTopics} 
+        onBack={handleBackToTopics}
+        subtopics={currentSubtopics}
       />
     )
   }
@@ -807,7 +877,10 @@ export const Practice = () => {
       <Exam 
         topic={selectedTopic} 
         onBack={handleBackToTopics} 
-        onComplete={handleExamComplete} 
+        onComplete={handleExamComplete}
+        questions={currentQuestions}
+        subtopics={currentSubtopics}
+        kpis={currentKPIs}
       />
     )
   }

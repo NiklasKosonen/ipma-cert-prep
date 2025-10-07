@@ -15,14 +15,14 @@ let aiModel = {
   learnedPatterns: new Map<string, string[]>(), // KPI name -> learned variations
   contextPatterns: new Map<string, string[]>(), // Context -> related KPIs
 }
-export const evaluateAnswer = async (answer: string, kpis: string[], language: string = 'fi'): Promise<EvaluationResult> => {
+export const evaluateAnswer = async (answer: string, kpis: string[], language: string = 'fi', aiCriteria?: string[]): Promise<EvaluationResult> => {
   console.log('🤖 OpenAI Evaluation - Answer:', answer.substring(0, 100))
   console.log('🤖 OpenAI Evaluation - KPIs to detect:', kpis)
   console.log('🤖 OpenAI Evaluation - Language:', language)
   
   try {
     // Use OpenAI API for evaluation
-    const evaluation = await evaluateWithOpenAI(answer, kpis, language)
+    const evaluation = await evaluateWithOpenAI(answer, kpis, language, aiCriteria)
     console.log('✅ OpenAI Evaluation Result:', evaluation)
     return evaluation
   } catch (error) {
@@ -45,7 +45,7 @@ export const evaluateAnswer = async (answer: string, kpis: string[], language: s
 }
 
 // OpenAI-based evaluation function
-const evaluateWithOpenAI = async (answer: string, kpis: string[], language: string = 'fi'): Promise<EvaluationResult> => {
+const evaluateWithOpenAI = async (answer: string, kpis: string[], language: string = 'fi', aiCriteria?: string[]): Promise<EvaluationResult> => {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   
   if (!apiKey) {
@@ -61,6 +61,14 @@ const evaluateWithOpenAI = async (answer: string, kpis: string[], language: stri
   const isFinnish = language === 'fi'
   const feedbackLanguage = isFinnish ? 'Finnish' : 'English'
   
+  // Build AI evaluation criteria section
+  const aiCriteriaSection = aiCriteria && aiCriteria.length > 0 
+    ? `\n\nADDITIONAL EVALUATION CRITERIA (from admin settings):
+${aiCriteria.map(criteria => `- ${criteria}`).join('\n')}
+
+Please incorporate these criteria into your evaluation.`
+    : ''
+
   const prompt = `You are an expert evaluator for IPMA Level C certification exams. Your task is to evaluate a student's answer and detect which Key Performance Indicators (KPIs) are mentioned or demonstrated.
 
 KPIs to detect: ${kpis.join(', ')}
@@ -85,6 +93,7 @@ Examples of what to detect:
 - "riskinhallinta" = "risk management"
 - "laadunhallinta" = "quality management"
 - "muutosjohtaminen" = "change management"
+${aiCriteriaSection}
 
 Please analyze the answer and:
 1. Identify which KPIs are mentioned, demonstrated, or implied in the answer

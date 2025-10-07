@@ -18,9 +18,11 @@ const Exam: React.FC = () => {
     createAttemptItem, 
     updateAttemptItem,
     questions,
-    subtopics,
     topics,
-    kpis
+    kpis,
+    getAIEvaluationCriteria,
+    getQuestionsByLanguage,
+    getKPIsByLanguage
   } = useData()
 
   const [attempt, setAttempt] = useState<Attempt | null>(null)
@@ -29,6 +31,53 @@ const Exam: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isEvaluating, setIsEvaluating] = useState(false)
+  const [aiCriteria, setAiCriteria] = useState<string[]>([])
+  
+  // Language-specific data state
+  const [currentQuestions, setCurrentQuestions] = useState<Question[]>(questions)
+  const [currentKPIs, setCurrentKPIs] = useState(kpis)
+
+  // Load language-specific data when language changes
+  useEffect(() => {
+    const loadLanguageData = async () => {
+      try {
+        const [questionsData, kpisData] = await Promise.all([
+          getQuestionsByLanguage(language),
+          getKPIsByLanguage(language)
+        ])
+        
+        setCurrentQuestions(questionsData)
+        setCurrentKPIs(kpisData)
+        
+        console.log(`✅ Loaded ${language} data for exam:`, {
+          questions: questionsData.length,
+          kpis: kpisData.length
+        })
+      } catch (error) {
+        console.error(`❌ Error loading ${language} data for exam:`, error)
+        setCurrentQuestions([])
+        setCurrentKPIs([])
+      }
+    }
+    
+    loadLanguageData()
+  }, [language, getQuestionsByLanguage, getKPIsByLanguage])
+
+  // Load AI evaluation criteria
+  useEffect(() => {
+    const loadAICriteria = async () => {
+      try {
+        const criteria = await getAIEvaluationCriteria(language)
+        setAiCriteria(criteria)
+        console.log('✅ Loaded AI evaluation criteria:', criteria)
+      } catch (error) {
+        console.error('❌ Failed to load AI evaluation criteria:', error)
+        setAiCriteria([])
+      }
+    }
+    
+    loadAICriteria()
+  }, [language, getAIEvaluationCriteria])
 
   // Load attempt and questions
   useEffect(() => {
@@ -72,24 +121,19 @@ const Exam: React.FC = () => {
 
         // Load questions for this attempt
         const attemptQuestions = (currentAttempt.selectedQuestionIds || [])
-          .map(id => questions.find(q => q.id === id))
+          .map(id => currentQuestions.find(q => q.id === id))
           .filter((q): q is Question => q !== undefined)
         
         console.log('🔍 Debug - selectedQuestionIds:', currentAttempt.selectedQuestionIds)
-        console.log('🔍 Debug - available questions:', questions.length)
+        console.log('🔍 Debug - available questions:', currentQuestions.length)
         console.log('🔍 Debug - attemptQuestions found:', attemptQuestions.length)
-        console.log('🔍 Debug - questions data:', questions.map(q => ({ 
+        console.log('🔍 Debug - questions data:', currentQuestions.map(q => ({ 
           id: q.id, 
           prompt: q.prompt.substring(0, 50), 
           subtopicId: q.subtopicId,
           connectedKPIs: q.connectedKPIs 
         })))
-        console.log('🔍 Debug - subtopics data:', subtopics.map(s => ({ 
-          id: s.id, 
-          title: s.title, 
-          topicId: s.topicId 
-        })))
-        console.log('🔍 Debug - KPIs data:', kpis.map(k => ({ 
+        console.log('🔍 Debug - KPIs data:', currentKPIs.map(k => ({ 
           id: k.id, 
           name: k.name, 
           subtopicId: k.subtopicId 
@@ -152,7 +196,7 @@ const Exam: React.FC = () => {
           // Fallback: If no KPIs linked to question, get KPIs from subtopic
           if (kpiNames.length === 0 && question.subtopicId) {
             console.log('⚠️ No KPIs linked to question, trying to get KPIs from subtopic:', question.subtopicId)
-            const subtopicKPIs = kpis.filter(kpi => kpi.subtopicId === question.subtopicId)
+            const subtopicKPIs = currentKPIs.filter(kpi => kpi.subtopicId === question.subtopicId)
             kpiNames = subtopicKPIs.map(kpi => kpi.name)
             console.log('🔍 KPI Names to detect (from subtopic):', kpiNames)
           }
@@ -165,7 +209,7 @@ const Exam: React.FC = () => {
           }
           
           // Evaluate the answer
-          const evaluation = await evaluateAnswer(answer, kpiNames, language)
+          const evaluation = await evaluateAnswer(answer, kpiNames, language, aiCriteria)
           
           const result: AttemptItem = existingItem ? {
             ...existingItem,
