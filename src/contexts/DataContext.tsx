@@ -406,41 +406,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(titleValidation.error || 'Invalid topic title')
     }
 
-    // Create new topic with language-specific ID
-    const baseId = `topic_${Date.now()}`
+    // Create new topic with UUID
     const newTopic: Topic = {
       ...topicData,
       title: sanitizeInput(topicData.title),
       description: sanitizeInput(topicData.description),
       subtopics: [],
-      id: language === 'en' ? `${baseId}_en` : baseId,
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
-    // Save to appropriate Supabase table with proper field mapping
+    // Save to unified topics table with language column
     try {
-      const tableName = language === 'en' ? 'topics_en' : 'topics'
-      
       // Map camelCase to snake_case for database
       const dbTopic = {
         id: newTopic.id,
         title: newTopic.title,
         description: newTopic.description,
         is_active: newTopic.isActive,
+        language: language,
         created_at: newTopic.createdAt,
         updated_at: newTopic.updatedAt
       }
       
       const { error } = await supabase
-        .from(tableName)
+        .from('topics')
         .insert([dbTopic])
       
       if (error) {
-        throw new Error(`Failed to add topic to ${tableName}: ${error.message}`)
+        throw new Error(`Failed to add topic: ${error.message}`)
       }
       
-      console.log(`✅ Topic added to ${tableName}:`, newTopic.id)
+      console.log(`✅ Topic added to ${language} database:`, newTopic.id)
     } catch (error) {
       console.error(`❌ Failed to add topic to ${language} database:`, error)
       throw error
@@ -511,21 +509,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Language-aware subtopic management
   const addSubtopicWithLanguage = async (subtopicData: Omit<Subtopic, 'id' | 'createdAt' | 'updatedAt'>, language: 'fi' | 'en') => {
-    // Create new subtopic with language-specific ID
-    const baseId = `subtopic_${Date.now()}`
+    // Create new subtopic with UUID
     const newSubtopic: Subtopic = {
       ...subtopicData,
-      id: language === 'en' ? `${baseId}_en` : baseId,
-      // Don't modify topicId - it's already the correct ID for the selected language
+      id: crypto.randomUUID(),
       topicId: subtopicData.topicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
-    // Save to appropriate Supabase table with proper field mapping
+    // Save to unified subtopics table with language column
     try {
-      const tableName = language === 'en' ? 'subtopics_en' : 'subtopics'
-      
       // Map camelCase to snake_case for database
       const dbSubtopic = {
         id: newSubtopic.id,
@@ -533,19 +527,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         description: newSubtopic.description,
         topic_id: newSubtopic.topicId,
         is_active: newSubtopic.isActive,
+        language: language,
         created_at: newSubtopic.createdAt,
         updated_at: newSubtopic.updatedAt
       }
       
       const { error } = await supabase
-        .from(tableName)
+        .from('subtopics')
         .insert([dbSubtopic])
       
       if (error) {
-        throw new Error(`Failed to add subtopic to ${tableName}: ${error.message}`)
+        throw new Error(`Failed to add subtopic: ${error.message}`)
       }
       
-      console.log(`✅ Subtopic added to ${tableName}:`, newSubtopic.id)
+      console.log(`✅ Subtopic added to ${language} database:`, newSubtopic.id)
     } catch (error) {
       console.error(`❌ Failed to add subtopic to ${language} database:`, error)
       throw error
@@ -646,24 +641,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(promptValidation.error || 'Invalid question prompt')
     }
 
-    // Create new question with language-specific ID
-    const baseId = `question_${Date.now()}`
+    // Create new question with UUID
     const newQuestion: Question = {
       ...questionData,
       prompt: sanitizeInput(questionData.prompt),
       connectedKPIs: questionData.connectedKPIs || [],
-      id: language === 'en' ? `${baseId}_en` : baseId,
-      // Don't modify topicId and subtopicId - they're already the correct IDs for the selected language
+      id: crypto.randomUUID(),
       topicId: questionData.topicId,
       subtopicId: questionData.subtopicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
-    // Save to appropriate Supabase table with proper field mapping
+    // Save to unified questions table with language column
     try {
-      const tableName = language === 'en' ? 'questions_en' : 'questions'
-      
       // Map camelCase to snake_case for database
       const dbQuestion = {
         id: newQuestion.id,
@@ -672,19 +663,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         subtopic_id: newQuestion.subtopicId,
         connectedkpis: newQuestion.connectedKPIs,
         is_active: newQuestion.isActive,
+        language: language,
         created_at: newQuestion.createdAt,
         updated_at: newQuestion.updatedAt
       }
       
       const { error } = await supabase
-        .from(tableName)
+        .from('questions')
         .insert([dbQuestion])
       
       if (error) {
-        throw new Error(`Failed to add question to ${tableName}: ${error.message}`)
+        throw new Error(`Failed to add question: ${error.message}`)
       }
       
-      console.log(`✅ Question added to ${tableName}:`, newQuestion.id)
+      console.log(`✅ Question added to ${language} database:`, newQuestion.id)
     } catch (error) {
       console.error(`❌ Failed to add question to ${language} database:`, error)
       throw error
@@ -756,23 +748,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error('KPIs must belong to a specific subtopic')
     }
     
-    // Create new KPI with language-specific ID
-    const baseId = `kpi_${Date.now()}`
+    // Create new KPI with UUID
     const newKPI: KPI = {
       ...kpiData,
       connectedQuestions: kpiData.connectedQuestions || [],
-      id: language === 'en' ? `${baseId}_en` : baseId,
-      // Don't modify topicId and subtopicId - they're already the correct IDs for the selected language
+      id: crypto.randomUUID(),
       topicId: kpiData.topicId,
       subtopicId: kpiData.subtopicId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
-    // Save to appropriate Supabase table with proper field mapping
+    // Save to unified kpis table with language column
     try {
-      const tableName = language === 'en' ? 'kpis_en' : 'kpis'
-      
       // Map camelCase to snake_case for database
       const dbKPI = {
         id: newKPI.id,
@@ -781,19 +769,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         topic_id: newKPI.topicId,
         subtopic_id: newKPI.subtopicId,
         connected_questions: newKPI.connectedQuestions,
+        language: language,
         created_at: newKPI.createdAt,
         updated_at: newKPI.updatedAt
       }
       
       const { error } = await supabase
-        .from(tableName)
+        .from('kpis')
         .insert([dbKPI])
       
       if (error) {
-        throw new Error(`Failed to add KPI to ${tableName}: ${error.message}`)
+        throw new Error(`Failed to add KPI: ${error.message}`)
       }
       
-      console.log(`✅ KPI added to ${tableName}:`, newKPI.id)
+      console.log(`✅ KPI added to ${language} database:`, newKPI.id)
     } catch (error) {
       console.error(`❌ Failed to add KPI to ${language} database:`, error)
       throw error
@@ -1684,10 +1673,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // Language-aware data loading functions
   const getTopicsByLanguage = async (language: 'fi' | 'en'): Promise<Topic[]> => {
     try {
-      const tableName = language === 'en' ? 'topics_en' : 'topics'
       const { data, error } = await supabase
-        .from(tableName)
+        .from('topics')
         .select('*')
+        .eq('language', language)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -1711,10 +1700,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const getSubtopicsByLanguage = async (language: 'fi' | 'en'): Promise<Subtopic[]> => {
     try {
-      const tableName = language === 'en' ? 'subtopics_en' : 'subtopics'
       const { data, error } = await supabase
-        .from(tableName)
+        .from('subtopics')
         .select('*')
+        .eq('language', language)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -1738,10 +1727,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const getKPIsByLanguage = async (language: 'fi' | 'en'): Promise<KPI[]> => {
     try {
-      const tableName = language === 'en' ? 'kpis_en' : 'kpis'
       const { data, error } = await supabase
-        .from(tableName)
+        .from('kpis')
         .select('*')
+        .eq('language', language)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -1766,10 +1755,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const getQuestionsByLanguage = async (language: 'fi' | 'en'): Promise<Question[]> => {
     try {
-      const tableName = language === 'en' ? 'questions_en' : 'questions'
       const { data, error } = await supabase
-        .from(tableName)
+        .from('questions')
         .select('*')
+        .eq('language', language)
         .order('created_at', { ascending: true })
 
       if (error) {

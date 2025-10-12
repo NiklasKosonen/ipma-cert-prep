@@ -4,7 +4,8 @@ import { useData } from '../../contexts/DataContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { Topic, Subtopic, KPI, Question, TrainingExample, CompanyCode } from '../../types'
 import AIEvaluationRules, { EvaluationRule } from '../../components/AIEvaluationRules'
-import { User, Users, Settings } from 'lucide-react'
+import { evaluateAnswer } from '../../lib/evaluationEngine'
+import { User, Users, Settings, TestTube } from 'lucide-react'
 
 const AdminConsole: React.FC = () => {
   const { t } = useLanguage()
@@ -19,7 +20,8 @@ const AdminConsole: React.FC = () => {
     addCompanyCode, updateCompanyCode, deleteCompanyCode,
     createUserForCompany, removeUserForCompany,
     getTopicsByLanguage, getSubtopicsByLanguage, getKPIsByLanguage, getQuestionsByLanguage,
-    getAIEvaluationCriteria, getAIEvaluationCriteriaWithIds, addAIEvaluationCriteria, updateAIEvaluationCriteria, deleteAIEvaluationCriteria
+    getAIEvaluationCriteria, getAIEvaluationCriteriaWithIds, addAIEvaluationCriteria, updateAIEvaluationCriteria, deleteAIEvaluationCriteria,
+    createAttempt, createAttemptItem, updateAttempt
   } = useData()
 
   // Auto backup removed - data now syncs to Supabase in real-time
@@ -50,6 +52,9 @@ const AdminConsole: React.FC = () => {
         connectedKPIs: [],
         isActive: true
       })
+      
+      // Refresh language-specific data after adding
+      await loadLanguageData(adminLanguage)
       
       alert(`✅ Question added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
     } catch (error) {
@@ -91,6 +96,15 @@ const AdminConsole: React.FC = () => {
   const [newUserEmail, setNewUserEmail] = useState('')
   // const [editingCompanyCode, setEditingCompanyCode] = useState<string | null>(null)
   // const [editCompanyCode, setEditCompanyCode] = useState<Partial<CompanyCode>>({...})
+
+  // Test data generator states
+  const [testDataConfig, setTestDataConfig] = useState({
+    userEmail: '',
+    topicId: '',
+    numAttempts: 5,
+    language: 'fi' as 'fi' | 'en'
+  })
+  const [isGeneratingTestData, setIsGeneratingTestData] = useState(false)
   
   // Company emails management (to be implemented later)
   // const [companyEmails, setCompanyEmails] = useState<Record<string, string[]>>({})
@@ -214,6 +228,126 @@ const AdminConsole: React.FC = () => {
     }
   }
 
+  // Test data generator functions
+  const generateSyntheticAnswer = (_question: Question) => {
+    // Simple random answer generator (can be enhanced)
+    const templates = [
+      "This involves understanding key concepts and applying them systematically.",
+      "The approach requires careful analysis and strategic implementation.",
+      "Critical factors include stakeholder engagement and resource allocation.",
+      "Effective project management requires clear communication and risk assessment.",
+      "Success depends on proper planning, execution, and monitoring processes.",
+      "Key competencies include leadership, problem-solving, and decision-making skills.",
+      "The methodology focuses on iterative development and continuous improvement.",
+      "Important considerations include budget management and timeline adherence."
+    ]
+    return templates[Math.floor(Math.random() * templates.length)]
+  }
+
+  const generateTestAttempts = async () => {
+    if (!testDataConfig.userEmail || !testDataConfig.topicId) {
+      alert('Please select user and topic')
+      return
+    }
+    
+    const user = users.find(u => u.email === testDataConfig.userEmail)
+    if (!user) {
+      alert('User not found with that email')
+      return
+    }
+    
+    setIsGeneratingTestData(true)
+    
+    try {
+      // Get language-specific data
+      const [, subtopicsData, questionsData, kpisData] = await Promise.all([
+        getTopicsByLanguage(testDataConfig.language),
+        getSubtopicsByLanguage(testDataConfig.language),
+        getQuestionsByLanguage(testDataConfig.language),
+        getKPIsByLanguage(testDataConfig.language)
+      ])
+      
+      // Get topic subtopics
+      const topicSubtopics = subtopicsData.filter(s => s.topicId === testDataConfig.topicId && s.isActive)
+      
+      for (let i = 0; i < testDataConfig.numAttempts; i++) {
+        // Select random questions for this topic
+        const selectedQuestions: string[] = []
+        
+        for (const subtopic of topicSubtopics) {
+          const subtopicQuestions = questionsData.filter(q => q.subtopicId === subtopic.id && q.isActive)
+          if (subtopicQuestions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * subtopicQuestions.length)
+            selectedQuestions.push(subtopicQuestions[randomIndex].id)
+          }
+        }
+        
+        if (selectedQuestions.length === 0) {
+          console.warn(`No questions found for topic ${testDataConfig.topicId}`)
+          continue
+        }
+        
+        // Create attempt
+        const attempt = await createAttempt(user.id, testDataConfig.topicId, selectedQuestions)
+        
+        // For each question, generate synthetic answer and evaluate
+        for (const questionId of selectedQuestions) {
+          const question = questionsData.find(q => q.id === questionId)
+          if (!question) continue
+          
+          // Generate random answer
+          const syntheticAnswer = generateSyntheticAnswer(question)
+          
+          // Get KPIs for evaluation
+          const questionKPIs = kpisData.filter(k => question.connectedKPIs.includes(k.id))
+          
+          // Call AI evaluation
+          const evaluation = await evaluateAnswer(
+            syntheticAnswer,
+            questionKPIs.map(k => k.name),
+            testDataConfig.language,
+            [] // no AI criteria for test data
+          )
+          
+          // Save attempt item with evaluation
+          await createAttemptItem(attempt.id, questionId, syntheticAnswer, {
+            kpisDetected: evaluation.toteutuneet_kpi,
+            kpisMissing: evaluation.puuttuvat_kpi,
+            score: evaluation.pisteet,
+            feedback: evaluation.sanallinen_arvio
+          })
+        }
+        
+        // Update attempt as completed
+        const totalScore = selectedQuestions.length * 3 // Will be calculated properly in real scenario
+        await updateAttempt(attempt.id, {
+          status: 'completed',
+          endTime: new Date().toISOString(),
+          score: totalScore,
+          passed: true // Simplified for test data
+        })
+        
+        console.log(`✅ Generated test attempt ${i + 1}/${testDataConfig.numAttempts}`)
+      }
+      
+      alert(`✅ Generated ${testDataConfig.numAttempts} test attempts for ${testDataConfig.userEmail}!`)
+      
+      // Reset form
+      setTestDataConfig({
+        userEmail: '',
+        topicId: '',
+        numAttempts: 5,
+        language: 'fi'
+      })
+      
+    } catch (error) {
+      console.error('Error generating test attempts:', error)
+      alert(`❌ Error generating test attempts: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsGeneratingTestData(false)
+    }
+  }
+
   const handleEditTrainingExample = (_id: string) => {
     // const trainingExample = trainingExamples.find(te => te.id === id)
     // if (trainingExample) {
@@ -321,17 +455,31 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleUpdateTopic = () => {
+  const handleUpdateTopic = async () => {
     if (editingTopic && editTopic.title.trim()) {
-      updateTopic(editingTopic.id, editTopic)
-      setEditingTopic(null)
-      setEditTopic({ title: '', description: '' })
+      try {
+        await updateTopic(editingTopic.id, editTopic)
+        setEditingTopic(null)
+        setEditTopic({ title: '', description: '' })
+        // Refresh language-specific data after update
+        await loadLanguageData(adminLanguage)
+      } catch (error) {
+        console.error('Error updating topic:', error)
+        alert(`❌ Error updating topic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
-  const handleDeleteTopic = (topicId: string) => {
+  const handleDeleteTopic = async (topicId: string) => {
     if (window.confirm('Are you sure you want to delete this topic?')) {
-      deleteTopic(topicId)
+      try {
+        await deleteTopic(topicId)
+        // Refresh language-specific data after deletion
+        await loadLanguageData(adminLanguage)
+      } catch (error) {
+        console.error('Error deleting topic:', error)
+        alert(`❌ Error deleting topic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
@@ -340,6 +488,8 @@ const AdminConsole: React.FC = () => {
       try {
         await addSubtopicWithLanguage(newSubtopic, adminLanguage)
         setNewSubtopic({ title: '', description: '', topicId: '', isActive: true })
+        // Refresh language-specific data after adding
+        await loadLanguageData(adminLanguage)
         alert(`✅ Subtopic added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
       } catch (error) {
         console.error('Error adding subtopic:', error)
@@ -348,20 +498,34 @@ const AdminConsole: React.FC = () => {
     }
   }
 
-  const handleUpdateSubtopic = () => {
+  const handleUpdateSubtopic = async () => {
     if (editingSubtopic && editSubtopic.title.trim()) {
-      console.log('Updating subtopic:', editingSubtopic.id, 'with data:', editSubtopic)
-      updateSubtopic(editingSubtopic.id, editSubtopic)
-      setEditingSubtopic(null)
-      setEditSubtopic({ title: '', description: '', topicId: '', isActive: true })
+      try {
+        console.log('Updating subtopic:', editingSubtopic.id, 'with data:', editSubtopic)
+        await updateSubtopic(editingSubtopic.id, editSubtopic)
+        setEditingSubtopic(null)
+        setEditSubtopic({ title: '', description: '', topicId: '', isActive: true })
+        // Refresh language-specific data after update
+        await loadLanguageData(adminLanguage)
+      } catch (error) {
+        console.error('Error updating subtopic:', error)
+        alert(`❌ Error updating subtopic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
-  const handleDeleteSubtopic = (subtopicId: string) => {
+  const handleDeleteSubtopic = async (subtopicId: string) => {
     console.log('Attempting to delete subtopic:', subtopicId)
     if (window.confirm(`Are you sure you want to delete this subtopic? (ID: ${subtopicId})`)) {
-      console.log('Confirmed deletion of subtopic:', subtopicId)
-      deleteSubtopic(subtopicId)
+      try {
+        console.log('Confirmed deletion of subtopic:', subtopicId)
+        await deleteSubtopic(subtopicId)
+        // Refresh language-specific data after deletion
+        await loadLanguageData(adminLanguage)
+      } catch (error) {
+        console.error('Error deleting subtopic:', error)
+        alert(`❌ Error deleting subtopic: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
@@ -376,6 +540,8 @@ const AdminConsole: React.FC = () => {
         console.log('✅ KPI data:', kpiData)
         await addKPIWithLanguage(kpiData, adminLanguage)
         setNewKPI({ name: '', isEssential: true, topicId: '', subtopicId: '' })
+        // Refresh language-specific data after adding
+        await loadLanguageData(adminLanguage)
         alert(`✅ KPI added to ${adminLanguage === 'fi' ? 'Finnish' : 'English'} database!`)
         console.log('✅ KPI added successfully')
       } catch (error) {
@@ -493,6 +659,7 @@ const AdminConsole: React.FC = () => {
               { id: 'questions', label: t('questions') },
               { id: 'training-examples', label: t('trainingExamples') },
               { id: 'company-codes', label: t('companyCodes') },
+              { id: 'test-data', label: 'Test Data Generator' },
               { id: 'backup', label: 'Backup & Sync' },
               { id: 'ai-evaluation', label: t('aiEvaluation') }
             ].map((tab) => (
@@ -2120,6 +2287,120 @@ const AdminConsole: React.FC = () => {
             </div>
           )}
 
+          {/* Test Data Generator Tab */}
+          {activeTab === 'test-data' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Test Data Generator</h2>
+                <TestTube className="w-6 h-6 text-blue-600" />
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="mb-6">
+                  <p className="text-gray-600 mb-4">
+                    Generate synthetic exam attempts for testing purposes. This will create N test attempts with 
+                    randomized questions, synthetic answers, and AI evaluations.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* User Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select User
+                    </label>
+                    <select
+                      value={testDataConfig.userEmail}
+                      onChange={(e) => setTestDataConfig({ ...testDataConfig, userEmail: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a user...</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.email}>
+                          {user.email} ({user.name || 'No name'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Topic Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Topic
+                    </label>
+                    <select
+                      value={testDataConfig.topicId}
+                      onChange={(e) => setTestDataConfig({ ...testDataConfig, topicId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a topic...</option>
+                      {currentTopics.map((topic) => (
+                        <option key={topic.id} value={topic.id}>
+                          {topic.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Number of Attempts */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Attempts
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={testDataConfig.numAttempts}
+                      onChange={(e) => setTestDataConfig({ ...testDataConfig, numAttempts: parseInt(e.target.value) || 5 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Language Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Content Language
+                    </label>
+                    <select
+                      value={testDataConfig.language}
+                      onChange={(e) => setTestDataConfig({ ...testDataConfig, language: e.target.value as 'fi' | 'en' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="fi">🇫🇮 Finnish</option>
+                      <option value="en">🇬🇧 English</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    onClick={generateTestAttempts}
+                    disabled={isGeneratingTestData || !testDataConfig.userEmail || !testDataConfig.topicId}
+                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                  >
+                    {isGeneratingTestData ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <TestTube className="w-4 h-4" />
+                        <span>Generate Test Attempts</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Note:</strong> This will create {testDataConfig.numAttempts} exam attempts for {testDataConfig.userEmail || 'selected user'} 
+                  using the {testDataConfig.language === 'fi' ? 'Finnish' : 'English'} content database.</p>
+                  <p className="mt-1">Each attempt will include randomized questions, synthetic answers, and AI evaluations.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Backup & Sync Tab */}
           {activeTab === 'backup' && (

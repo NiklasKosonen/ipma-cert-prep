@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Download, Calendar, Clock, BarChart3, Filter, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
+import { Download, Calendar, Clock, BarChart3, Filter, Target, TrendingUp, CheckCircle, XCircle, X } from 'lucide-react'
 import { useData } from '../../contexts/DataContext'
 import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
 import { Attempt, AttemptItem } from '../../types'
 
 export const UserHistory = () => {
-  const { getUserAttempts, getUserAttemptItems, topics, subtopics } = useData()
+  const { getUserAttempts, getUserAttemptItems, topics, subtopics, questions } = useData()
   const { user } = useAuth()
   const [selectedTopic, setSelectedTopic] = useState<string>('all')
   const [attempts, setAttempts] = useState<Attempt[]>([])
   const [attemptItems, setAttemptItems] = useState<AttemptItem[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Modal state for viewing exam details
+  const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Load user data
   useEffect(() => {
@@ -113,6 +117,17 @@ export const UserHistory = () => {
     const pointsPercentage = maxScoreForAttempt > 0 ? (attemptScore / maxScoreForAttempt) * 100 : 0
     
     return questionsAnsweredPercentage >= 80 && pointsPercentage >= 50
+  }
+
+  // Modal functions
+  const openAttemptModal = (attempt: Attempt) => {
+    setSelectedAttempt(attempt)
+    setModalOpen(true)
+  }
+
+  const closeAttemptModal = () => {
+    setSelectedAttempt(null)
+    setModalOpen(false)
   }
 
   if (loading) {
@@ -284,7 +299,11 @@ export const UserHistory = () => {
                 const duration = `${subtopicCount * 3} min`
                 
                 return (
-                  <div key={attempt.id} className="bg-white rounded-lg shadow-lg p-6">
+                  <div 
+                    key={attempt.id} 
+                    className="bg-white rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow duration-200"
+                    onClick={() => openAttemptModal(attempt)}
+                  >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex-1 mb-4 lg:mb-0">
                         <div className="flex items-center justify-between mb-2">
@@ -340,6 +359,142 @@ export const UserHistory = () => {
           )}
         </div>
       </div>
+
+      {/* Exam Details Modal */}
+      {modalOpen && selectedAttempt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {getTopicName(selectedAttempt.topicId)} - Exam Details
+              </h2>
+              <button 
+                onClick={closeAttemptModal}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Exam Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-gray-600">Score</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {attemptItems
+                        .filter(item => item.attemptId === selectedAttempt.id)
+                        .reduce((sum, item) => sum + (item.score || 0), 0)}
+                      /{attemptItems.filter(item => item.attemptId === selectedAttempt.id).length * 3}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <p className={`text-lg font-semibold ${isExamPassed(selectedAttempt) ? 'text-green-600' : 'text-red-600'}`}>
+                      {isExamPassed(selectedAttempt) ? 'Passed' : 'Failed'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Date</p>
+                    <p className="text-lg font-medium">
+                      {new Date(selectedAttempt.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Duration</p>
+                    <p className="text-lg font-medium">
+                      {subtopics.filter(s => s.topicId === selectedAttempt.topicId).length * 3} min
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions and Answers */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-900">Questions and Answers</h3>
+                
+                {attemptItems
+                  .filter(item => item.attemptId === selectedAttempt.id)
+                  .sort((a, b) => {
+                    // Sort by creation time
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                  })
+                  .map((item, idx) => {
+                    const question = questions.find(q => q.id === item.questionId)
+                    
+                    return (
+                      <div key={item.id} className="border border-gray-200 rounded-lg p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            Question {idx + 1}
+                          </h4>
+                          <div className="flex items-center space-x-4">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              (item.score || 0) >= 2 ? 'bg-green-100 text-green-800' :
+                              (item.score || 0) >= 1 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {item.score || 0}/3 points
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {question && (
+                          <div className="mb-4">
+                            <p className="text-gray-700 leading-relaxed">{question.prompt}</p>
+                          </div>
+                        )}
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                          <h5 className="font-medium text-blue-900 mb-2">Your Answer:</h5>
+                          <p className="text-blue-800 leading-relaxed">
+                            {item.answer || 'No answer provided'}
+                          </p>
+                        </div>
+                        
+                        {item.feedback && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                            <h5 className="font-medium text-gray-900 mb-2">AI Feedback:</h5>
+                            <p className="text-gray-700 leading-relaxed">{item.feedback}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-4 text-sm">
+                          {item.kpisDetected && item.kpisDetected.length > 0 && (
+                            <div>
+                              <span className="font-medium text-green-700">KPIs Detected:</span>
+                              <span className="ml-1 text-green-600">
+                                {item.kpisDetected.join(', ')}
+                              </span>
+                            </div>
+                          )}
+                          {item.kpisMissing && item.kpisMissing.length > 0 && (
+                            <div>
+                              <span className="font-medium text-red-700">KPIs Missing:</span>
+                              <span className="ml-1 text-red-600">
+                                {item.kpisMissing.join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+            
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={closeAttemptModal}
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
