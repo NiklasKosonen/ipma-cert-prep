@@ -2005,6 +2005,7 @@ const AdminConsole: React.FC = () => {
                                 if (result.success) {
                                   console.log('✅ User created successfully:', newUserEmail)
                                   // Update the company code with the new email
+                                  // Note: Users state is automatically updated by createUserForCompany function
                                   const updatedEmails = [...(selectedCompany.authorizedEmails || []), newUserEmail.trim()]
                                   updateCompanyCode(selectedCompany.id, { authorizedEmails: updatedEmails })
                                   setNewUserEmail('')

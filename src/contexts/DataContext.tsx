@@ -4,7 +4,7 @@ import { mockTopics, mockQuestions, mockKPIs, mockCompanyCodes, mockSubtopics, m
 import { validateTopicTitle, validateQuestionPrompt, sanitizeInput } from '../lib/validation'
 import { SupabaseDataService } from '../services/supabaseDataService'
 import { ExamDataService } from '../services/examDataService'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseAdmin } from '../lib/supabase'
 
 // Data persistence utilities with user-specific storage
 const STORAGE_KEYS = {
@@ -259,7 +259,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           supabaseKpis,
           supabaseCompanyCodes,
           supabaseSampleAnswers,
-          supabaseTrainingExamples
+          supabaseTrainingExamples,
+          supabaseUsers
         ] = await Promise.all([
           supabaseDataService.getAllTopics(),
           supabaseDataService.getAllSubtopics(),
@@ -267,7 +268,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           supabaseDataService.getAllKPIs(),
           supabaseDataService.getAllCompanyCodes(),
           supabaseDataService.getAllSampleAnswers(),
-          supabaseDataService.getAllTrainingExamples()
+          supabaseDataService.getAllTrainingExamples(),
+          supabaseDataService.getAllUsers()
         ])
 
         console.log('✅ Data loaded from Supabase:', {
@@ -275,7 +277,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           subtopics: supabaseSubtopics.length,
           questions: supabaseQuestions.length,
           kpis: supabaseKpis.length,
-          companyCodes: supabaseCompanyCodes.length
+          companyCodes: supabaseCompanyCodes.length,
+          users: supabaseUsers.length
         })
 
         // Set state from Supabase (use mock data only if Supabase is empty)
@@ -286,6 +289,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setCompanyCodes(supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
         setSampleAnswers(supabaseSampleAnswers)
         setTrainingExamples(supabaseTrainingExamples)
+        setUsers(supabaseUsers)
 
         // Cache to localStorage for faster subsequent loads
         saveToStorage(STORAGE_KEYS.topics, supabaseTopics.length > 0 ? supabaseTopics : mockTopics)
@@ -295,6 +299,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         saveToStorage(STORAGE_KEYS.companyCodes, supabaseCompanyCodes.length > 0 ? supabaseCompanyCodes : mockCompanyCodes)
         saveToStorage(STORAGE_KEYS.sampleAnswers, supabaseSampleAnswers)
         saveToStorage(STORAGE_KEYS.trainingExamples, supabaseTrainingExamples)
+        saveToStorage(STORAGE_KEYS.users, supabaseUsers)
         
       } catch (error) {
         console.error('❌ CRITICAL: Failed to load from Supabase:', error)
@@ -302,21 +307,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         
         // Emergency fallback to localStorage
         console.log('📦 Attempting emergency fallback to localStorage...')
-      const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
+        const loadedTopics = loadFromStorage(STORAGE_KEYS.topics, mockTopics)
         const loadedSubtopics = loadFromStorage(STORAGE_KEYS.subtopics, mockSubtopics)
-      const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
-      const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
-      const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
-      const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
-      const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
+        const loadedQuestions = loadFromStorage(STORAGE_KEYS.questions, mockQuestions)
+        const loadedKpis = loadFromStorage(STORAGE_KEYS.kpis, mockKPIs)
+        const loadedCompanyCodes = loadFromStorage(STORAGE_KEYS.companyCodes, mockCompanyCodes)
+        const loadedSampleAnswers = loadFromStorage(STORAGE_KEYS.sampleAnswers, mockSampleAnswers)
+        const loadedTrainingExamples = loadFromStorage(STORAGE_KEYS.trainingExamples, mockTrainingExamples)
+        const loadedUsers = loadFromStorage(STORAGE_KEYS.users, [])
 
-      setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
+        setTopics(Array.isArray(loadedTopics) ? loadedTopics : mockTopics)
         setSubtopics(Array.isArray(loadedSubtopics) ? loadedSubtopics : mockSubtopics)
-      setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
-      setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
-      setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
-      setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
-      setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
+        setQuestions(Array.isArray(loadedQuestions) ? loadedQuestions : mockQuestions)
+        setKpis(Array.isArray(loadedKpis) ? loadedKpis : mockKPIs)
+        setCompanyCodes(Array.isArray(loadedCompanyCodes) ? loadedCompanyCodes : mockCompanyCodes)
+        setSampleAnswers(Array.isArray(loadedSampleAnswers) ? loadedSampleAnswers : mockSampleAnswers)
+        setTrainingExamples(Array.isArray(loadedTrainingExamples) ? loadedTrainingExamples : mockTrainingExamples)
+        setUsers(Array.isArray(loadedUsers) ? loadedUsers : [])
       }
     }
 
@@ -901,61 +908,57 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Create user via serverless function to prevent admin session hijacking
-  const createUserForCompany = async (email: string, companyCode: string, companyName: string) => {
+  // Create user for company (creates both Auth user and public.users record)
+  const createUserForCompany = async (email: string, companyCode: string, companyName: string): Promise<{success: boolean, userId?: string, error?: string}> => {
     try {
-      console.log('🔄 Creating user via serverless function:', { email, companyCode, companyName })
+      console.log('🔄 Creating user via admin API:', { email, companyCode, companyName })
       
+      // Check if admin client is available
+      if (!supabaseAdmin) {
+        throw new Error('Admin client not available. Please add VITE_SUPABASE_SERVICE_ROLE_KEY to your environment variables.')
+      }
+
       // Check if user already exists in public.users
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUser, error: userCheckError } = await supabase
         .from('users')
         .select('id, email, company_code')
         .eq('email', email)
         .single()
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('❌ Error checking existing user:', checkError)
-        throw new Error(`Failed to check existing user: ${checkError.message}`)
-      }
-
-      if (existingUser) {
+      if (existingUser && !userCheckError) {
         console.log('⚠️ User already exists in public.users:', existingUser)
-        
-        // If user exists but has different company code, update it
-        if (existingUser.company_code !== companyCode) {
-          console.log('🔄 Updating existing user with new company code')
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({
-              company_code: companyCode,
-              company_name: companyName,
-              updated_at: new Date().toISOString()
-            })
-            .eq('email', email)
-
-          if (updateError) {
-            console.error('❌ Failed to update existing user:', updateError)
-            throw new Error(`Failed to update existing user: ${updateError.message}`)
-          }
-
-          console.log('✅ Updated existing user with new company code')
-          return { success: true, userId: existingUser.id }
-        } else {
+        if (existingUser.company_code === companyCode) {
           console.log('✅ User already exists with correct company code')
           return { success: true, userId: existingUser.id }
+        } else {
+          throw new Error(`User already exists with different company code: ${existingUser.company_code}`)
         }
       }
 
-      // Get current session for authorization
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('No active session found')
+      // Generate a temporary password
+      const tempPassword = crypto.randomUUID() + '!A1'
+
+      // Create auth user using admin API
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          company_code: companyCode,
+          company_name: companyName
+        }
+      })
+
+      if (authError || !authUser.user) {
+        console.error('❌ Failed to create auth user:', authError)
+        throw new Error(`Failed to create auth user: ${authError?.message || 'Unknown error'}`)
       }
 
-      // Create user profile directly in our users table (skip Supabase Auth for now)
-      // This prevents the admin session from being hijacked
+      console.log('✅ Auth user created successfully:', authUser.user.id)
+
+      // Create user profile in public.users with auth user ID
       const userProfileData = {
-        id: crypto.randomUUID(), // Generate a UUID for the user
+        id: authUser.user.id, // Use auth user ID to link the records
         email: email,
         name: email.split('@')[0],
         role: 'user',
@@ -973,11 +976,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (profileError) {
         console.error('❌ Failed to create user profile:', profileError)
+        // Try to clean up the auth user if profile creation fails
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+          console.log('🧹 Cleaned up auth user after profile creation failure')
+        } catch (cleanupError) {
+          console.error('❌ Failed to cleanup auth user:', cleanupError)
+        }
         throw new Error(`Failed to create user profile: ${profileError.message}`)
       }
 
-      console.log('✅ User created successfully in public.users:', { email, userId: userProfileData.id })
-      return { success: true, userId: userProfileData.id }
+      // Send password reset email so user can set their own password
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      })
+
+      if (resetError) {
+        console.warn('⚠️ Failed to send password reset email:', resetError)
+        // Don't fail the whole operation for this
+      } else {
+        console.log('✅ Password reset email sent to:', email)
+      }
+
+      // Update local users state
+      const newUser: UserProfile = {
+        id: authUser.user.id,
+        email: email,
+        name: email.split('@')[0],
+        role: 'user',
+        companyCode: companyCode,
+        companyName: companyName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      setUsers(prev => [...prev, newUser])
+
+      console.log('✅ User created successfully:', { email, userId: authUser.user.id })
+      return { success: true, userId: authUser.user.id }
 
     } catch (error) {
       console.error('❌ Error creating user:', error)

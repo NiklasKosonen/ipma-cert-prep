@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 
 // Create a mock Supabase client if environment variables are missing
 const createMockSupabase = () => ({
@@ -20,8 +21,10 @@ const createMockSupabase = () => ({
 console.log('🔍 Supabase Config Check:', {
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey,
+  hasServiceRoleKey: !!supabaseServiceRoleKey,
   url: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING',
-  keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0
+  keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0,
+  serviceRoleKeyLength: supabaseServiceRoleKey ? supabaseServiceRoleKey.length : 0
 })
 
 export const supabase = supabaseUrl && supabaseAnonKey 
@@ -33,3 +36,13 @@ export const supabase = supabaseUrl && supabaseAnonKey
       },
     })
   : createMockSupabase() as any
+
+// Admin client for server-side operations (requires service role key)
+export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey 
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null
