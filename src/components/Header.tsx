@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, User, Globe } from 'lucide-react'
+import { LogOut, User, Globe, History, Home } from 'lucide-react'
 import { useAuthSupabase as useAuth } from '../hooks/useAuthSupabase'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -64,6 +64,26 @@ export const Header = () => {
             </span>
           </Link>
 
+          {/* Navigation Links for Users */}
+          {user?.role === 'user' && (
+            <nav className="hidden md:flex items-center space-x-6">
+              <Link
+                to="/app/home"
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+              >
+                <Home className="w-4 h-4" />
+                <span className="text-sm font-medium">Home</span>
+              </Link>
+              <Link
+                to="/app/history"
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+              >
+                <History className="w-4 h-4" />
+                <span className="text-sm font-medium">History</span>
+              </Link>
+            </nav>
+          )}
+
           {/* Right side */}
           <div className="flex items-center space-x-4">
             {/* Language Selector - Enterprise Style */}
@@ -114,14 +134,24 @@ export const Header = () => {
                       {user.role} Account
                     </div>
                     {user.role === 'user' && (
-                      <Link
-                        to="/app/profile"
-                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <User className="w-4 h-4" />
-                        <span>My Profile</span>
-                      </Link>
+                      <>
+                        <Link
+                          to="/app/history"
+                          className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <History className="w-4 h-4" />
+                          <span>Exam History</span>
+                        </Link>
+                        <Link
+                          to="/app/profile"
+                          className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <User className="w-4 h-4" />
+                          <span>My Profile</span>
+                        </Link>
+                      </>
                     )}
                     <button
                       onClick={handleSignOut}

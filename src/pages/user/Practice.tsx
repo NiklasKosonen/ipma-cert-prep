@@ -250,13 +250,14 @@ const TopicDetails = ({ topic, onStartExam, onBack, subtopics }: {
 }
 
 // Exam Component
-const Exam = ({ topic, onBack, onComplete, questions, subtopics, kpis }: { 
+const Exam = ({ topic, onBack, onComplete, questions, subtopics, kpis, language }: { 
   topic: Topic, 
   onBack: () => void, 
   onComplete: (results: any) => void,
   questions: Question[],
   subtopics: Subtopic[],
-  kpis: any[]
+  kpis: any[],
+  language: string
 }) => {
   const { createAttempt, createAttemptItem, updateAttempt } = useData()
   const { user } = useAuthSupabase()
@@ -356,7 +357,7 @@ const Exam = ({ topic, onBack, onComplete, questions, subtopics, kpis }: {
           }
           
           // Evaluate the answer
-          const evaluation = await evaluateAnswer(answer, kpiNames, 'fi') // Default to Finnish for practice
+          const evaluation = await evaluateAnswer(answer, kpiNames, language)
           
           // Create attempt item
           await createAttemptItem(attempt.id, question.id, answer, {
@@ -881,6 +882,7 @@ export const Practice = () => {
         questions={currentQuestions}
         subtopics={currentSubtopics}
         kpis={currentKPIs}
+        language={language}
       />
     )
   }

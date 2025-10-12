@@ -75,24 +75,46 @@ KPIs to detect: ${kpis.join(', ')}
 
 Student's answer: "${answer}"
 
-IMPORTANT INSTRUCTIONS:
-1. Be VERY GENEROUS in detecting KPIs - look for synonyms, related concepts, and implied understanding
-2. Consider Finnish and English variations of the same concept
-3. Look for partial matches and conceptual understanding, not just exact word matches
-4. If a student demonstrates understanding of a concept even with different wording, count it as detected
-5. Focus on the MEANING and CONTEXT, not just keywords
+CRITICAL INSTRUCTIONS FOR KPI DETECTION:
+1. Be EXTREMELY GENEROUS in detecting KPIs - look for ANY related concepts, synonyms, or implied understanding
+2. Consider natural language descriptions where students describe their skills and competencies
+3. Look for conceptual understanding even when exact terminology isn't used
+4. Focus on the MEANING and CONTEXT, not just exact word matches
+5. If a student demonstrates understanding of a concept with different wording, count it as detected
 
-Examples of what to detect:
-- "johtaminen" = "leadership" 
-- "kommunikaatio" = "communication"
-- "tiimityö" = "teamwork"
-- "suunnittelu" = "planning"
-- "ongelmien ratkaisu" = "problem solving"
-- "päätöksenteko" = "decision making"
-- "sidosryhmäjohtaminen" = "stakeholder management"
-- "riskinhallinta" = "risk management"
-- "laadunhallinta" = "quality management"
-- "muutosjohtaminen" = "change management"
+EXAMPLES OF WHAT TO DETECT (from real student answers):
+- "I have strong analytical abilities" → detects "analytical thinking" or "problem solving"
+- "I can communicate effectively with teams" → detects "communication" and "teamwork"
+- "I lead cross-functional teams" → detects "leadership" and "teamwork"
+- "I manage project timelines and budgets" → detects "project management" and "resource management"
+- "I identify and solve problems" → detects "problem solving"
+- "I make decisions based on data" → detects "decision making"
+- "I work well with stakeholders" → detects "stakeholder management"
+- "I handle risks proactively" → detects "risk management"
+- "I ensure quality standards" → detects "quality management"
+- "I adapt to changes" → detects "change management"
+
+FINNISH EXAMPLES:
+- "Minulla on vahvat analyyttiset taidot" → detects "analyyttinen ajattelu" or "ongelmien ratkaisu"
+- "Osaan viestiä tehokkaasti tiimien kanssa" → detects "kommunikaatio" and "tiimityö"
+- "Johdan poikkifunktionaalisia tiimejä" → detects "johtaminen" and "tiimityö"
+- "Hallitsen projektien aikatauluja ja budjetteja" → detects "projektinhallinta" and "resurssien hallinta"
+- "Tunnistan ja ratkaisen ongelmia" → detects "ongelmien ratkaisu"
+- "Teen päätöksiä datan perusteella" → detects "päätöksenteko"
+- "Työskentelen hyvin sidosryhmien kanssa" → detects "sidosryhmäjohtaminen"
+- "Hallitsen riskejä ennakoivasti" → detects "riskinhallinta"
+- "Varmistan laadun standardit" → detects "laadunhallinta"
+- "Sopeudun muutoksiin" → detects "muutosjohtaminen"
+
+ADVANCED DETECTION PATTERNS:
+- Skills and competencies descriptions → detect relevant KPIs
+- Past experiences and achievements → detect demonstrated KPIs
+- Problem-solving examples → detect "problem solving"
+- Leadership examples → detect "leadership"
+- Communication examples → detect "communication"
+- Teamwork examples → detect "teamwork"
+- Planning and organization → detect "planning"
+- Decision-making examples → detect "decision making"
 ${aiCriteriaSection}
 
 Please analyze the answer and:
@@ -108,13 +130,13 @@ Return your response as a JSON object with this exact structure:
   "feedback": "constructive feedback in ${feedbackLanguage}"
 }
 
-Scoring criteria:
-- 3 points: 3+ KPIs clearly addressed OR comprehensive understanding shown
-- 2 points: 2 KPIs addressed OR good understanding shown
-- 1 point: 1 KPI addressed OR basic understanding shown
-- 0 points: No KPIs addressed AND answer is irrelevant/unclear
+SCORING CRITERIA (BE VERY GENEROUS):
+- 3 points: 3+ KPIs detected OR comprehensive understanding of concepts shown OR detailed skills/competencies described
+- 2 points: 2 KPIs detected OR good understanding shown OR relevant skills mentioned
+- 1 point: 1 KPI detected OR basic understanding shown OR some relevant experience mentioned
+- 0 points: No KPIs detected AND answer is completely irrelevant/unclear
 
-Be GENEROUS with scoring - if the student shows understanding of the concepts, give them credit even if the wording is different.
+IMPORTANT: Be EXTREMELY GENEROUS with scoring. If the student demonstrates any understanding of the concepts, skills, or competencies related to the KPIs, give them credit. Focus on conceptual understanding rather than exact terminology.
 
 IMPORTANT: The feedback must be written in ${feedbackLanguage}.`
 
@@ -262,21 +284,23 @@ const detectKPIs = (answer: string, kpis: string[]): string[] => {
 // Helper function to get synonyms for common KPI terms
 const getKPISynonyms = (kpi: string): string[] => {
   const synonymMap: Record<string, string[]> = {
-    'leadership': ['lead', 'manage', 'guide', 'direct', 'supervise', 'oversee', 'johtaminen', 'johtaa', 'johto', 'johtaja'],
-    'communication': ['communicate', 'discuss', 'talk', 'speak', 'convey', 'express', 'kommunikaatio', 'viestintä', 'keskustelu'],
-    'teamwork': ['collaborate', 'cooperate', 'work together', 'team work', 'joint effort', 'tiimityö', 'yhteistyö', 'tiimi'],
-    'planning': ['plan', 'organize', 'schedule', 'prepare', 'arrange', 'coordinate', 'suunnittelu', 'suunnitelma', 'suunnitella'],
-    'problem solving': ['solve', 'resolve', 'address', 'tackle', 'fix', 'handle', 'ongelmien ratkaisu', 'ratkaista', 'ongelma'],
-    'decision making': ['decide', 'choose', 'select', 'determine', 'conclude', 'päätöksenteko', 'päätös', 'päättää'],
-    'stakeholder management': ['stakeholder', 'client', 'customer', 'partner', 'relationship', 'sidosryhmä', 'asiakas', 'kumppani'],
-    'risk management': ['risk', 'threat', 'danger', 'uncertainty', 'mitigate', 'riskinhallinta', 'riski', 'uhka'],
-    'quality management': ['quality', 'standard', 'excellence', 'improvement', 'control', 'laadunhallinta', 'laatu', 'standardi'],
-    'change management': ['change', 'transformation', 'transition', 'adaptation', 'evolution', 'muutosjohtaminen', 'muutos', 'muuttaminen'],
-    'project management': ['project', 'initiative', 'deliverable', 'milestone', 'timeline', 'projektinhallinta', 'projekti', 'hankkeet'],
-    'resource management': ['resource', 'budget', 'cost', 'allocation', 'utilization', 'resurssien hallinta', 'resurssi', 'budjetti'],
-    'performance management': ['performance', 'evaluation', 'assessment', 'review', 'feedback', 'suorituskyvyn hallinta', 'suoritus', 'arviointi'],
-    'strategic thinking': ['strategy', 'strategic', 'vision', 'direction', 'long-term', 'strateginen ajattelu', 'strategia', 'visio'],
-    'innovation': ['innovate', 'creative', 'new', 'novel', 'improvement', 'enhancement', 'innovointi', 'luovuus', 'uusinta']
+    'leadership': ['lead', 'manage', 'guide', 'direct', 'supervise', 'oversee', 'johtaminen', 'johtaa', 'johto', 'johtaja', 'leadership', 'leading', 'manager', 'supervisor', 'team lead', 'head', 'boss', 'commander'],
+    'communication': ['communicate', 'discuss', 'talk', 'speak', 'convey', 'express', 'kommunikaatio', 'viestintä', 'keskustelu', 'presentation', 'presenting', 'explain', 'explaining', 'verbal', 'written', 'oral', 'interpersonal'],
+    'teamwork': ['collaborate', 'cooperate', 'work together', 'team work', 'joint effort', 'tiimityö', 'yhteistyö', 'tiimi', 'collaboration', 'cooperation', 'group work', 'team member', 'team player', 'collective', 'shared'],
+    'planning': ['plan', 'organize', 'schedule', 'prepare', 'arrange', 'coordinate', 'suunnittelu', 'suunnitelma', 'suunnitella', 'strategy', 'strategic', 'roadmap', 'timeline', 'milestone', 'organization', 'structured'],
+    'problem solving': ['solve', 'resolve', 'address', 'tackle', 'fix', 'handle', 'ongelmien ratkaisu', 'ratkaista', 'ongelma', 'analytical', 'analysis', 'critical thinking', 'troubleshoot', 'solution', 'challenge', 'difficulty'],
+    'decision making': ['decide', 'choose', 'select', 'determine', 'conclude', 'päätöksenteko', 'päätös', 'päättää', 'choice', 'judgment', 'conclusion', 'determination', 'resolution', 'judgement'],
+    'stakeholder management': ['stakeholder', 'client', 'customer', 'partner', 'relationship', 'sidosryhmä', 'asiakas', 'kumppani', 'business partner', 'vendor', 'supplier', 'external', 'internal', 'user', 'end user'],
+    'risk management': ['risk', 'threat', 'danger', 'uncertainty', 'mitigate', 'riskinhallinta', 'riski', 'uhka', 'assessment', 'evaluation', 'prevention', 'safety', 'security', 'hazard'],
+    'quality management': ['quality', 'standard', 'excellence', 'improvement', 'control', 'laadunhallinta', 'laatu', 'standardi', 'assurance', 'testing', 'validation', 'verification', 'compliance', 'metrics'],
+    'change management': ['change', 'transformation', 'transition', 'adaptation', 'evolution', 'muutosjohtaminen', 'muutos', 'muuttaminen', 'modification', 'adjustment', 'flexibility', 'adaptable', 'agile'],
+    'project management': ['project', 'initiative', 'deliverable', 'milestone', 'timeline', 'projektinhallinta', 'projekti', 'hankkeet', 'program', 'task', 'assignment', 'scope', 'budget', 'deadline'],
+    'resource management': ['resource', 'budget', 'cost', 'allocation', 'utilization', 'resurssien hallinta', 'resurssi', 'budjetti', 'financial', 'money', 'funding', 'investment', 'capital', 'assets'],
+    'performance management': ['performance', 'evaluation', 'assessment', 'review', 'feedback', 'suorituskyvyn hallinta', 'suoritus', 'arviointi', 'metrics', 'kpi', 'measurement', 'monitoring', 'tracking', 'improvement'],
+    'strategic thinking': ['strategy', 'strategic', 'vision', 'direction', 'long-term', 'strateginen ajattelu', 'strategia', 'visio', 'future', 'planning', 'goal', 'objective', 'mission', 'purpose'],
+    'innovation': ['innovate', 'creative', 'new', 'novel', 'improvement', 'enhancement', 'innovointi', 'luovuus', 'uusinta', 'creativity', 'invention', 'development', 'advancement', 'breakthrough'],
+    'analytical thinking': ['analytical', 'analysis', 'analyze', 'data', 'research', 'investigation', 'study', 'examine', 'evaluate', 'assess', 'review', 'scrutinize', 'analytinen', 'analyysi'],
+    'technical skills': ['technical', 'technology', 'technical knowledge', 'expertise', 'competency', 'skill', 'ability', 'proficiency', 'mastery', 'technique', 'method', 'approach', 'tekninen', 'taitaja']
   }
   
   const kpiLower = kpi.toLowerCase()
@@ -396,9 +420,9 @@ const generateFeedback = (
   
   if (score === 3) {
     if (isFinnish) {
-      return `Erinomaista työtä! Olet käsitellyt kaikki keskeiset alueet: ${detectedNames.join(', ')}. Vastauksesi osoittaa kattavaa ymmärrystä aiheesta. Tekoäly onnistui tunnistamaan nämä KPI:t vaikka sanamuodot vaihtelivat.`
+      return `Erinomaista työtä! Olet käsitellyt kaikki keskeiset alueet: ${detectedNames.join(', ')}. Vastauksesi osoittaa kattavaa ymmärrystä aiheesta ja kykyäsi soveltaa tietoa käytännön tilanteisiin. Tekoäly onnistui tunnistamaan nämä KPI:t vaikka sanamuodot vaihtelivat, mikä osoittaa, että olet käsitellyt aiheen syvällisesti.`
     } else {
-      return `Excellent work! You've covered all the key areas: ${detectedNames.join(', ')}. Your answer demonstrates comprehensive understanding of the topic. The AI has successfully detected these KPIs even with variations in wording.`
+      return `Excellent work! You've covered all the key areas: ${detectedNames.join(', ')}. Your answer demonstrates comprehensive understanding of the topic and your ability to apply knowledge in practical situations. The AI successfully detected these KPIs even with variations in wording, showing that you've addressed the topic thoroughly.`
     }
   }
   

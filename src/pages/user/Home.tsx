@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen } from 'lucide-react'
+import { Play, Clock, BarChart3, Filter, X, AlertCircle, Target, BookOpen, History } from 'lucide-react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useData } from '../../contexts/DataContext'
 import { useAuthSupabase as useAuth } from '../../hooks/useAuthSupabase'
@@ -243,6 +243,17 @@ export const UserHome = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mb-8 flex justify-center">
+          <Link
+            to="/app/history"
+            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <History className="w-5 h-5" />
+            <span>View Exam History</span>
+          </Link>
         </div>
 
         {/* Topics Grid */}
