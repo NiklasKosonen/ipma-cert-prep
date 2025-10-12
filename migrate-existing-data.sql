@@ -75,15 +75,19 @@ BEGIN
 
     -- Migrate kpis_en to kpis with language='en'
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kpis_en') THEN
-        INSERT INTO public.kpis (id, name, description, weight, is_active, language, created_at, updated_at)
-        SELECT id, name, description, weight, is_active, 'en' as language, created_at, updated_at
+        INSERT INTO public.kpis (id, name, description, is_active, language, created_at, updated_at, topic_id, subtopic_id, is_essential, connected_questions)
+        SELECT id, name, description, is_active, 'en' as language, created_at, updated_at,
+               topic_id, subtopic_id, is_essential, connected_questions
         FROM public.kpis_en
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             description = EXCLUDED.description,
-            weight = EXCLUDED.weight,
             is_active = EXCLUDED.is_active,
             language = 'en',
+            topic_id = EXCLUDED.topic_id,
+            subtopic_id = EXCLUDED.subtopic_id,
+            is_essential = EXCLUDED.is_essential,
+            connected_questions = EXCLUDED.connected_questions,
             updated_at = EXCLUDED.updated_at;
         
         RAISE NOTICE 'Migrated kpis_en to kpis with language=en';
