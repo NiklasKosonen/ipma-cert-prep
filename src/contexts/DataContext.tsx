@@ -1315,24 +1315,59 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const getUserAttemptItems = async (userId: string): Promise<AttemptItem[]> => {
     try {
-      const { data, error } = await supabase
-        .from('attempt_items')
-        .select(`
-          *,
-          attempts!inner(user_id)
-        `)
-        .eq('attempts.user_id', userId)
-        .order('created_at', { ascending: false })
+      // First, get all attempts for this user
+      const { data: attemptsData, error: attemptsError } = await supabase
+        .from('attempts')
+        .select('id')
+        .eq('user_id', userId)
 
-      if (error) {
-        console.error('Error fetching user attempt items:', error)
+      if (attemptsError) {
+        console.error('❌ Error fetching user attempts:', attemptsError)
+        throw new Error(`Failed to fetch user attempts: ${attemptsError.message}`)
+      }
+
+      if (!attemptsData || attemptsData.length === 0) {
+        console.log('ℹ️ No attempts found for user:', userId)
         return []
       }
 
-      return data || []
+      const attemptIds = attemptsData.map((a: any) => a.id)
+      console.log(`📊 Found ${attemptIds.length} attempts for user, fetching items...`)
+
+      // Now get attempt items for these attempts
+      const { data, error } = await supabase
+        .from('attempt_items')
+        .select('*')
+        .in('attempt_id', attemptIds)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('❌ Error fetching attempt items:', error)
+        throw new Error(`Failed to fetch attempt items: ${error.message}`)
+      }
+
+      // Map database fields to application interface
+      const mappedItems: AttemptItem[] = (data || []).map((item: any) => ({
+        id: item.id,
+        attemptId: item.attempt_id,
+        questionId: item.question_id,
+        answer: item.answer,
+        score: item.score,
+        maxScore: 3,
+        feedback: item.feedback,
+        isEvaluated: item.is_evaluated,
+        durationSec: item.duration_sec,
+        kpisDetected: item.kpis_detected || [],
+        kpisMissing: item.kpis_missing || [],
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }))
+      
+      console.log(`✅ Loaded ${mappedItems.length} attempt items for user`)
+      return mappedItems
     } catch (error) {
-      console.error('Error in getUserAttemptItems:', error)
-      return []
+      console.error('❌ Error in getUserAttemptItems:', error)
+      throw error // Re-throw instead of silently returning []
     }
   }
 

@@ -312,12 +312,6 @@ const Exam: React.FC = () => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  // Get question context
-  const getQuestionContext = (question: Question) => {
-    const questionKPIs = kpis.filter(k => question.connectedKPIs.includes(k.id))
-
-    return { questionKPIs }
-  }
 
   if (!attempt || !examQuestions.length) {
     return (
@@ -398,34 +392,19 @@ const Exam: React.FC = () => {
       {/* Exam Content */}
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="space-y-8">
-          {examQuestions.map((question, index) => {
-            const { questionKPIs } = getQuestionContext(question)
-            
-            return (
-              <div key={question.id} className="bg-white rounded-lg shadow-lg p-8">
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Question {index + 1} of {examQuestions.length}
-                    </span>
-                  </div>
-                  
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    {question.prompt}
-                  </h2>
-
-                  {/* KPI Requirements */}
-                  {questionKPIs.length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                      <h3 className="font-medium text-yellow-900 mb-2">Key Points to Address:</h3>
-                      <ul className="list-disc list-inside space-y-1 text-yellow-800">
-                        {questionKPIs.map(kpi => (
-                          <li key={kpi.id}>{kpi.name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+          {examQuestions.map((question, index) => (
+            <div key={question.id} className="bg-white rounded-lg shadow-lg p-8">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                    Question {index + 1} of {examQuestions.length}
+                  </span>
                 </div>
+                
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  {question.prompt}
+                </h2>
+              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -439,12 +418,12 @@ const Exam: React.FC = () => {
                     placeholder="Answer with 3-5 sentences or bullet points..."
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Aim for 3-5 sentences or bullet points covering the key points above.
+                    Aim for 3-5 sentences or bullet points.
                   </p>
                 </div>
-              </div>
-            )
-          })}
+            </div>
+          ))
+        }
         </div>
 
         {/* Submit Button */}
