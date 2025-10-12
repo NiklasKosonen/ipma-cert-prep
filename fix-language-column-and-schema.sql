@@ -50,8 +50,9 @@ FROM public.subtopics_en
 ON CONFLICT (id) DO NOTHING;
 
 -- Migrate kpis_en to kpis with language='en'
-INSERT INTO public.kpis (id, name, description, is_active, language, created_at, updated_at, topic_id, subtopic_id, is_essential, connected_questions)
-SELECT id, name, description, is_active, 'en' as language, created_at, updated_at, 
+-- Note: Only migrating columns that exist in the kpis table
+INSERT INTO public.kpis (id, name, language, created_at, updated_at, topic_id, subtopic_id, is_essential, connected_questions)
+SELECT id, name, 'en' as language, created_at, updated_at, 
        topic_id, subtopic_id, is_essential, connected_questions
 FROM public.kpis_en
 ON CONFLICT (id) DO NOTHING;

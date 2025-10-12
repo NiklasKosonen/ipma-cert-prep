@@ -74,15 +74,14 @@ BEGIN
     END IF;
 
     -- Migrate kpis_en to kpis with language='en'
+    -- Note: Only migrating columns that exist in the kpis table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'kpis_en') THEN
-        INSERT INTO public.kpis (id, name, description, is_active, language, created_at, updated_at, topic_id, subtopic_id, is_essential, connected_questions)
-        SELECT id, name, description, is_active, 'en' as language, created_at, updated_at,
+        INSERT INTO public.kpis (id, name, language, created_at, updated_at, topic_id, subtopic_id, is_essential, connected_questions)
+        SELECT id, name, 'en' as language, created_at, updated_at,
                topic_id, subtopic_id, is_essential, connected_questions
         FROM public.kpis_en
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
-            description = EXCLUDED.description,
-            is_active = EXCLUDED.is_active,
             language = 'en',
             topic_id = EXCLUDED.topic_id,
             subtopic_id = EXCLUDED.subtopic_id,
